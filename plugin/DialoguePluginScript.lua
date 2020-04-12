@@ -514,13 +514,13 @@ EditDialogueButton.Click:Connect(function()
 	CurrentDialogueContainer = Model.DialogueContainer;
 	
 	-- Add the chat receiver script in the starter player scripts
-	if not StarterPlayerScripts:FindFirstChild("DialogueViewerScript") then
+	if not StarterPlayerScripts:FindFirstChild("DialogueClientScript") then
 		
-		print("[Dialogue Maker] Adding DialogueViewerScript to the StarterPlayerScripts...");
-		local DialogueViewerScript = script.DialogueViewerScript:Clone()
-		DialogueViewerScript.Parent = StarterPlayerScripts;
-		DialogueViewerScript.Disabled = false;
-		print("[Dialogue Maker] Added DialogueViewerScript to the StarterPlayerScripts.");
+		print("[Dialogue Maker] Adding DialogueClientScript to the StarterPlayerScripts...");
+		local DialogueClientScript = script.DialogueClientScript:Clone()
+		DialogueClientScript.Parent = StarterPlayerScripts;
+		DialogueClientScript.Disabled = false;
+		print("[Dialogue Maker] Added DialogueClientScript to the StarterPlayerScripts.");
 		
 	end;
 	
@@ -535,19 +535,19 @@ EditDialogueButton.Click:Connect(function()
 	end;
 	
 	-- Add the chat receiver script in the starter player scripts
-	if not ServerScriptService:FindFirstChild("DialogueManager") then
+	if not ServerScriptService:FindFirstChild("DialogueServerScript") then
 		
-		print("[Dialogue Maker] Adding DialogueManager to the ServerScriptService...");
-		local DialogueManager = script.DialogueManager:Clone();
-		DialogueManager.Parent = ServerScriptService;
-		DialogueManager.Disabled = false;
-		print("[Dialogue Maker] Added DialogueManager to the ServerScriptService.");
+		print("[Dialogue Maker] Adding DialogueServerScript to the ServerScriptService...");
+		local DialogueServerScript = script.DialogueServerScript:Clone();
+		DialogueServerScript.Parent = ServerScriptService;
+		DialogueServerScript.Disabled = false;
+		print("[Dialogue Maker] Added DialogueServerScript to the ServerScriptService.");
 		
 		-- Add this model to the DialogueManager
 		local DialogueLocation = Instance.new("ObjectValue");
 		DialogueLocation.Value = Model;
 		DialogueLocation.Name = "DialogueLocation";
-		DialogueLocation.Parent = DialogueManager.DialogueLocations;
+		DialogueLocation.Parent = DialogueServerScript.DialogueLocations;
 		
 	end;
 	
