@@ -18,6 +18,6 @@ for _, value in ipairs(DialogueLocationsFolder:GetChildren()) do
 	end;	
 end;
 
-Players.PlayerAdded:Connect(function(player) 
-	RemoteConnections.SendNPCDialogueToPlayer:FireClient(player,DialogueLocations);
-end);
+RemoteConnections.GetNPCDialogue.OnServerInvoke = function(player)
+	return DialogueLocations;
+end
