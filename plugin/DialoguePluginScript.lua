@@ -229,9 +229,9 @@ local function OpenDialogueEditor()
 		local function EnableSpeechBubble(sync)
 			SettingsFrame.SpeechBubbleEnabled.BackgroundColor3 = Color3.fromRGB(73,195,81);
 			SettingsFrame.SpeechBubbleEnabled.Text = "Speech bubble enabled";
-			SettingsFrame.DefineHeadButton.BackgroundColor3 = Color3.fromRGB(122,122,122);
-			SettingsFrame.DefineHeadButton.TextColor3 = Color3.fromRGB(27,27,27);
-			SettingsFrame.DefineHeadButton.AutoButtonColor = true;
+			SettingsFrame.DefineSpeechBubblePart.BackgroundColor3 = Color3.fromRGB(122,122,122);
+			SettingsFrame.DefineSpeechBubblePart.TextColor3 = Color3.fromRGB(27,27,27);
+			SettingsFrame.DefineSpeechBubblePart.AutoButtonColor = true;
 			
 			if sync then
 				CurrentDialogueContainer.Settings.SpeechBubbleEnabled.Value = true;
@@ -241,9 +241,9 @@ local function OpenDialogueEditor()
 		local function DisableSpeechBubble(sync)
 			SettingsFrame.SpeechBubbleEnabled.BackgroundColor3 = Color3.fromRGB(255,115,115);
 			SettingsFrame.SpeechBubbleEnabled.Text = "Speech bubble disabled";
-			SettingsFrame.DefineHeadButton.BackgroundColor3 = Color3.fromRGB(81,81,81);
-			SettingsFrame.DefineHeadButton.TextColor3 = Color3.fromRGB(27,27,27);
-			SettingsFrame.DefineHeadButton.AutoButtonColor = false;
+			SettingsFrame.DefineSpeechBubblePart.BackgroundColor3 = Color3.fromRGB(81,81,81);
+			SettingsFrame.DefineSpeechBubblePart.TextColor3 = Color3.fromRGB(27,27,27);
+			SettingsFrame.DefineSpeechBubblePart.AutoButtonColor = false;
 			
 			if sync then
 				CurrentDialogueContainer.Settings.SpeechBubbleEnabled.Value = false;
@@ -325,15 +325,37 @@ local function OpenDialogueEditor()
 				EnableClick(true);
 			end;
 		end);
-	
-		-- Now for the part-defining buttons
-		Events.DefinePromptRegion = SettingsFrame.DefinePromptRegion.MouseButton1Click:Connect(function()
+			
+		local function ClosePartSelectionFrame()
+			
+			-- Disconnect the events to make sure the user can't click them
+			Events.PartSelectionConfirmButton:Disconnect();
+			Events.PartSelectionBackButton:Disconnect();
+			Events.GetSelectedPart:Disconnect();
+			
+			-- Reset the part selection GUI
+			PartSelectionFrame.Visible = false;
+			PartSelectionFrame.SelectAPart.Text = "Select a part";
+			
+			-- Allow the player to press buttons in the settings menu
+			Busy = false;
+			
+		end;
+		
+		local function OpenPartSelectionFrame(selectingFor)
 			
 			-- Debounce
 			if Busy then
 				return;
 			end;
 			Busy = true;
+			
+			-- Change the tip based on what we're selecting
+			if selectingFor == "ClickDetector" then
+				PartSelectionFrame.Tip.Text = "Tip: You can select a ClickDetector from your object explorer!"
+			else
+				PartSelectionFrame.Tip.Text = "Tip: You can select a part from the Workspace by pressing Alt while clicking the part you want to select!";
+			end;
 			
 			-- Make the part selection frame visible
 			PartSelectionFrame.Visible = true;
@@ -344,11 +366,25 @@ local function OpenDialogueEditor()
 				
 				local CurrentSelection = Selection:Get();
 				
-				-- Check if the selection is a part
-				if #CurrentSelection ~= 1 or not CurrentSelection[1] or not CurrentSelection[1]:IsA("Part") then
-					PartSelected = false;
-					PartSelectionFrame.SelectAPart.Text = "Select a part";
-					return;
+				-- Check if we're selecting a ClickDetector or part
+				if selectingFor == "ClickDetector" then
+					
+					-- Check if the selection is a ClickDetector
+					if #CurrentSelection ~= 1 or not CurrentSelection[1] or not CurrentSelection[1]:IsA("ClickDetector") then
+						PartSelected = false;
+						PartSelectionFrame.SelectAPart.Text = "Select a ClickDetector";
+						return;
+					end;
+					
+				else
+					
+					-- Check if the selection is a part
+					if #CurrentSelection ~= 1 or not CurrentSelection[1] or not CurrentSelection[1]:IsA("Part") then
+						PartSelected = false;
+						PartSelectionFrame.SelectAPart.Text = "Select a part";
+						return;
+					end;
+					
 				end;
 				
 				-- Show the user the name of the part they're currently selecting
@@ -362,6 +398,8 @@ local function OpenDialogueEditor()
 			-- Let's listen for the user's button choices
 			Events.PartSelectionBackButton = PartSelectionFrame.BackButton.MouseButton1Click:Connect(function()
 				
+				ClosePartSelectionFrame();
+				
 			end);
 			
 			Events.PartSelectionConfirmButton = PartSelectionFrame.ConfirmButton.MouseButton1Click:Connect(function()
@@ -371,23 +409,48 @@ local function OpenDialogueEditor()
 					return;
 				end;
 				
-				-- Disconnect the events to make sure the user can't click them
-				Events.PartSelectionConfirmButton:Disconnect();
-				Events.PartSelectionBackButton:Disconnect();
-				Events.GetSelectedPart:Disconnect();
+				-- Close the part selection frame
+				ClosePartSelectionFrame();
 				
-				-- Sync the part with the prompt region
-				CurrentDialogueContainer.Settings.PromptRegionPart.Value = PartSelected;
-				SettingsFrame.DefinePromptRegion.Text = CurrentDialogueContainer.Settings.PromptRegionPart.Value.Name;
+				-- Check i
+				if selectingFor == "PromptRegionPart" then
+					
+					-- Sync the part with the prompt region
+					CurrentDialogueContainer.Settings.PromptRegionPart.Value = PartSelected;
+					SettingsFrame.DefinePromptRegion.Text = CurrentDialogueContainer.Settings.PromptRegionPart.Value.Name;
 				
-				-- Reset the part selection GUI
-				PartSelectionFrame.Visible = false;
-				PartSelectionFrame.SelectAPart.Text = "Select a part";
-				
-				-- Allow the player to press buttons in the settings menu
-				Busy = false;
+				elseif selectingFor == "SpeechBubblePart" then
+					
+					CurrentDialogueContainer.Settings.SpeechBubblePart.Value = PartSelected;
+					SettingsFrame.DefineSpeechBubblePart.Text = CurrentDialogueContainer.Settings.SpeechBubblePart.Value.Name;
+					
+				elseif selectingFor == "ClickDetector" then
+					
+					CurrentDialogueContainer.Settings.ClickDetectorLocation.Value = PartSelected;
+					SettingsFrame.DefineClickDetector.Text = CurrentDialogueContainer.Settings.ClickDetectorLocation.Value.Name;
+					
+				end;
 				
 			end);
+			
+		end;
+	
+		-- Now for the part-defining buttons
+		Events.DefinePromptRegion = SettingsFrame.DefinePromptRegion.MouseButton1Click:Connect(function()
+			
+			OpenPartSelectionFrame("PromptRegionPart");
+			
+		end);
+			
+		Events.DefineSpeechBubblePart = SettingsFrame.DefineSpeechBubblePart.MouseButton1Click:Connect(function()
+			
+			OpenPartSelectionFrame("SpeechBubblePart");
+			
+		end);
+			
+		Events.DefineClickDetector = SettingsFrame.DefineClickDetector.MouseButton1Click:Connect(function()
+			
+			OpenPartSelectionFrame("ClickDetector");
 			
 		end);
 		
