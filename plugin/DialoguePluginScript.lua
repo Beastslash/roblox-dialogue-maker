@@ -1,6 +1,6 @@
 --[[
 	
-	DialogueMakerScript.lua
+	DialoguePluginScript.lua
 	Written by Christian Toney (DraconicChris)
 	
 ]]--
