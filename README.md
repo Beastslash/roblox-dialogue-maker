@@ -1,2 +1,2 @@
 # Roblox Dialogue Maker plugin
-Soon™
+This plugin doesn't work yet.
