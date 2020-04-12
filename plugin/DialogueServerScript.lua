@@ -1,6 +1,6 @@
 --[[
-
-	DialogueManager.lua
+	
+	DialogueServerScript.lua
 	Written by Christian Toney (DraconicChris)
 	
 ]]--
