@@ -338,6 +338,18 @@ local function OpenDialogueEditor()
 			-- Make the part selection frame visible
 			PartSelectionFrame.Visible = true;
 			
+			Events.GetSelectedPart = Selection.SelectionChanged:Connect(function()
+				
+				local CurrentSelection = Selection:Get();
+				
+				if #CurrentSelection ~= 1 or not CurrentSelection[1] or not CurrentSelection[1]:IsA("Part") then
+					return;
+				end;
+				
+				PartSelectionFrame.SelectAPart.Text = CurrentSelection[1].Name;
+				
+			end);
+			
 		end);
 		
 		-- Add the option to go back to the dialogue manager
