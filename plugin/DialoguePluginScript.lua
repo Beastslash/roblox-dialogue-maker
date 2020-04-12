@@ -338,15 +338,54 @@ local function OpenDialogueEditor()
 			-- Make the part selection frame visible
 			PartSelectionFrame.Visible = true;
 			
+			-- Let's listen when the user selects another object
+			local PartSelected = false;
 			Events.GetSelectedPart = Selection.SelectionChanged:Connect(function()
 				
 				local CurrentSelection = Selection:Get();
 				
+				-- Check if the selection is a part
 				if #CurrentSelection ~= 1 or not CurrentSelection[1] or not CurrentSelection[1]:IsA("Part") then
+					PartSelected = false;
+					PartSelectionFrame.SelectAPart.Text = "Select a part";
 					return;
 				end;
 				
+				-- Show the user the name of the part they're currently selecting
 				PartSelectionFrame.SelectAPart.Text = CurrentSelection[1].Name;
+				
+				-- Allow the user to proceed
+				PartSelected = CurrentSelection[1];
+				
+			end);
+				
+			-- Let's listen for the user's button choices
+			Events.PartSelectionBackButton = PartSelectionFrame.BackButton.MouseButton1Click:Connect(function()
+				
+			end);
+			
+			Events.PartSelectionConfirmButton = PartSelectionFrame.ConfirmButton.MouseButton1Click:Connect(function()
+				
+				-- Make sure a part is selected
+				if not PartSelected then
+					return;
+				end;
+				
+				-- Disconnect the events to make sure the user can't click them
+				Events.PartSelectionConfirmButton:Disconnect();
+				Events.PartSelectionBackButton:Disconnect();
+				Events.GetSelectedPart:Disconnect();
+				
+				-- Sync the part with the prompt region
+				CurrentDialogueContainer.Settings.PromptRegionPart.Value = PartSelected;
+				SettingsFrame.DefinePromptRegion.Text = CurrentDialogueContainer.Settings.PromptRegionPart.Value.Name;
+				
+				-- Reset the part selection GUI
+				PartSelectionFrame.Visible = false;
+				PartSelectionFrame.SelectAPart.Text = "Select a part";
+				
+				-- Allow the player to press buttons in the settings menu
+				Busy = false;
 				
 			end);
 			
