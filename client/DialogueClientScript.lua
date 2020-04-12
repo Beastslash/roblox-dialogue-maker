@@ -14,8 +14,15 @@ end;
 -- Get themes
 local Themes = script.Themes;
 local DefaultTheme = RemoteConnections.GetDefaultTheme:InvokeServer();
+local PlayerTalkingWithNPC = false;
 
 local function ReadDialogue(npc)
+	
+	if PlayerTalkingWithNPC then
+		return;
+	end;
+	
+	PlayerTalkingWithNPC = true;
 	
 	local DialogueContainer = npc.DialogueContainer;
 	local DialogueSettings = DialogueContainer.Settings;
@@ -30,9 +37,45 @@ local function ReadDialogue(npc)
 		end;
 	end;
 	
+	-- Freeze the player
+	Player.Character.HumanoidRootPart.Anchored = true;
+	
 	-- Show the dialogue GUI to the player
 	local DialogueGui = ThemeUsed:Clone();
-	DialogueGui.Parent = PlayerGui;
+	local DialoguePriority = "1";
+	local CurrentDirectory = DialogueContainer["1"];
+	
+	-- Show the dialouge to the player
+	while PlayerTalkingWithNPC and game:GetService("RunService").Heartbeat:Wait() do
+		
+		local TargetDirectoryPath = DialoguePriority:split(".");
+		local Attempts = #DialogueContainer:GetChildren();
+		
+		-- Move to the target directory
+		for index, directory in ipairs(TargetDirectoryPath) do
+			CurrentDirectory = CurrentDirectory.Dialogue[directory];
+		end;
+		
+		-- Show the message to the player
+		local ThemeDialogueContainer = DialogueGui.DialogueContainer;
+		local LineTemplate = ThemeDialogueContainer.NPCTextContainerWithoutResponses.Line;
+		local Message = "";
+		
+		DialogueGui.Parent = PlayerGui;
+		
+		for _, letter in ipairs(CurrentDirectory.Message.Value:split("")) do
+			Message = Message..letter;
+			ThemeDialogueContainer.NPCTextContainerWithoutResponses.Line.Text = Message;
+			wait(.025);
+		end;
+		
+		local Responding = true;
+		
+		while Responding do
+			game:GetService("RunService").Heartbeat:Wait();
+		end;
+		
+	end;
 	
 end;
 
@@ -54,6 +97,7 @@ for _, npc in ipairs(NPCDialogue) do
 				
 				if DialogueSettings.SpeechBubblePart.Value:IsA("Part") then
 					
+					-- Create a speech bubble
 					local SpeechBubble = Instance.new("BillboardGui");
 					SpeechBubble.Name = "SpeechBubble";
 					SpeechBubble.Active = true;
