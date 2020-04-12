@@ -604,7 +604,7 @@ EditDialogueButton.Click:Connect(function()
 		ClickDetectorLocation.Parent = DialogueSettings;
 		
 		local Theme = Instance.new("StringValue");
-		Theme.Name = "";
+		Theme.Name = "Theme";
 		Theme.Parent = DialogueSettings;
 		
 		-- Create a root folder
