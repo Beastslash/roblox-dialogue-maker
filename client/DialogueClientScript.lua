@@ -15,6 +15,7 @@ end;
 local Themes = script.Themes;
 local DefaultTheme = RemoteConnections.GetDefaultTheme:InvokeServer();
 local PlayerTalkingWithNPC = false;
+local Events = {};
 
 local function ReadDialogue(npc)
 	
@@ -63,19 +64,58 @@ local function ReadDialogue(npc)
 		
 		DialogueGui.Parent = PlayerGui;
 		
+		local NPCTalking = true;
+		local WaitingForResponse = true;
+		
+		-- Make the NPC stop talking if the player clicks the frame
+		Events.DialogueClicked = ThemeDialogueContainer.InputBegan:Connect(function(input)
+			
+			-- Make sure the player clicked the frame
+			if input.UserInputType == Enum.UserInputType.MouseButton1 then
+				if NPCTalking then
+					NPCTalking = false;
+				else
+					
+					-- Check if there are any available responses
+					if #CurrentDirectory.Responses:GetChildren() == 0 then
+						WaitingForResponse = false;
+					end;
+					
+				end;
+			end;
+			
+		end);
+		
 		for _, letter in ipairs(CurrentDirectory.Message.Value:split("")) do
+			
+			-- Check if the player wants to skip their dialogue
+			if not NPCTalking then
+				
+				-- Replace the incomplete dialogue with the full text
+				ThemeDialogueContainer.NPCTextContainerWithoutResponses.Line.Text = CurrentDirectory.Message.Value;
+				break;
+				
+			end;
+			
 			Message = Message..letter;
 			ThemeDialogueContainer.NPCTextContainerWithoutResponses.Line.Text = Message;
 			wait(.025);
+			
 		end;
 		
-		local Responding = true;
+		NPCTalking = false;
 		
-		while Responding do
+		while WaitingForResponse do
 			game:GetService("RunService").Heartbeat:Wait();
 		end;
 		
+		DialogueGui:Destroy();
+		PlayerTalkingWithNPC = false;
+		
 	end;
+	
+	-- Unfreeze the player
+	Player.Character.HumanoidRootPart.Anchored = false;
 	
 end;
 
