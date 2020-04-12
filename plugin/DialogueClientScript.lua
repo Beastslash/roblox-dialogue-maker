@@ -1,8 +1,8 @@
 --[[
-
-	DialogueClient.lua
+	
+	DialogueClientScript.lua
 	Written by Christian Toney (DraconicChris)
-
+	
 ]]--
 
 -- Get Roblox services
