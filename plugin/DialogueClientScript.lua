@@ -11,7 +11,24 @@ if not RemoteConnections then
 	error("[Dialogue Maker] Couldn't find the DialogueMakerRemoteConnections folder in the ReplicatedStorage.",0)
 end;
 
+-- Get themes
+local Themes = RemoteConnections.GetAllThemes:InvokeServer();
+local DefaultTheme = RemoteConnections.GetDefaultTheme:InvokeServer();
+
 local function ReadDialogue(npc)
+	
+	local DialogueContainer = npc.DialogueContainer;
+	local DialogueSettings = DialogueContainer.Settings;
+	local ThemeUsed = DefaultTheme;
+	
+	-- Check if the theme is different from the server theme
+	if DialogueSettings.Theme.Value ~= "" then
+		if Themes[DialogueSettings.Theme.Value] then
+			ThemeUsed = Themes[DialogueSettings.Theme.Value];
+		else
+			warn("[Dialogue Maker] \""..DialogueSettings.Theme.Value.."\" wasn't a theme the client downloaded from the server. Using default theme...");
+		end;
+	end;
 	
 end;
 
