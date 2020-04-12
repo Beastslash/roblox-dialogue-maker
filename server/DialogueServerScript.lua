@@ -23,20 +23,20 @@ end;
 
 RemoteConnections.GetNPCDialogue.OnServerInvoke = function(player)
 	return DialogueLocations;
-end
+end;
 
 RemoteConnections.GetDefaultTheme.OnServerInvoke = function(player)
 	return Settings.DefaultTheme;
-end
+end;
 
 RemoteConnections.GetAllThemes.OnServerInvoke = function(player)
 	
-	local Themes = {}
+	local Themes = {};
 	
 	for _, theme in ipairs(script.Themes:GetChildren()) do
-		table.insert(Themes, theme:Clone());
+		Themes[theme.Name] = theme:Clone();
 	end;
 	
 	return Themes;
 	
-end
+end;
