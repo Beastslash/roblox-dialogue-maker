@@ -26,9 +26,13 @@ local function ReadDialogue(npc)
 		if Themes[DialogueSettings.Theme.Value] then
 			ThemeUsed = Themes[DialogueSettings.Theme.Value];
 		else
-			warn("[Dialogue Maker] \""..DialogueSettings.Theme.Value.."\" wasn't a theme the client downloaded from the server. Using default theme...");
+			warn("[Dialogue Maker] \""..DialogueSettings.Theme.Value.."\" wasn't a theme the client downloaded from the server, so we're going to use the default theme.");
 		end;
 	end;
+	
+	-- Show the dialogue GUI to the player
+	local DialogueGui = ThemeUsed:Clone();
+	DialogueGui.Parent = PlayerGui;
 	
 end;
 
