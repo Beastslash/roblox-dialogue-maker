@@ -194,8 +194,8 @@ local function OpenDialogueEditor()
 		local function DisablePromptRegion(sync)
 			SettingsFrame.PromptRegionEnabled.BackgroundColor3 = Color3.fromRGB(255,115,115);
 			SettingsFrame.PromptRegionEnabled.Text = "Prompt region disabled";
-			SettingsFrame.RadiusInStuds.BackgroundColor3 = Color3.fromRGB(81,81,81);
-			SettingsFrame.RadiusInStuds.TextColor3 = Color3.fromRGB(27,27,27);
+			SettingsFrame.DefinePromptRegion.BackgroundColor3 = Color3.fromRGB(81,81,81);
+			SettingsFrame.DefinePromptRegion.TextColor3 = Color3.fromRGB(27,27,27);
 			
 			if sync then
 				CurrentDialogueContainer.Settings.PromptRegionEnabled.Value = false;
@@ -445,6 +445,7 @@ local function OpenDialogueEditor()
 		Events.DefineSpeechBubblePart = SettingsFrame.DefineSpeechBubblePart.MouseButton1Click:Connect(function()
 			
 			OpenPartSelectionFrame("SpeechBubblePart");
+			print("chheck")
 			
 		end);
 			
