@@ -603,6 +603,10 @@ EditDialogueButton.Click:Connect(function()
 		ClickDetectorLocation.Name = "ClickDetectorLocation";
 		ClickDetectorLocation.Parent = DialogueSettings;
 		
+		local Theme = Instance.new("StringValue");
+		Theme.Name = "";
+		Theme.Parent = DialogueSettings;
+		
 		-- Create a root folder
 		local TempRootFolder = Instance.new("Folder");
 		TempRootFolder.Name = "1";
