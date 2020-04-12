@@ -12,7 +12,7 @@ if not RemoteConnections then
 end;
 
 -- Get themes
-local Themes = RemoteConnections.GetAllThemes:InvokeServer();
+local Themes = script.Themes;
 local DefaultTheme = RemoteConnections.GetDefaultTheme:InvokeServer();
 
 local function ReadDialogue(npc)
