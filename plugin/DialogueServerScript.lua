@@ -1,10 +1,3 @@
---[[
-	
-	DialogueServerScript.lua
-	Written by Christian Toney (DraconicChris)
-	
-]]--
-
 -- Roblox services
 local ReplicatedStorage = game:GetService("ReplicatedStorage");
 local Players = game:GetService("Players");
@@ -21,10 +14,10 @@ local DialogueLocationsFolder = script.DialogueLocations;
 -- Add every dialogue that's in the folder to the dialogue array
 for _, value in ipairs(DialogueLocationsFolder:GetChildren()) do
 	if value.Value:FindFirstChild("DialogueContainer") then
-		table.insert(DialogueLocationsFolder, value.Value);
+		table.insert(DialogueLocations, value.Value);
 	end;	
 end;
 
 Players.PlayerAdded:Connect(function(player) 
-	RemoteConnections.SendNPCDialogueToPlayer:FireClient(player);
+	RemoteConnections.SendNPCDialogueToPlayer:FireClient(player,DialogueLocations);
 end);
