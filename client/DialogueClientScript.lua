@@ -19,7 +19,7 @@ local function ReadDialogue(npc)
 	
 	local DialogueContainer = npc.DialogueContainer;
 	local DialogueSettings = DialogueContainer.Settings;
-	local ThemeUsed = DefaultTheme;
+	local ThemeUsed = Themes[DefaultTheme];
 	
 	-- Check if the theme is different from the server theme
 	if DialogueSettings.Theme.Value ~= "" then
