@@ -116,7 +116,7 @@ local function SyncDialogueGui(directory)
 			for _, child in ipairs(ServerScriptService.DialogueServerScript.Conditions:GetChildren()) do
 				
 				-- Check if the child is a condition
-				if child:IsA("ModuleScript") and child.Priority.Value == dialogue.Priority.Value then
+				if child:IsA("ModuleScript") and child.Priority.Value == dialogue.Priority.Value and child.NPC.Value == Model then
 					
 					-- Return the condiiton
 					Condition = child;
@@ -131,6 +131,8 @@ local function SyncDialogueGui(directory)
 				-- Create a new condition
 				Condition = script.ConditionTemplate:Clone();
 				Condition.Priority.Value = dialogue.Priority.Value;
+				Condition.NPC.Value = Model;
+				Condition.Type.Value = "Dialogue"
 				Condition.Name = "Condition";
 				Condition.Parent = ServerScriptService.DialogueServerScript.Conditions;
 				
