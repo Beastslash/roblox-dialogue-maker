@@ -67,12 +67,13 @@ local function ReadDialogue(npc)
 			
 			-- Check if the message has any variables
 			local MessageText = CurrentDirectory.Message.Value;
-			local VariableMatches = MessageText:gmatch("%[/variable=(%w+)%]");
-			for match in VariableMatches do
+			for match in string.gmatch(MessageText,"%[/variable=(.+)%]") do
 				
 				-- Get the match from the server
 				local VariableValue = RemoteConnections.GetVariable:InvokeServer(npc,match);
-				MessageText = MessageText:gsub("%[/variable=(%w+)%]",VariableValue);
+				if VariableValue then
+					MessageText = MessageText:gsub("%[/variable=(.+)%]",VariableValue);
+				end;
 				
 			end;
 			
@@ -105,13 +106,13 @@ local function ReadDialogue(npc)
 				
 			end);
 			
-			for _, letter in ipairs(CurrentDirectory.Message.Value:split("")) do
+			for _, letter in ipairs(MessageText:split("")) do
 				
 				-- Check if the player wants to skip their dialogue
 				if not NPCTalking then
 					
 					-- Replace the incomplete dialogue with the full text
-					ThemeDialogueContainer.NPCTextContainerWithoutResponses.Line.Text = CurrentDirectory.Message.Value;
+					ThemeDialogueContainer.NPCTextContainerWithoutResponses.Line.Text = MessageText;
 					break;
 					
 				end;
