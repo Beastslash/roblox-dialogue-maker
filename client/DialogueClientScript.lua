@@ -117,6 +117,11 @@ local function ReadDialogue(npc)
 				game:GetService("RunService").Heartbeat:Wait();
 			end;
 			
+			-- Run after action
+			if CurrentDirectory.HasAfterAction.Value then
+				RemoteConnections.ExecuteAction:InvokeServer(npc,"1."..DialoguePriority,"Dialogue","Before");
+			end;
+			
 			-- Check if there is more dialogue
 			if #CurrentDirectory.Dialogue:GetChildren() ~= 0 then
 				DialoguePriority = DialoguePriority..".1";
