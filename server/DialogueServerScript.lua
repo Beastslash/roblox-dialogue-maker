@@ -61,7 +61,7 @@ RemoteConnections.PlayerPassesCondition.OnServerInvoke = function(player,npc,pri
 	end;
 	
 	-- Check if there is no condition or the condition passed
-	if not Condition or require(Condition) then
+	if not Condition or require(Condition)() then
 		return true;
 	else
 		return false;
