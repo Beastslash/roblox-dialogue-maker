@@ -14,6 +14,9 @@ end;
 local DialogueLocations = {};
 local DialogueLocationsFolder = script.DialogueLocations;
 
+-- Keep an array of dialogue variables
+local DialogueVariables = {};
+
 -- Add every dialogue that's in the folder to the dialogue array
 for _, value in ipairs(DialogueLocationsFolder:GetChildren()) do
 	if value.Value:FindFirstChild("DialogueContainer") then
@@ -88,12 +91,74 @@ RemoteConnections.ExecuteAction.OnServerInvoke = function(player,npc,priority,di
 		
 	end;
 	
-	-- Check if the action is synchronous
+	-- Add the player to the action
 	local Action = require(Action);
+	
+	local Old = getfenv(Action.Execute);
+	setfenv(Action.Execute,setmetatable({
+		Player = player
+	},{
+	__index = function(t,i)
+		if Old[i] then
+			return Old[i];
+		else
+			-- Whoops.
+		end;
+	end;}));
+		
+	-- Check if there are any variables the user wants us to overwrite
+	for variable, value in pairs(Action.Variables) do
+		
+		if not DialogueVariables[player] then
+			DialogueVariables[player] = {};
+		end;
+		
+		if not DialogueVariables[player][npc] then
+			DialogueVariables[player][npc] = {};
+		end
+		
+		DialogueVariables[player][npc][variable] = value;
+		
+	end;
+	
+	-- Check if the action is synchronous
 	if Action.Synchronous then
 		Action.Execute();
 	else
 		coroutine.wrap(Action.Execute)();
 	end;
 
+end;
+
+RemoteConnections.GetVariable.OnServerInvoke = function(player,npc,variable)
+	
+	-- Ensure security
+	if not npc:IsA("Model") or typeof(variable) ~= "string" then
+		warn("[Dialogue Maker] "..player.Name.." failed a security check");
+		error("[Dialogue Maker] Invalid parameters given to check if "..player.Name.." passes a condition");
+	end;
+	
+	if not DialogueVariables[player] then
+		DialogueVariables[player] = {};
+	end;
+	
+	if not DialogueVariables[player][npc] then
+		DialogueVariables[player][npc] = {};
+	end;
+	
+	-- Check the default variables
+	for _, variablesScript in ipairs(script.DefaultVariables:GetChildren()) do
+		if variablesScript.NPC.Value == npc then
+			local DefaultVariablesScript = require(variablesScript);
+			for defaultVariable, value in pairs(DefaultVariablesScript) do
+				DialogueVariables[player][npc][defaultVariable] = value;
+			end;
+			break;
+		end;
+	end;
+	
+	if DialogueVariables[player][npc][variable] then
+		return DialogueVariables[player][npc][variable];
+	end;
+	
 end;
