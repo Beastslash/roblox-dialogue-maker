@@ -71,7 +71,12 @@ local function SyncDialogueGui(directory)
 	local DirectoryChildren = directory:GetChildren();
 	table.sort(DirectoryChildren, function(messageA, messageB)
 		
-		return messageA.Priority.Value < messageB.Priority.Value;
+		local MessageAPrioritySplit = messageA.Priority.Value:split(".");
+		local MessageAPriority = tonumber(MessageAPrioritySplit[#MessageAPrioritySplit]);
+		local MessageBPrioritySplit = messageB.Priority.Value:split(".");
+		local MessageBPriority = tonumber(MessageBPrioritySplit[#MessageAPrioritySplit]);
+		
+		return MessageAPriority < MessageBPriority;
 		
 	end);
 	
@@ -157,7 +162,7 @@ local function AddDialogueToMessageList(directory,text)
 	local DialogueObj = Instance.new("Folder");
 	DialogueObj.Name = #directory:GetChildren()+1;
 	
-	local DialoguePriority = Instance.new("IntValue");
+	local DialoguePriority = Instance.new("StringValue");
 	DialoguePriority.Name = "Priority";
 	DialoguePriority.Value = Priority;
 	DialoguePriority.Parent = DialogueObj;
