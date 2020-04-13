@@ -702,13 +702,6 @@ local function OpenDialogueEditor()
 				
 			end;
 			
-			print(_.."/"..#Path.." ("..directory..") --------")
-			print("P1: "..CurrentDirectory.Name)
-			print("P2: "..CurrentDirectory.Parent.Name)
-			print("P3: "..CurrentDirectory.Parent.Parent.Name)
-			print("P4: "..CurrentDirectory.Parent.Parent.Parent.Name)
-			print("\n")
-			
 			if TargetDirectory.Dialogue:FindFirstChild(directory) then
 				CurrentDirectory = TargetDirectory.Dialogue;
 			elseif TargetDirectory.Responses:FindFirstChild(directory) then
