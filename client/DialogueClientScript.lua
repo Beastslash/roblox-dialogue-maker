@@ -44,73 +44,89 @@ local function ReadDialogue(npc)
 	-- Show the dialogue GUI to the player
 	local DialogueGui = ThemeUsed:Clone();
 	local DialoguePriority = "1";
-	local CurrentDirectory = DialogueContainer["1"];
+	local RootDirectory = DialogueContainer["1"];
+	local CurrentDirectory = RootDirectory;
 	
 	-- Show the dialouge to the player
 	while PlayerTalkingWithNPC and game:GetService("RunService").Heartbeat:Wait() do
 		
-		local TargetDirectoryPath = DialoguePriority:split(".");
-		local Attempts = #DialogueContainer:GetChildren();
+		if RemoteConnections.PlayerPassesCondition:InvokeServer(DialoguePriority) then
 		
-		-- Move to the target directory
-		for index, directory in ipairs(TargetDirectoryPath) do
-			CurrentDirectory = CurrentDirectory.Dialogue[directory];
-		end;
-		
-		-- Show the message to the player
-		local ThemeDialogueContainer = DialogueGui.DialogueContainer;
-		local LineTemplate = ThemeDialogueContainer.NPCTextContainerWithoutResponses.Line;
-		local Message = "";
-		
-		DialogueGui.Parent = PlayerGui;
-		
-		local NPCTalking = true;
-		local WaitingForResponse = true;
-		
-		-- Make the NPC stop talking if the player clicks the frame
-		Events.DialogueClicked = ThemeDialogueContainer.InputBegan:Connect(function(input)
+			local TargetDirectoryPath = DialoguePriority:split(".");
+			local Attempts = #DialogueContainer:GetChildren();
 			
-			-- Make sure the player clicked the frame
-			if input.UserInputType == Enum.UserInputType.MouseButton1 then
-				if NPCTalking then
-					NPCTalking = false;
-				else
-					
-					-- Check if there are any available responses
-					if #CurrentDirectory.Responses:GetChildren() == 0 then
-						WaitingForResponse = false;
+			-- Move to the target directory
+			for index, directory in ipairs(TargetDirectoryPath) do
+				CurrentDirectory = CurrentDirectory.Dialogue[directory];
+			end;
+			
+			-- Show the message to the player
+			local ThemeDialogueContainer = DialogueGui.DialogueContainer;
+			local LineTemplate = ThemeDialogueContainer.NPCTextContainerWithoutResponses.Line;
+			local Message = "";
+			
+			DialogueGui.Parent = PlayerGui;
+			
+			local NPCTalking = true;
+			local WaitingForResponse = true;
+			
+			-- Make the NPC stop talking if the player clicks the frame
+			Events.DialogueClicked = ThemeDialogueContainer.InputBegan:Connect(function(input)
+				
+				-- Make sure the player clicked the frame
+				if input.UserInputType == Enum.UserInputType.MouseButton1 then
+					if NPCTalking then
+						NPCTalking = false;
+					else
+						
+						-- Check if there are any available responses
+						if #CurrentDirectory.Responses:GetChildren() == 0 then
+							WaitingForResponse = false;
+						end;
+						
 					end;
+				end;
+				
+			end);
+			
+			for _, letter in ipairs(CurrentDirectory.Message.Value:split("")) do
+				
+				-- Check if the player wants to skip their dialogue
+				if not NPCTalking then
+					
+					-- Replace the incomplete dialogue with the full text
+					ThemeDialogueContainer.NPCTextContainerWithoutResponses.Line.Text = CurrentDirectory.Message.Value;
+					break;
 					
 				end;
-			end;
-			
-		end);
-		
-		for _, letter in ipairs(CurrentDirectory.Message.Value:split("")) do
-			
-			-- Check if the player wants to skip their dialogue
-			if not NPCTalking then
 				
-				-- Replace the incomplete dialogue with the full text
-				ThemeDialogueContainer.NPCTextContainerWithoutResponses.Line.Text = CurrentDirectory.Message.Value;
-				break;
+				Message = Message..letter;
+				ThemeDialogueContainer.NPCTextContainerWithoutResponses.Line.Text = Message;
+				wait(.025);
 				
 			end;
 			
-			Message = Message..letter;
-			ThemeDialogueContainer.NPCTextContainerWithoutResponses.Line.Text = Message;
-			wait(.025);
+			NPCTalking = false;
+			
+			while WaitingForResponse do
+				game:GetService("RunService").Heartbeat:Wait();
+			end;
+			
+			-- Check if there is more dialogue
+			if #CurrentDirectory.Dialogue:GetChildren() ~= 0 then
+				DialoguePriority = DialoguePriority..".1";
+			else
+				DialogueGui:Destroy();
+				PlayerTalkingWithNPC = false;
+			end;
+			
+		else
+			
+			local SplitPriority = DialoguePriority:split(".");
+			SplitPriority[#SplitPriority] = SplitPriority[#SplitPriority] + 1;
+			DialoguePriority = table.concat(".");
 			
 		end;
-		
-		NPCTalking = false;
-		
-		while WaitingForResponse do
-			game:GetService("RunService").Heartbeat:Wait();
-		end;
-		
-		DialogueGui:Destroy();
-		PlayerTalkingWithNPC = false;
 		
 	end;
 	
