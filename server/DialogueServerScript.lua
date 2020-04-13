@@ -40,3 +40,31 @@ RemoteConnections.GetAllThemes.OnServerInvoke = function(player)
 	return Themes;
 	
 end;
+
+RemoteConnections.PlayerPassesCondition.OnServerInvoke = function(player,npc,priority,dialogueType)
+	
+	-- Ensure security
+	if not npc:IsA("Model") or typeof(priority) ~= "string" or typeof(dialogueType) ~= "string" then
+		warn("[Dialogue Maker] "..player.Name.." failed a security check");
+		error("[Dialogue Maker] Invalid parameters given to check if "..player.Name.." passes a condition");
+	end;
+	
+	-- Search for condition
+	local Condition;
+	for _, condition in ipairs(script.Conditions:GetChildren()) do
+		
+		if condition.NPC.Value == npc and condition.Priority.Value == priority and condition.Type.Value == dialogueType then
+			Condition = condition;
+			break;
+		end;
+		
+	end;
+	
+	-- Check if there is no condition or the condition passed
+	if not Condition or require(Condition) then
+		return true;
+	else
+		return false;
+	end;
+	
+end;
