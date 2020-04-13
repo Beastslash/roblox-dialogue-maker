@@ -91,41 +91,45 @@ RemoteConnections.ExecuteAction.OnServerInvoke = function(player,npc,priority,di
 		
 	end;
 	
-	-- Add the player to the action
-	local Action = require(Action);
+	if Action then
 	
-	local Old = getfenv(Action.Execute);
-	setfenv(Action.Execute,setmetatable({
-		Player = player
-	},{
-	__index = function(t,i)
-		if Old[i] then
-			return Old[i];
+		-- Add the player to the action
+		Action = require(Action);
+		
+		local Old = getfenv(Action.Execute);
+		setfenv(Action.Execute,setmetatable({
+			Player = player
+		},{
+		__index = function(t,i)
+			if Old[i] then
+				return Old[i];
+			else
+				-- Whoops.
+			end;
+		end;}));
+			
+		-- Check if there are any variables the user wants us to overwrite
+		for variable, value in pairs(Action.Variables) do
+			
+			if not DialogueVariables[player] then
+				DialogueVariables[player] = {};
+			end;
+			
+			if not DialogueVariables[player][npc] then
+				DialogueVariables[player][npc] = {};
+			end
+			
+			DialogueVariables[player][npc][variable] = value;
+			
+		end;
+		
+		-- Check if the action is synchronous
+		if Action.Synchronous then
+			Action.Execute();
 		else
-			-- Whoops.
+			coroutine.wrap(Action.Execute)();
 		end;
-	end;}));
-		
-	-- Check if there are any variables the user wants us to overwrite
-	for variable, value in pairs(Action.Variables) do
-		
-		if not DialogueVariables[player] then
-			DialogueVariables[player] = {};
-		end;
-		
-		if not DialogueVariables[player][npc] then
-			DialogueVariables[player][npc] = {};
-		end
-		
-		DialogueVariables[player][npc][variable] = value;
-		
-	end;
 	
-	-- Check if the action is synchronous
-	if Action.Synchronous then
-		Action.Execute();
-	else
-		coroutine.wrap(Action.Execute)();
 	end;
 
 end;
@@ -146,15 +150,20 @@ RemoteConnections.GetVariable.OnServerInvoke = function(player,npc,variable)
 		DialogueVariables[player][npc] = {};
 	end;
 	
-	-- Check the default variables
-	for _, variablesScript in ipairs(script.DefaultVariables:GetChildren()) do
-		if variablesScript.NPC.Value == npc then
-			local DefaultVariablesScript = require(variablesScript);
-			for defaultVariable, value in pairs(DefaultVariablesScript) do
-				DialogueVariables[player][npc][defaultVariable] = value;
+	-- Check the current variables
+	if not DialogueVariables[player][npc][variable] then
+		
+		-- Check for default variables
+		for _, variablesScript in ipairs(script.DefaultVariables:GetChildren()) do
+			if variablesScript.NPC.Value == npc then
+				local DefaultVariablesScript = require(variablesScript);
+				for defaultVariable, value in pairs(DefaultVariablesScript) do
+					DialogueVariables[player][npc][defaultVariable] = value;
+				end;
+				break;
 			end;
-			break;
 		end;
+		
 	end;
 	
 	if DialogueVariables[player][npc][variable] then
