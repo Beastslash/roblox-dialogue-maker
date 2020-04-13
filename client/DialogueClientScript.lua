@@ -119,7 +119,7 @@ local function ReadDialogue(npc)
 			
 			-- Run after action
 			if CurrentDirectory.HasAfterAction.Value then
-				RemoteConnections.ExecuteAction:InvokeServer(npc,"1."..DialoguePriority,"Dialogue","Before");
+				RemoteConnections.ExecuteAction:InvokeServer(npc,"1."..DialoguePriority,"Dialogue","After");
 			end;
 			
 			-- Check if there is more dialogue
