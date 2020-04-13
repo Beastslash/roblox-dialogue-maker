@@ -531,13 +531,30 @@ local function OpenDialogueEditor()
 		Events.DefineSpeechBubblePart = SettingsFrame.DefineSpeechBubblePart.MouseButton1Click:Connect(function()
 			
 			OpenPartSelectionFrame("SpeechBubblePart");
-			print("chheck")
 			
 		end);
 			
 		Events.DefineClickDetector = SettingsFrame.DefineClickDetector.MouseButton1Click:Connect(function()
 			
 			OpenPartSelectionFrame("ClickDetector");
+			
+		end);
+			
+		Events.DefineTimeout = SettingsFrame.TimeoutInSeconds.InputEnded:Connect(function(enterPressed)
+			
+			-- Make sure the user pressed enter
+			if enterPressed and tonumber(SettingsFrame.TimeoutInSeconds.Text) then
+				
+				-- Make sure the user enabled timeouts
+				if CurrentDialogueContainer.Settings.TimeoutEnabled.Value then
+					
+					CurrentDialogueContainer.Settings.TimeoutInSeconds.Value = SettingsFrame.TimeoutInSeconds.Text;
+					SettingsFrame.TimeoutInSeconds.PlaceholderText = CurrentDialogueContainer.Settings.TimeoutInSeconds.Value.." seconds";
+					SettingsFrame.TimeoutInSeconds.Text = "";
+					
+				end;
+				
+			end;
 			
 		end);
 		
