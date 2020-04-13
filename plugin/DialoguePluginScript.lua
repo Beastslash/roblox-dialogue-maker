@@ -575,6 +575,30 @@ local function OpenDialogueEditor()
 		
 	end);
 	
+	Events.ChangeDefaultVariables = Tools.EditVariables:Connect(function()
+		
+		-- Look for the default variables script
+		local DefaultVariablesFolder = ServerScriptService.DialogueServerScript.DefaultVariables;
+		local DefaultVariablesScript;
+		for _, variablesScript in ipairs(DefaultVariablesFolder:GetChildren()) do
+			if variablesScript.NPC.Value == Model then
+				DefaultVariablesScript = variablesScript;
+				break;
+			end;
+		end;
+		
+		-- Create a default variables script if there isn't one
+		if not DefaultVariablesScript then
+			DefaultVariablesScript = script.DefaultVariablesTemplate:Clone();
+			DefaultVariablesScript.Name = "DefaultVariables";
+			DefaultVariablesScript.NPC.Value = Model;
+		end;
+		
+		-- Open the script
+		plugin:OpenScript(DefaultVariablesScript);
+		
+	end);
+	
 	Tools.AddDialogue.MouseButton1Click:Connect(function()
 		
 		local Path = ViewingPriority:split(".");
