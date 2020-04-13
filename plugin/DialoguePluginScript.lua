@@ -212,9 +212,29 @@ local function SyncDialogueGui(directoryDialogue)
 			
 		end);
 		
+		-- Toggle message/response
+		DialogueStatus.InputEnded:Connect(function(input)
+			
+			if input.UserInputType == Enum.UserInputType.MouseButton2 then
+				
+				-- Check if the status is a message
+				if dialogue.Response.Value then
+					dialogue.Response.Value = false;
+					dialogue.Parent = directoryDialogue.Parent.Dialogue;
+				else
+					dialogue.Response.Value = true;
+					dialogue.Parent = directoryDialogue.Parent.Responses;
+				end;
+				
+				SyncDialogueGui(directoryDialogue);
+				
+			end;
+			
+		end);
+		
 	end;
 	
-end
+end;
 
 local function AddDialogueToMessageList(directory,text)
 	
@@ -239,6 +259,10 @@ local function AddDialogueToMessageList(directory,text)
 	local DialogueActive = Instance.new("BoolValue");
 	DialogueActive.Name = "Active";
 	DialogueActive.Value = true;
+	DialogueActive.Parent = DialogueObj;
+	
+	local DialogueActive = Instance.new("BoolValue");
+	DialogueActive.Name = "Response";
 	DialogueActive.Parent = DialogueObj;
 	
 	local DialogueBeforeAction = Instance.new("BoolValue");
