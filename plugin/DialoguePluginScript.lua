@@ -29,6 +29,7 @@ DialogueMakerFrame.DialogueContainer.DialogueMessageList.DialogueMessageTemplate
 local DialogueMakerOpen = false;
 local CurrentDialogueContainer;
 local ViewingPriority = "1";
+local ViewingA = "Dialogue";
 
 local Model;
 
@@ -60,6 +61,12 @@ local function SyncDialogueGui(directoryDialogue)
 	
 	print("Now viewing "..ViewingPriority);
 	
+	if directoryDialogue.Parent:FindFirstChild("Response") and directoryDialogue.Parent.Response.Value then
+		ViewingA = "Response";
+	else
+		ViewingA = "Dialogue";
+	end;
+	
 	-- Clean up the old dialogue
 	for _, status in ipairs(DialogueMessageList:GetChildren()) do
 		
@@ -70,168 +77,196 @@ local function SyncDialogueGui(directoryDialogue)
 	end;
 	
 	-- Sort the directory based on priority
-	local DirectoryChildren = directoryDialogue:GetChildren();
-	table.sort(DirectoryChildren, function(messageA, messageB)
-		
+	local function SortByMessagePriority(messageA, messageB)
 		local MessageAPrioritySplit = messageA.Priority.Value:split(".");
 		local MessageAPriority = tonumber(MessageAPrioritySplit[#MessageAPrioritySplit]);
 		local MessageBPrioritySplit = messageB.Priority.Value:split(".");
 		local MessageBPriority = tonumber(MessageBPrioritySplit[#MessageAPrioritySplit]);
 		
 		return MessageAPriority < MessageBPriority;
+	end
+	
+	local MessageChildren = directoryDialogue:GetChildren();
+	table.sort(MessageChildren, SortByMessagePriority);
 		
-	end);
+	local ResponseChildren = directoryDialogue.Parent.Responses:GetChildren();
+	table.sort(ResponseChildren, SortByMessagePriority);
 	
 	-- Keep track if a message GUI is open
 	local EditingMessage = false;
 	
+	local CombinedDirectories = {ResponseChildren = ResponseChildren; MessageChildren = MessageChildren}
+	
 	-- Create new status
-	for _, dialogue in ipairs(DirectoryChildren) do
+	for _, category in pairs(CombinedDirectories) do
 		
-		local DialogueStatus = DialogueMessageTemplate:Clone();
-		DialogueStatus.Priority.Text = dialogue.Priority.Value;
-		DialogueStatus.Message.Text = dialogue.Message.Value;
-		DialogueStatus.Visible = true;
-		DialogueStatus.Parent = DialogueMessageList;
-		
-		Events.EditingMessage[dialogue] = DialogueStatus.Message.MouseButton1Click:Connect(function()
+		for _, dialogue in ipairs(category) do
 			
-			if EditingMessage then
-				return;
+			local DialogueStatus = DialogueMessageTemplate:Clone();
+			DialogueStatus.Priority.Text = dialogue.Priority.Value;
+			DialogueStatus.Message.Text = dialogue.Message.Value;
+			DialogueStatus.Visible = true;
+			DialogueStatus.Parent = DialogueMessageList;
+			
+			if dialogue.Response.Value then
+				
+				DialogueStatus.BackgroundTransparency = 0.4;
+				
 			end;
 			
-			EditingMessage = true;
-			
-			DialogueStatus.Message.TextBox.Text = dialogue.Message.Value;
-			DialogueStatus.Message.TextBox.Visible = true;
-			DialogueStatus.Message.TextBox:CaptureFocus();
-			DialogueStatus.Message.TextBox.FocusLost:Connect(function(enterPressed)
-				if enterPressed then
-					dialogue.Message.Value = DialogueStatus.Message.TextBox.Text;
-					DialogueStatus.Message.TextBox.Visible = false;
-					SyncDialogueGui(directoryDialogue);
-					EditingMessage = false;
+			Events.EditingMessage[dialogue] = DialogueStatus.Message.MouseButton1Click:Connect(function()
+				
+				if EditingMessage then
+					return;
 				end;
+				
+				EditingMessage = true;
+				
+				DialogueStatus.Message.TextBox.Text = dialogue.Message.Value;
+				DialogueStatus.Message.TextBox.Visible = true;
+				DialogueStatus.Message.TextBox:CaptureFocus();
+				DialogueStatus.Message.TextBox.FocusLost:Connect(function(enterPressed)
+					if enterPressed then
+						dialogue.Message.Value = DialogueStatus.Message.TextBox.Text;
+						DialogueStatus.Message.TextBox.Visible = false;
+						SyncDialogueGui(directoryDialogue);
+						EditingMessage = false;
+					end;
+				end);
+				
 			end);
 			
-		end);
+			DialogueStatus.ConditionButton.MouseButton1Click:Connect(function()
+				
+				-- Look through the condition list and find the condition we want
+				local Condition;
+				for _, child in ipairs(ServerScriptService.DialogueServerScript.Conditions:GetChildren()) do
+					
+					-- Check if the child is a condition
+					if child:IsA("ModuleScript") and child.Priority.Value == dialogue.Priority.Value and child.NPC.Value == Model then
+						
+						-- Return the condiiton
+						Condition = child;
+						break;
+						
+					end;
+					
+				end;
+				
+				if not Condition then
+					
+					-- Create a new condition
+					Condition = script.ConditionTemplate:Clone();
+					Condition.Priority.Value = dialogue.Priority.Value;
+					Condition.NPC.Value = Model;
+					if dialogue.Response.Value then
+						Condition.Type.Value = "Response";
+					else
+						Condition.Type.Value = "Dialogue";
+					end
+					Condition.Name = "Condition";
+					Condition.Parent = ServerScriptService.DialogueServerScript.Conditions;
+					
+				end;
+				
+				-- Open the condition script
+				plugin:OpenScript(Condition);
+				
+			end);
+				
+			local function OpenAction(beforeOrAfter)
+				-- Look through the action list and find the condition we want
+				local Action;
+				for _, child in ipairs(ServerScriptService.DialogueServerScript.Actions[beforeOrAfter]:GetChildren()) do
+					
+					-- Check if the child is a condition
+					if child:IsA("ModuleScript") and child.Priority.Value == dialogue.Priority.Value and child.NPC.Value == Model then
+						
+						-- Return the condiiton
+						Action = child;
+						break;
+						
+					end;
+					
+				end;
+				
+				if not Action then
+					
+					-- Create a new condition
+					Action = script.ActionTemplate:Clone();
+					Action.Priority.Value = dialogue.Priority.Value;
+					Action.NPC.Value = Model;
+					if dialogue.Response.Value then
+						Action.Type.Value = "Response";
+					else
+						Action.Type.Value = "Dialogue";
+					end
+					Action.Name = beforeOrAfter.."Action";
+					Action.Parent = ServerScriptService.DialogueServerScript.Actions[beforeOrAfter];
+					
+					dialogue["Has"..beforeOrAfter.."Action"].Value = true;
+					
+				end;
+				
+				-- Open the condition script
+				plugin:OpenScript(Action);
+				
+			end;
+			
+			DialogueStatus.BeforeActionButton.MouseButton1Click:Connect(function()
+				
+				OpenAction("Before");
+				
+			end);
+				
+			DialogueStatus.AfterActionButton.MouseButton1Click:Connect(function()
+				
+				OpenAction("After");
+				
+			end);
+				
+			DialogueStatus.ViewChildren.MouseButton1Click:Connect(function()
+				
+				ViewingPriority = dialogue.Priority.Value;
+				
+				-- Go to the target directory
+				local Path = ViewingPriority:split(".");
+				local CurrentDirectory = CurrentDialogueContainer;
+				
+				for index, directory in ipairs(Path) do
+					if CurrentDirectory:FindFirstChild(directory) then
+						CurrentDirectory = CurrentDirectory[directory].Dialogue;
+					else
+						CurrentDirectory = CurrentDirectory.Parent.Responses[directory].Dialogue;
+					end;
+				end;
+				
+				SyncDialogueGui(CurrentDirectory);
+				
+			end);
+			
+			-- Toggle message/response
+			DialogueStatus.InputEnded:Connect(function(input)
+				
+				if input.UserInputType == Enum.UserInputType.MouseButton2 and dialogue.Parent.Parent.Parent.Name == "Dialogue" and ViewingPriority ~= "1" then
+					
+					-- Check if the status is a message
+					if dialogue.Response.Value then
+						dialogue.Response.Value = false;
+						dialogue.Parent = directoryDialogue.Parent.Dialogue;
+					else
+						dialogue.Response.Value = true;
+						dialogue.Parent = directoryDialogue.Parent.Responses;
+					end;
+					
+					SyncDialogueGui(directoryDialogue);
+					
+				end;
+				
+			end);
 		
-		DialogueStatus.ConditionButton.MouseButton1Click:Connect(function()
-			
-			-- Look through the condition list and find the condition we want
-			local Condition;
-			for _, child in ipairs(ServerScriptService.DialogueServerScript.Conditions:GetChildren()) do
-				
-				-- Check if the child is a condition
-				if child:IsA("ModuleScript") and child.Priority.Value == dialogue.Priority.Value and child.NPC.Value == Model then
-					
-					-- Return the condiiton
-					Condition = child;
-					break;
-					
-				end;
-				
-			end;
-			
-			if not Condition then
-				
-				-- Create a new condition
-				Condition = script.ConditionTemplate:Clone();
-				Condition.Priority.Value = dialogue.Priority.Value;
-				Condition.NPC.Value = Model;
-				Condition.Type.Value = "Dialogue"
-				Condition.Name = "Condition";
-				Condition.Parent = ServerScriptService.DialogueServerScript.Conditions;
-				
-			end;
-			
-			-- Open the condition script
-			plugin:OpenScript(Condition);
-			
-		end);
-			
-		local function OpenAction(beforeOrAfter)
-			-- Look through the action list and find the condition we want
-			local Action;
-			for _, child in ipairs(ServerScriptService.DialogueServerScript.Actions[beforeOrAfter]:GetChildren()) do
-				
-				-- Check if the child is a condition
-				if child:IsA("ModuleScript") and child.Priority.Value == dialogue.Priority.Value and child.NPC.Value == Model then
-					
-					-- Return the condiiton
-					Action = child;
-					break;
-					
-				end;
-				
-			end;
-			
-			if not Action then
-				
-				-- Create a new condition
-				Action = script.ActionTemplate:Clone();
-				Action.Priority.Value = dialogue.Priority.Value;
-				Action.NPC.Value = Model;
-				Action.Type.Value = "Dialogue";
-				Action.Name = beforeOrAfter.."Action";
-				Action.Parent = ServerScriptService.DialogueServerScript.Actions[beforeOrAfter];
-				
-				dialogue["Has"..beforeOrAfter.."Action"].Value = true;
-				
-			end;
-			
-			-- Open the condition script
-			plugin:OpenScript(Action);
-			
 		end;
-		
-		DialogueStatus.BeforeActionButton.MouseButton1Click:Connect(function()
-			
-			OpenAction("Before");
-			
-		end);
-			
-		DialogueStatus.AfterActionButton.MouseButton1Click:Connect(function()
-			
-			OpenAction("After");
-			
-		end);
-			
-		DialogueStatus.ViewChildren.MouseButton1Click:Connect(function()
-			
-			ViewingPriority = dialogue.Priority.Value;
-			
-			-- Go to the target directory
-			local Path = ViewingPriority:split(".");
-			local CurrentDirectory = CurrentDialogueContainer;
-			for _, directory in ipairs(Path) do
-				CurrentDirectory = CurrentDirectory[directory].Dialogue;
-			end;
-			
-			SyncDialogueGui(CurrentDirectory)
-			
-		end);
-		
-		-- Toggle message/response
-		DialogueStatus.InputEnded:Connect(function(input)
-			
-			if input.UserInputType == Enum.UserInputType.MouseButton2 then
-				
-				-- Check if the status is a message
-				if dialogue.Response.Value then
-					dialogue.Response.Value = false;
-					dialogue.Parent = directoryDialogue.Parent.Dialogue;
-				else
-					dialogue.Response.Value = true;
-					dialogue.Parent = directoryDialogue.Parent.Responses;
-				end;
-				
-				SyncDialogueGui(directoryDialogue);
-				
-			end;
-			
-		end);
-		
+	
 	end;
 	
 end;
@@ -240,11 +275,11 @@ local function AddDialogueToMessageList(directory,text)
 	
 	-- Let's create the dialogue first.
 	-- Get message priority
-	local Priority = ViewingPriority.."."..#directory:GetChildren()+1;
+	local Priority = ViewingPriority.."."..(#directory:GetChildren()+#directory.Parent.Responses:GetChildren())+1;
 	
 	-- Create the dialogue folder
 	local DialogueObj = Instance.new("Folder");
-	DialogueObj.Name = #directory:GetChildren()+1;
+	DialogueObj.Name = (#directory:GetChildren()+#directory.Parent.Responses:GetChildren())+1;
 	
 	local DialoguePriority = Instance.new("StringValue");
 	DialoguePriority.Name = "Priority";
@@ -667,7 +702,20 @@ local function OpenDialogueEditor()
 				
 			end;
 			
-			CurrentDirectory = TargetDirectory.Dialogue;
+			print(_.."/"..#Path.." ("..directory..") --------")
+			print("P1: "..CurrentDirectory.Name)
+			print("P2: "..CurrentDirectory.Parent.Name)
+			print("P3: "..CurrentDirectory.Parent.Parent.Name)
+			print("P4: "..CurrentDirectory.Parent.Parent.Parent.Name)
+			print("\n")
+			
+			if TargetDirectory.Dialogue:FindFirstChild(directory) then
+				CurrentDirectory = TargetDirectory.Dialogue;
+			elseif TargetDirectory.Responses:FindFirstChild(directory) then
+				CurrentDirectory = TargetDirectory.Responses;
+			elseif CurrentDirectory:FindFirstChild(directory) then
+				CurrentDirectory = CurrentDirectory[directory].Dialogue;
+			end;
 			
 		end;
 		
