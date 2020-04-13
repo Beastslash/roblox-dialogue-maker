@@ -147,12 +147,11 @@ local function SyncDialogueGui(directory)
 			plugin:OpenScript(Condition);
 			
 		end);
-		
-		DialogueStatus.BeforeActionButton.MouseButton1Click:Connect(function()
 			
+		local function OpenAction(beforeOrAfter)
 			-- Look through the action list and find the condition we want
 			local Action;
-			for _, child in ipairs(ServerScriptService.DialogueServerScript.Actions.Before:GetChildren()) do
+			for _, child in ipairs(ServerScriptService.DialogueServerScript.Actions[beforeOrAfter]:GetChildren()) do
 				
 				-- Check if the child is a condition
 				if child:IsA("ModuleScript") and child.Priority.Value == dialogue.Priority.Value and child.NPC.Value == Model then
@@ -173,14 +172,26 @@ local function SyncDialogueGui(directory)
 				Action.NPC.Value = Model;
 				Action.Type.Value = "Dialogue";
 				Action.Name = "BeforeAction";
-				Action.Parent = ServerScriptService.DialogueServerScript.Actions.Before;
+				Action.Parent = ServerScriptService.DialogueServerScript.Actions[beforeOrAfter];
 				
-				dialogue.HasBeforeAction.Value = true;
+				dialogue["Has"..beforeOrAfter.."Action"].Value = true;
 				
 			end;
 			
 			-- Open the condition script
 			plugin:OpenScript(Action);
+			
+		end;
+		
+		DialogueStatus.BeforeActionButton.MouseButton1Click:Connect(function()
+			
+			OpenAction("Before");
+			
+		end);
+			
+		DialogueStatus.AfterActionButton.MouseButton1Click:Connect(function()
+			
+			OpenAction("After");
 			
 		end);
 		
