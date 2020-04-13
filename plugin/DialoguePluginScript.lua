@@ -575,7 +575,7 @@ local function OpenDialogueEditor()
 		
 	end);
 	
-	Events.ChangeDefaultVariables = Tools.EditVariables:Connect(function()
+	Events.ChangeDefaultVariables = Tools.EditVariables.MouseButton1Click:Connect(function()
 		
 		-- Look for the default variables script
 		local DefaultVariablesFolder = ServerScriptService.DialogueServerScript.DefaultVariables;
