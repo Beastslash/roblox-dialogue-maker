@@ -50,7 +50,7 @@ local function ReadDialogue(npc)
 	-- Show the dialouge to the player
 	while PlayerTalkingWithNPC and game:GetService("RunService").Heartbeat:Wait() do
 		
-		if RemoteConnections.PlayerPassesCondition:InvokeServer(DialoguePriority) then
+		if RemoteConnections.PlayerPassesCondition:InvokeServer(npc,DialoguePriority,"Dialogue") then
 		
 			local TargetDirectoryPath = DialoguePriority:split(".");
 			local Attempts = #DialogueContainer:GetChildren();
