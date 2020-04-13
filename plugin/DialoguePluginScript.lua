@@ -56,7 +56,9 @@ local function CloseDialogueEditor()
 	
 end;
 
-local function SyncDialogueGui(directory)
+local function SyncDialogueGui(directoryDialogue)
+	
+	print("Now viewing "..ViewingPriority);
 	
 	-- Clean up the old dialogue
 	for _, status in ipairs(DialogueMessageList:GetChildren()) do
@@ -68,7 +70,7 @@ local function SyncDialogueGui(directory)
 	end;
 	
 	-- Sort the directory based on priority
-	local DirectoryChildren = directory:GetChildren();
+	local DirectoryChildren = directoryDialogue:GetChildren();
 	table.sort(DirectoryChildren, function(messageA, messageB)
 		
 		local MessageAPrioritySplit = messageA.Priority.Value:split(".");
@@ -107,7 +109,7 @@ local function SyncDialogueGui(directory)
 				if enterPressed then
 					dialogue.Message.Value = DialogueStatus.Message.TextBox.Text;
 					DialogueStatus.Message.TextBox.Visible = false;
-					SyncDialogueGui(directory);
+					SyncDialogueGui(directoryDialogue);
 					EditingMessage = false;
 				end;
 			end);
@@ -192,6 +194,21 @@ local function SyncDialogueGui(directory)
 		DialogueStatus.AfterActionButton.MouseButton1Click:Connect(function()
 			
 			OpenAction("After");
+			
+		end);
+			
+		DialogueStatus.ViewChildren.MouseButton1Click:Connect(function()
+			
+			ViewingPriority = dialogue.Priority.Value;
+			
+			-- Go to the target directory
+			local Path = ViewingPriority:split(".");
+			local CurrentDirectory = CurrentDialogueContainer;
+			for _, directory in ipairs(Path) do
+				CurrentDirectory = CurrentDirectory[directory].Dialogue;
+			end;
+			
+			SyncDialogueGui(CurrentDirectory)
 			
 		end);
 		
@@ -603,7 +620,8 @@ local function OpenDialogueEditor()
 		
 		local Path = ViewingPriority:split(".");
 		local CurrentDirectory = CurrentDialogueContainer;
-		for directory, _ in pairs(Path) do
+		for _, directory in ipairs(Path) do
+			
 			local TargetDirectory = CurrentDirectory:FindFirstChild(directory);
 			if not TargetDirectory then
 				
@@ -624,11 +642,12 @@ local function OpenDialogueEditor()
 				TargetDirectory.Parent = CurrentDirectory;
 				
 			end;
-			CurrentDirectory = TargetDirectory;
+			
+			CurrentDirectory = TargetDirectory.Dialogue;
 			
 		end;
 		
-		AddDialogueToMessageList(CurrentDirectory.Dialogue,"");
+		AddDialogueToMessageList(CurrentDirectory,"");
 		
 	end);
 	
