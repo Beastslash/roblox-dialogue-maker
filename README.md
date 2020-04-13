@@ -5,7 +5,7 @@ The Dialogue Maker is am open-source plugin for creating RPG-like dialogue boxes
 
 ## Features
 * Responsive dialogue editor
-* NPC dialogue triggers (clicking and proximity)
+* NPC dialogue triggers (clicking and proximity regions)
 * Conditional dialogue
 * Asynchronous and synchronous functions can be ran before and after dialogue starts
 
