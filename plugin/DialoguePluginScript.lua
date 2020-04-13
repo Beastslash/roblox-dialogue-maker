@@ -116,7 +116,7 @@ local function SyncDialogueGui(directory)
 			for _, child in ipairs(ServerScriptService.DialogueServerScript.Conditions:GetChildren()) do
 				
 				-- Check if the child is a condition
-				if child:IsA("ModuleScript") and child.Priority.Value == tostring(dialogue.Priority.Value) and child.NPC.Value == Model then
+				if child:IsA("ModuleScript") and child.Priority.Value == dialogue.Priority.Value and child.NPC.Value == Model then
 					
 					-- Return the condiiton
 					Condition = child;
@@ -151,7 +151,7 @@ local function AddDialogueToMessageList(directory,text)
 	
 	-- Let's create the dialogue first.
 	-- Get message priority
-	local Priority = #directory:GetChildren()+1;
+	local Priority = ViewingPriority.."."..#directory:GetChildren()+1;
 	
 	-- Create the dialogue folder
 	local DialogueObj = Instance.new("Folder");
