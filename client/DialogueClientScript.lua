@@ -113,6 +113,12 @@ local function ReadDialogue(npc)
 			
 			NPCTalking = false;
 			
+			coroutine.wrap(function()
+				if DialogueSettings.TimeoutEnabled.Value and DialogueSettings.TimeoutInSeconds.Value then
+					WaitingForResponse = false;
+				end;
+			end)();
+			
 			while WaitingForResponse do
 				game:GetService("RunService").Heartbeat:Wait();
 			end;
