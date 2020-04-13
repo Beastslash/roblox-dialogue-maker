@@ -115,6 +115,7 @@ local function ReadDialogue(npc)
 			
 			coroutine.wrap(function()
 				if DialogueSettings.TimeoutEnabled.Value and DialogueSettings.TimeoutInSeconds.Value then
+					wait(DialogueSettings.TimeoutInSeconds.Value);
 					WaitingForResponse = false;
 				end;
 			end)();
