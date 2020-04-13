@@ -144,6 +144,7 @@ local function ReadDialogue(npc)
 			-- Check if there is more dialogue
 			if #CurrentDirectory.Dialogue:GetChildren() ~= 0 then
 				DialoguePriority = DialoguePriority..".1";
+				CurrentDirectory = RootDirectory;
 			else
 				DialogueGui:Destroy();
 				PlayerTalkingWithNPC = false;
