@@ -171,6 +171,7 @@ local function SyncDialogueGui(directory)
 				Action = script.ActionTemplate:Clone();
 				Action.Priority.Value = dialogue.Priority.Value;
 				Action.NPC.Value = Model;
+				Action.Type.Value = "Dialogue";
 				Action.Name = "ActionBefore";
 				Action.Parent = ServerScriptService.DialogueServerScript.Actions.Before;
 				
