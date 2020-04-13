@@ -22,7 +22,7 @@ local DialogueMessageTemplate = DialogueMessageList.DialogueMessageTemplate:Clon
 local SettingsFrame = DialogueMakerFrame.SettingsFrame;
 local PartSelectionFrame = DialogueMakerFrame.PartSelection;
 local Tools = DialogueMakerFrame.Tools;
-local Events = {};
+local Events = {EditingMessage = {};};
 
 DialogueMakerFrame.DialogueContainer.DialogueMessageList.DialogueMessageTemplate:Destroy();
 
@@ -87,7 +87,7 @@ local function SyncDialogueGui(directory)
 		DialogueStatus.Visible = true;
 		DialogueStatus.Parent = DialogueMessageList;
 		
-		DialogueStatus.Message.MouseButton1Click:Connect(function()
+		Events.EditingMessage[dialogue] = DialogueStatus.Message.MouseButton1Click:Connect(function()
 			
 			if EditingMessage then
 				return;
@@ -106,6 +106,38 @@ local function SyncDialogueGui(directory)
 					EditingMessage = false;
 				end;
 			end);
+			
+		end);
+		
+		DialogueStatus.ConditionButton.MouseButton1Click:Connect(function()
+			
+			-- Look through the condition list and find the condition we want
+			local Condition;
+			for _, child in ipairs(ServerScriptService.DialogueServerScript.Conditions:GetChildren()) do
+				
+				-- Check if the child is a condition
+				if child:IsA("ModuleScript") and child.Priority.Value == dialogue.Priority.Value then
+					
+					-- Return the condiiton
+					Condition = child;
+					break;
+					
+				end;
+				
+			end;
+			
+			if not Condition then
+				
+				-- Create a new condition
+				Condition = script.ConditionTemplate:Clone();
+				Condition.Priority.Value = dialogue.Priority.Value;
+				Condition.Name = "Condition";
+				Condition.Parent = ServerScriptService.DialogueServerScript.Conditions;
+				
+			end;
+			
+			-- Open the condition script
+			plugin:OpenScript(Condition);
 			
 		end);
 		
