@@ -43,6 +43,9 @@ local function ReadDialogue(npc)
 	
 	-- Show the dialogue GUI to the player
 	local DialogueGui = ThemeUsed:Clone();
+	local ResponseContainer = DialogueGui.DialogueContainer.ResponseContainer;
+	local ResponseTemplate = ResponseContainer.ResponseTemplate:Clone();
+	ResponseContainer.ResponseTemplate:Destroy();
 	local DialoguePriority = "1";
 	local RootDirectory = DialogueContainer["1"];
 	local CurrentDirectory = RootDirectory;
@@ -79,7 +82,25 @@ local function ReadDialogue(npc)
 			
 			-- Show the message to the player
 			local ThemeDialogueContainer = DialogueGui.DialogueContainer;
-			local LineTemplate = ThemeDialogueContainer.NPCTextContainerWithoutResponses.Line;
+			
+			-- Check if there are any response options
+			local TextContainer;
+			local ResponsesEnabled = false;
+			if #CurrentDirectory.Responses:GetChildren() > 0 then
+				
+				TextContainer = ThemeDialogueContainer.NPCTextContainerWithResponses;
+				ThemeDialogueContainer.NPCTextContainerWithResponses.Visible = true;
+				ThemeDialogueContainer.NPCTextContainerWithoutResponses.Visible = false;
+				ResponsesEnabled = true;
+				
+			else
+				
+				TextContainer = ThemeDialogueContainer.NPCTextContainerWithoutResponses;
+				ThemeDialogueContainer.NPCTextContainerWithoutResponses.Visible = true;
+				ThemeDialogueContainer.NPCTextContainerWithResponses.Visible = false;
+				
+			end;
+			
 			local Message = "";
 			
 			DialogueGui.Parent = PlayerGui;
@@ -112,18 +133,28 @@ local function ReadDialogue(npc)
 				if not NPCTalking then
 					
 					-- Replace the incomplete dialogue with the full text
-					ThemeDialogueContainer.NPCTextContainerWithoutResponses.Line.Text = MessageText;
+					TextContainer.Line.Text = MessageText;
 					break;
 					
 				end;
 				
 				Message = Message..letter;
-				ThemeDialogueContainer.NPCTextContainerWithoutResponses.Line.Text = Message;
+				TextContainer.Line.Text = Message;
 				wait(.025);
 				
 			end;
-			
 			NPCTalking = false;
+			
+			if ResponsesEnabled then
+				for _, response in ipairs(CurrentDirectory.Responses:GetChildren()) do
+					
+					local ResponseButton = ResponseTemplate:Clone();
+					ResponseButton.Text = response.Message.Value;
+					ResponseButton.Parent = ResponseContainer;
+					
+				end;
+				ResponseContainer.Visible = true;
+			end
 			
 			coroutine.wrap(function()
 				if DialogueSettings.TimeoutEnabled.Value and DialogueSettings.TimeoutInSeconds.Value then
