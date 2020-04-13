@@ -51,13 +51,18 @@ local function ReadDialogue(npc)
 	while PlayerTalkingWithNPC and game:GetService("RunService").Heartbeat:Wait() do
 		
 		if RemoteConnections.PlayerPassesCondition:InvokeServer(npc,"1."..DialoguePriority,"Dialogue") then
-		
+			
 			local TargetDirectoryPath = DialoguePriority:split(".");
 			local Attempts = #DialogueContainer:GetChildren();
 			
 			-- Move to the target directory
 			for index, directory in ipairs(TargetDirectoryPath) do
 				CurrentDirectory = CurrentDirectory.Dialogue[directory];
+			end;
+			
+			-- Run the before action if there is one
+			if CurrentDirectory.HasBeforeAction.Value then
+				RemoteConnections.ExecuteAction:InvokeServer(npc,"1."..DialoguePriority,"Dialogue","Before");
 			end;
 			
 			-- Show the message to the player
