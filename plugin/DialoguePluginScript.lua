@@ -148,7 +148,7 @@ local function SyncDialogueGui(directory)
 			
 		end);
 		
-		DialogueStatus.ActionBeforeButton.MouseButton1Click:Connect(function()
+		DialogueStatus.BeforeActionButton.MouseButton1Click:Connect(function()
 			
 			-- Look through the action list and find the condition we want
 			local Action;
@@ -172,8 +172,10 @@ local function SyncDialogueGui(directory)
 				Action.Priority.Value = dialogue.Priority.Value;
 				Action.NPC.Value = Model;
 				Action.Type.Value = "Dialogue";
-				Action.Name = "ActionBefore";
+				Action.Name = "BeforeAction";
 				Action.Parent = ServerScriptService.DialogueServerScript.Actions.Before;
+				
+				dialogue.HasBeforeAction.Value = true;
 				
 			end;
 			
@@ -211,13 +213,13 @@ local function AddDialogueToMessageList(directory,text)
 	DialogueActive.Value = true;
 	DialogueActive.Parent = DialogueObj;
 	
-	local DialogueActionBefore = Instance.new("ObjectValue");
-	DialogueActionBefore.Name = "ActionBefore";
-	DialogueActionBefore.Parent = DialogueObj;
+	local DialogueBeforeAction = Instance.new("BoolValue");
+	DialogueBeforeAction.Name = "HasBeforeAction";
+	DialogueBeforeAction.Parent = DialogueObj;
 	
-	local DialogueActionAfter = Instance.new("ObjectValue");
-	DialogueActionAfter.Name = "ActionAfter";
-	DialogueActionAfter.Parent = DialogueObj;
+	local DialogueAfterAction = Instance.new("BoolValue");
+	DialogueAfterAction.Name = "HasAfterAction";
+	DialogueAfterAction.Parent = DialogueObj;
 	
 	local DialogueChildDialogue = Instance.new("Folder");
 	DialogueChildDialogue.Name = "Dialogue"
