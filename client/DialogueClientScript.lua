@@ -65,6 +65,17 @@ local function ReadDialogue(npc)
 				RemoteConnections.ExecuteAction:InvokeServer(npc,"1."..DialoguePriority,"Dialogue","Before");
 			end;
 			
+			-- Check if the message has any variables
+			local MessageText = CurrentDirectory.Message.Text;
+			local VariableMatches = MessageText:gmatch("%[/variable=(%w+)%]");
+			for match in VariableMatches do
+				
+				-- Get the match from the server
+				local VariableValue = RemoteConnections.GetVariable:InvokeServer(npc,match);
+				MessageText = MessageText:gsub("%[/variable=(%w+)%]",VariableValue);
+				
+			end;
+			
 			-- Show the message to the player
 			local ThemeDialogueContainer = DialogueGui.DialogueContainer;
 			local LineTemplate = ThemeDialogueContainer.NPCTextContainerWithoutResponses.Line;
