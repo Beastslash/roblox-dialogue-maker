@@ -148,6 +148,39 @@ local function SyncDialogueGui(directory)
 			
 		end);
 		
+		DialogueStatus.ActionBeforeButton.MouseButton1Click:Connect(function()
+			
+			-- Look through the action list and find the condition we want
+			local Action;
+			for _, child in ipairs(ServerScriptService.DialogueServerScript.Actions.Before:GetChildren()) do
+				
+				-- Check if the child is a condition
+				if child:IsA("ModuleScript") and child.Priority.Value == dialogue.Priority.Value and child.NPC.Value == Model then
+					
+					-- Return the condiiton
+					Action = child;
+					break;
+					
+				end;
+				
+			end;
+			
+			if not Action then
+				
+				-- Create a new condition
+				Action = script.ActionTemplate:Clone();
+				Action.Priority.Value = dialogue.Priority.Value;
+				Action.NPC.Value = Model;
+				Action.Name = "ActionBefore";
+				Action.Parent = ServerScriptService.DialogueServerScript.Actions.Before;
+				
+			end;
+			
+			-- Open the condition script
+			plugin:OpenScript(Action);
+			
+		end);
+		
 	end;
 	
 end
