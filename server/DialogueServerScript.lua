@@ -68,3 +68,32 @@ RemoteConnections.PlayerPassesCondition.OnServerInvoke = function(player,npc,pri
 	end;
 	
 end;
+
+RemoteConnections.ExecuteAction.OnServerInvoke = function(player,npc,priority,dialogueType,beforeOrAfter)
+	
+	-- Ensure security
+	if not npc:IsA("Model") or typeof(priority) ~= "string" or typeof(dialogueType) ~= "string" or typeof(beforeOrAfter) ~= "string" then
+		warn("[Dialogue Maker] "..player.Name.." failed a security check");
+		error("[Dialogue Maker] Invalid parameters given to check if "..player.Name.." passes a condition");
+	end;
+	
+	-- Search for action
+	local Action;
+	for _, action in ipairs(script.Actions[beforeOrAfter]:GetChildren()) do
+		
+		if action.NPC.Value == npc and action.Priority.Value == priority and action.Type.Value == dialogueType then
+			Action = action;
+			break;
+		end;
+		
+	end;
+	
+	-- Check if the action is synchronous
+	local Action = require(Action);
+	if Action.Synchronous then
+		Action.Execute();
+	else
+		coroutine.wrap(Action.Execute)();
+	end;
+
+end;
