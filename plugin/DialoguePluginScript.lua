@@ -171,7 +171,7 @@ local function SyncDialogueGui(directory)
 				Action.Priority.Value = dialogue.Priority.Value;
 				Action.NPC.Value = Model;
 				Action.Type.Value = "Dialogue";
-				Action.Name = "BeforeAction";
+				Action.Name = beforeOrAfter.."Action";
 				Action.Parent = ServerScriptService.DialogueServerScript.Actions[beforeOrAfter];
 				
 				dialogue["Has"..beforeOrAfter.."Action"].Value = true;
