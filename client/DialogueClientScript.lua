@@ -66,7 +66,7 @@ local function ReadDialogue(npc)
 			end;
 			
 			-- Check if the message has any variables
-			local MessageText = CurrentDirectory.Message.Text;
+			local MessageText = CurrentDirectory.Message.Value;
 			local VariableMatches = MessageText:gmatch("%[/variable=(%w+)%]");
 			for match in VariableMatches do
 				
