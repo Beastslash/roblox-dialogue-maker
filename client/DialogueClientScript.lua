@@ -62,16 +62,25 @@ local function ReadDialogue(npc)
 				CurrentDirectory = CurrentDirectory.Dialogue[directory];
 			elseif CurrentDirectory.Responses:FindFirstChild(directory) then
 				CurrentDirectory = CurrentDirectory.Responses[directory];
+			elseif CurrentDirectory.Redirects:FindFirstChild(directory) then
+				CurrentDirectory = CurrentDirectory.Redirects[directory];
 			elseif CurrentDirectory:FindFirstChild(directory) then
 				CurrentDirectory = CurrentDirectory[directory];
 			end;
 		end;
 		
-		if RemoteConnections.PlayerPassesCondition:InvokeServer(npc,CurrentDirectory,"Dialogue") then
+		if CurrentDirectory.Redirect.Value and RemoteConnections.PlayerPassesCondition:InvokeServer(npc,CurrentDirectory) then
+			
+			RemoteConnections.ExecuteAction:InvokeServer(npc,CurrentDirectory,"Before");
+			DialoguePriority = CurrentDirectory.RedirectPriority.Value;
+			CurrentDirectory = RootDirectory;
+			RemoteConnections.ExecuteAction:InvokeServer(npc,CurrentDirectory,"After");
+			
+		elseif RemoteConnections.PlayerPassesCondition:InvokeServer(npc,CurrentDirectory) then
 			
 			-- Run the before action if there is one
 			if CurrentDirectory.HasBeforeAction.Value then
-				RemoteConnections.ExecuteAction:InvokeServer(npc,"1."..DialoguePriority,"Dialogue","Before");
+				RemoteConnections.ExecuteAction:InvokeServer(npc,CurrentDirectory,"Before");
 			end;
 			
 			-- Check if the message has any variables
@@ -166,9 +175,8 @@ local function ReadDialogue(npc)
 				-- Add response buttons
 				for _, response in ipairs(CurrentDirectory.Responses:GetChildren()) do
 					
-					if RemoteConnections.PlayerPassesCondition:InvokeServer(npc,response,"Response") then
+					if RemoteConnections.PlayerPassesCondition:InvokeServer(npc,response) then
 					
-						print(true)
 						local ResponseButton = ResponseTemplate:Clone();
 						ResponseButton.Name = "Response";
 						ResponseButton.Text = response.Message.Value;
@@ -179,7 +187,7 @@ local function ReadDialogue(npc)
 							Response = response;
 							
 							if response.HasAfterAction.Value then
-								RemoteConnections.ExecuteAction:InvokeServer(npc,response,"Response","After");
+								RemoteConnections.ExecuteAction:InvokeServer(npc,response,"After");
 							end;
 							
 							WaitingForResponse = false;
@@ -205,7 +213,7 @@ local function ReadDialogue(npc)
 			
 			-- Run after action
 			if CurrentDirectory.HasAfterAction.Value then
-				RemoteConnections.ExecuteAction:InvokeServer(npc,CurrentDirectory,"Dialogue","After");
+				RemoteConnections.ExecuteAction:InvokeServer(npc,CurrentDirectory,"After");
 			end;
 			
 			if Response then
@@ -223,7 +231,7 @@ local function ReadDialogue(npc)
 			else
 				
 				-- Check if there is more dialogue
-				if #CurrentDirectory.Dialogue:GetChildren() ~= 0 then
+				if #CurrentDirectory.Dialogue:GetChildren() ~= 0 or #CurrentDirectory.Redirects:GetChildren() ~= 0 then
 					DialoguePriority = DialoguePriority..".1";
 					CurrentDirectory = RootDirectory;
 				else
