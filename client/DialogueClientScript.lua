@@ -94,9 +94,15 @@ local function ReadDialogue(npc)
 			local ResponsesEnabled = false;
 			if #CurrentDirectory.Responses:GetChildren() > 0 then
 				
+				-- Clear previous responses
+				for _, response in ipairs(ResponseContainer:GetChildren()) do
+					response:Destroy();
+				end;
+				
 				TextContainer = ThemeDialogueContainer.NPCTextContainerWithResponses;
 				ThemeDialogueContainer.NPCTextContainerWithResponses.Visible = true;
 				ThemeDialogueContainer.NPCTextContainerWithoutResponses.Visible = false;
+				ThemeDialogueContainer.ResponseContainer.Visible = true;
 				ResponsesEnabled = true;
 				
 			else
@@ -104,6 +110,7 @@ local function ReadDialogue(npc)
 				TextContainer = ThemeDialogueContainer.NPCTextContainerWithoutResponses;
 				ThemeDialogueContainer.NPCTextContainerWithoutResponses.Visible = true;
 				ThemeDialogueContainer.NPCTextContainerWithResponses.Visible = false;
+				ThemeDialogueContainer.ResponseContainer.Visible = false;
 				
 			end;
 			
@@ -153,6 +160,8 @@ local function ReadDialogue(npc)
 			
 			local Response;
 			if ResponsesEnabled then
+				
+				-- Add response buttons
 				for _, response in ipairs(CurrentDirectory.Responses:GetChildren()) do
 					
 					if RemoteConnections.PlayerPassesCondition:InvokeServer(npc,response.Priority.Value,"Response") then
@@ -173,7 +182,6 @@ local function ReadDialogue(npc)
 					end;
 					
 				end;
-				ResponseContainer.Visible = true;
 			end;
 			
 			coroutine.wrap(function()
