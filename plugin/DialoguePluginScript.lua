@@ -45,6 +45,7 @@ local function CloseDialogueEditor()
 		end;
 	end;
 	
+	ViewingPriority = "1";
 	DialogueMakerFrame = DialogueMakerFrame:Clone();
 	DialogueMessageList = DialogueMakerFrame.DialogueContainer.DialogueMessageList;
 	DialogueMessageTemplate = DialogueMessageTemplate:Clone();
