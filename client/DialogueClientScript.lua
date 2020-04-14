@@ -201,7 +201,7 @@ local function ReadDialogue(npc)
 			end;
 			
 			coroutine.wrap(function()
-				if DialogueSettings.TimeoutEnabled.Value and DialogueSettings.TimeoutInSeconds.Value then
+				if DialogueSettings.TimeoutEnabled.Value and DialogueSettings.TimeoutInSeconds.Value and not ResponsesEnabled then
 					wait(DialogueSettings.TimeoutInSeconds.Value);
 					WaitingForResponse = false;
 				end;
