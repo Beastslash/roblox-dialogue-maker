@@ -11,6 +11,7 @@ local StarterPlayer = game:GetService("StarterPlayer");
 local StarterPlayerScripts = StarterPlayer.StarterPlayerScripts;
 local ReplicatedStorage = game:GetService("ReplicatedStorage");
 local ServerScriptService = game:GetService("ServerScriptService");
+local UserInputService = game:GetService("UserInputService");
 
 -- Toolbar configuration
 local Toolbar = plugin:CreateToolbar("Dialogue Maker by Beastslash");
@@ -22,7 +23,7 @@ local DialogueMessageTemplate = DialogueMessageList.DialogueMessageTemplate:Clon
 local SettingsFrame = DialogueMakerFrame.SettingsFrame;
 local PartSelectionFrame = DialogueMakerFrame.PartSelection;
 local Tools = DialogueMakerFrame.Tools;
-local Events = {EditingMessage = {};};
+local Events = {EditingMessage = {}; EditingRedirect = {}; ConvertFromRedirect = {}; ConvertToRedirect = {}};
 
 DialogueMakerFrame.DialogueContainer.DialogueMessageList.DialogueMessageTemplate:Destroy();
 
@@ -58,13 +59,13 @@ local function CloseDialogueEditor()
 end;
 
 local function SyncDialogueGui(directoryDialogue)
-	
 	if ViewingPriority == "1" then
 		DialogueMakerFrame.ViewStatus.DialogueLocationStatus.Text = "Viewing the beginning of the conversation";
 	else
 		DialogueMakerFrame.ViewStatus.DialogueLocationStatus.Text = "Viewing "..ViewingPriority;
 		Events.ViewParent = Tools.ViewParent.MouseButton1Click:Connect(function()
 			Events.ViewParent:Disconnect();
+			
 			Tools.ViewParent.BackgroundColor3 = Color3.fromRGB(159,159,159);
 			
 			local NewViewingPriority = ViewingPriority:split(".");
@@ -101,16 +102,26 @@ local function SyncDialogueGui(directoryDialogue)
 		return MessageAPriority < MessageBPriority;
 	end
 	
-	local MessageChildren = directoryDialogue:GetChildren();
-	table.sort(MessageChildren, SortByMessagePriority);
-		
 	local ResponseChildren = directoryDialogue.Parent.Responses:GetChildren();
 	table.sort(ResponseChildren, SortByMessagePriority);
+	
+	local MessageChildren = directoryDialogue.Parent.Dialogue:GetChildren();
+	table.sort(MessageChildren, SortByMessagePriority);
+	
+	local RedirectChildren = directoryDialogue.Parent.Redirects:GetChildren();
+	table.sort(RedirectChildren, SortByMessagePriority);
+	
+	-- Check if there is a redirect
+	if RedirectChildren[1] then
+		DialogueMessageList.Parent.DescriptionLabels.Text.Text = "Text / Redirect";
+	else
+		DialogueMessageList.Parent.DescriptionLabels.Text.Text = "Text";
+	end;
 	
 	-- Keep track if a message GUI is open
 	local EditingMessage = false;
 	
-	local CombinedDirectories = {ResponseChildren = ResponseChildren; MessageChildren = MessageChildren}
+	local CombinedDirectories = {ResponseChildren = ResponseChildren; MessageChildren = MessageChildren; RedirectChildren = RedirectChildren}
 	
 	-- Create new status
 	for _, category in pairs(CombinedDirectories) do
@@ -123,12 +134,26 @@ local function SyncDialogueGui(directoryDialogue)
 			DialogueStatus.Priority.PlaceholderText = dialogue.Priority.Value;
 			DialogueStatus.Priority.Text = dialogue.Priority.Value;
 			DialogueStatus.Message.Text = dialogue.Message.Value;
+			DialogueStatus.RedirectPriority.Text = dialogue.RedirectPriority.Value;
 			DialogueStatus.Visible = true;
 			DialogueStatus.Parent = DialogueMessageList;
 			
 			if dialogue.Response.Value then
 				
 				DialogueStatus.BackgroundTransparency = 0.4;
+				DialogueStatus.BackgroundColor3 = Color3.fromRGB(30,103,19);
+				
+			elseif dialogue.Redirect.Value then
+				
+				DialogueStatus.BackgroundTransparency = 0.4;
+				DialogueStatus.BackgroundColor3 = Color3.fromRGB(21,44,126);
+				DialogueStatus.RedirectPriority.Visible = true;
+				DialogueStatus.RedirectPriority.TextBox.PlaceholderText = "Type the exact priority you want to redirect to."
+				DialogueStatus.Message.Visible = false;
+				
+			else
+				
+				DialogueStatus.BackgroundTransparency = 1;
 				
 			end;
 			
@@ -219,12 +244,12 @@ local function SyncDialogueGui(directoryDialogue)
 				end);
 				
 			end);
-				
+			
 			DialogueStatus.PriorityButton.MouseButton2Click:Connect(function() 
 				
 				if dialogue.Parent.Parent.Parent.Name == "Dialogue" and ViewingPriority ~= "1" then
-					
-					-- Check if the status is a message
+							
+					-- Check if the dialogue is a message
 					if dialogue.Response.Value then
 						dialogue.Response.Value = false;
 						dialogue.Parent = directoryDialogue.Parent.Dialogue;
@@ -233,33 +258,87 @@ local function SyncDialogueGui(directoryDialogue)
 						dialogue.Parent = directoryDialogue.Parent.Responses;
 					end;
 					
-					SyncDialogueGui(directoryDialogue);
-					
 				end;
+				
+				SyncDialogueGui(directoryDialogue);
 				
 			end);
 			
-			Events.EditingMessage[dialogue] = DialogueStatus.Message.MouseButton1Click:Connect(function()
+			if dialogue.Redirect.Value then
 				
-				if EditingMessage then
-					return;
-				end;
+				Events.ConvertFromRedirect[dialogue] = DialogueStatus.RedirectPriority.MouseButton2Click:Connect(function()
 				
-				EditingMessage = true;
+					Events.ConvertFromRedirect[dialogue]:Disconnect();
 				
-				DialogueStatus.Message.TextBox.Text = dialogue.Message.Value;
-				DialogueStatus.Message.TextBox.Visible = true;
-				DialogueStatus.Message.TextBox:CaptureFocus();
-				DialogueStatus.Message.TextBox.FocusLost:Connect(function(enterPressed)
-					if enterPressed then
-						dialogue.Message.Value = DialogueStatus.Message.TextBox.Text;
-						DialogueStatus.Message.TextBox.Visible = false;
-						SyncDialogueGui(directoryDialogue);
-						EditingMessage = false;
+					dialogue.Redirect.Value = false;
+					if dialogue.Response.Value then
+						dialogue.Parent = directoryDialogue.Parent.Responses;
+					else
+						dialogue.Parent = directoryDialogue.Parent.Dialogue;
 					end;
+					
+					SyncDialogueGui(directoryDialogue);
+					
+				end);
+					
+				Events.EditingRedirect[dialogue] = DialogueStatus.RedirectPriority.MouseButton1Click:Connect(function()
+					
+					if EditingMessage then
+						return;
+					end;
+					
+					EditingMessage = true;
+					
+					DialogueStatus.RedirectPriority.TextBox.Text = dialogue.Message.Value;
+					DialogueStatus.RedirectPriority.TextBox.Visible = true;
+					DialogueStatus.RedirectPriority.TextBox:CaptureFocus();
+					DialogueStatus.RedirectPriority.TextBox.FocusLost:Connect(function(enterPressed)
+						if enterPressed then
+							Events.EditingRedirect[dialogue]:Disconnect();
+							dialogue.RedirectPriority.Value = DialogueStatus.RedirectPriority.TextBox.Text;
+							DialogueStatus.RedirectPriority.TextBox.Visible = false;
+							SyncDialogueGui(directoryDialogue);
+						end;
+						EditingMessage = false;
+					end);
+					
 				end);
 				
-			end);
+			else
+				
+				Events.ConvertToRedirect[dialogue] = DialogueStatus.Message.MouseButton2Click:Connect(function()
+					
+					Events.ConvertToRedirect[dialogue]:Disconnect();
+					
+					dialogue.Redirect.Value = true;
+					dialogue.Parent = directoryDialogue.Parent.Redirects;
+					SyncDialogueGui(directoryDialogue);
+					
+				end);
+				
+				Events.EditingMessage[dialogue] = DialogueStatus.Message.MouseButton1Click:Connect(function()
+				
+					if EditingMessage then
+						return;
+					end;
+					
+					EditingMessage = true;
+					
+					DialogueStatus.Message.TextBox.Text = dialogue.Message.Value;
+					DialogueStatus.Message.TextBox.Visible = true;
+					DialogueStatus.Message.TextBox:CaptureFocus();
+					DialogueStatus.Message.TextBox.FocusLost:Connect(function(enterPressed)
+						if enterPressed then
+							dialogue.Message.Value = DialogueStatus.Message.TextBox.Text;
+							DialogueStatus.Message.TextBox.Visible = false;
+							SyncDialogueGui(directoryDialogue);
+						end;
+						EditingMessage = false;
+					end);
+					
+				end);
+				
+			end
 			
 			DialogueStatus.ConditionButton.MouseButton1Click:Connect(function()
 				
@@ -286,6 +365,8 @@ local function SyncDialogueGui(directoryDialogue)
 					Condition.NPC.Value = Model;
 					if dialogue.Response.Value then
 						Condition.Type.Value = "Response";
+					elseif dialogue.Redirect.Value then
+						Condition.Type.Value = "Redirect";
 					else
 						Condition.Type.Value = "Dialogue";
 					end
@@ -323,6 +404,8 @@ local function SyncDialogueGui(directoryDialogue)
 					Action.NPC.Value = Model;
 					if dialogue.Response.Value then
 						Action.Type.Value = "Response";
+					elseif dialogue.Redirect.Value then
+						Action.Type.Value = "Redirect";
 					else
 						Action.Type.Value = "Dialogue";
 					end
@@ -350,31 +433,35 @@ local function SyncDialogueGui(directoryDialogue)
 				OpenAction("After");
 				
 			end);
-				
-			DialogueStatus.ViewChildren.MouseButton1Click:Connect(function()
-				
-				ViewingPriority = dialogue.Priority.Value;
-				if Events.ViewParent then
-					Events.ViewParent:Disconnect();
-					Events.ViewParent = nil;
-				end;
-				
-				-- Go to the target directory
-				local Path = ViewingPriority:split(".");
-				local CurrentDirectory = CurrentDialogueContainer;
-				
-				for index, directory in ipairs(Path) do
-					if CurrentDirectory:FindFirstChild(directory) then
-						CurrentDirectory = CurrentDirectory[directory].Dialogue;
-					else
-						CurrentDirectory = CurrentDirectory.Parent.Responses[directory].Dialogue;
+			
+			if dialogue.Redirect.Value then
+				DialogueStatus.ViewChildren.Visible = false;
+			else
+				DialogueStatus.ViewChildren.MouseButton1Click:Connect(function()
+					
+					ViewingPriority = dialogue.Priority.Value;
+					
+					if Events.ViewParent then
+						Events.ViewParent:Disconnect();
+						Events.ViewParent = nil;
 					end;
-				end;
-				
-				SyncDialogueGui(CurrentDirectory);
-				
-			end);
-		
+					
+					-- Go to the target directory
+					local Path = ViewingPriority:split(".");
+					local CurrentDirectory = CurrentDialogueContainer;
+					
+					for index, directory in ipairs(Path) do
+						if CurrentDirectory:FindFirstChild(directory) then
+							CurrentDirectory = CurrentDirectory[directory].Dialogue;
+						else
+							CurrentDirectory = CurrentDirectory.Parent.Responses[directory].Dialogue;
+						end;
+					end;
+					
+					SyncDialogueGui(CurrentDirectory);
+					
+				end);
+			end;
 		end;
 	
 	end;
@@ -385,11 +472,11 @@ local function AddDialogueToMessageList(directory,text)
 	
 	-- Let's create the dialogue first.
 	-- Get message priority
-	local Priority = ViewingPriority.."."..(#directory.Parent.Dialogue:GetChildren()+#directory.Parent.Responses:GetChildren())+1;
+	local Priority = ViewingPriority.."."..(#directory.Parent.Dialogue:GetChildren()+#directory.Parent.Responses:GetChildren()+#directory.Parent.Redirects:GetChildren())+1;
 	
 	-- Create the dialogue folder
 	local DialogueObj = Instance.new("Folder");
-	DialogueObj.Name = (#directory.Parent.Dialogue:GetChildren()+#directory.Parent.Responses:GetChildren())+1;
+	DialogueObj.Name = (#directory.Parent.Dialogue:GetChildren()+#directory.Parent.Responses:GetChildren()+#directory.Parent.Redirects:GetChildren())+1;
 	
 	local DialoguePriority = Instance.new("StringValue");
 	DialoguePriority.Name = "Priority";
@@ -406,9 +493,18 @@ local function AddDialogueToMessageList(directory,text)
 	DialogueActive.Value = true;
 	DialogueActive.Parent = DialogueObj;
 	
-	local DialogueActive = Instance.new("BoolValue");
-	DialogueActive.Name = "Response";
-	DialogueActive.Parent = DialogueObj;
+	local Response = Instance.new("BoolValue");
+	Response.Name = "Response";
+	Response.Parent = DialogueObj;
+	
+	local Redirect = Instance.new("BoolValue");
+	Redirect.Name = "Redirect";
+	Redirect.Parent = DialogueObj;
+	
+	local RedirectPriority = Instance.new("StringValue");
+	RedirectPriority.Name = "RedirectPriority";
+	RedirectPriority.Value = text;
+	RedirectPriority.Parent = DialogueObj;
 	
 	local DialogueBeforeAction = Instance.new("BoolValue");
 	DialogueBeforeAction.Name = "HasBeforeAction";
@@ -425,6 +521,11 @@ local function AddDialogueToMessageList(directory,text)
 	local DialogueChildResponses = Instance.new("Folder");
 	DialogueChildResponses.Name = "Responses";
 	DialogueChildResponses.Parent = DialogueObj;
+	
+	-- Create a folder to hold responses
+	local Redirects = Instance.new("Folder");
+	Redirects.Name = "Redirects";
+	Redirects.Parent = DialogueObj;
 	
 	DialogueObj.Parent = directory.Parent.Dialogue;
 	
@@ -808,6 +909,11 @@ local function OpenDialogueEditor()
 				Responses.Name = "Responses";
 				Responses.Parent = TargetDirectory;
 				
+				-- Create a folder to hold responses
+				local Redirects = Instance.new("Folder");
+				Redirects.Name = "Redirects";
+				Redirects.Parent = TargetDirectory;
+				
 				TargetDirectory.Parent = CurrentDirectory;
 				
 			end;
@@ -942,6 +1048,11 @@ EditDialogueButton.Click:Connect(function()
 		local Responses = Instance.new("Folder");
 		Responses.Name = "Responses";
 		Responses.Parent = TempRootFolder;
+		
+		-- Create a folder to hold redirects
+		local Redirects = Instance.new("Folder");
+		Redirects.Name = "Redirects";
+		Redirects.Parent = TempRootFolder;
 		
 		-- Add the dialogue folder to the model
 		DialogueFolder.Parent = Model;
