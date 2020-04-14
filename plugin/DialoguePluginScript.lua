@@ -200,6 +200,7 @@ local function SyncDialogueGui(directoryDialogue)
 						Action.Type.Value = "Dialogue";
 					end
 					Action.Name = beforeOrAfter.."Action";
+					
 					Action.Parent = ServerScriptService.DialogueServerScript.Actions[beforeOrAfter];
 					
 					dialogue["Has"..beforeOrAfter.."Action"].Value = true;
@@ -257,7 +258,6 @@ local function SyncDialogueGui(directoryDialogue)
 						dialogue.Parent = directoryDialogue.Parent.Responses;
 					end;
 					
-					print("sync")
 					SyncDialogueGui(directoryDialogue);
 					
 				end;
@@ -275,8 +275,6 @@ local function AddDialogueToMessageList(directory,text)
 	-- Let's create the dialogue first.
 	-- Get message priority
 	local Priority = ViewingPriority.."."..(#directory.Parent.Dialogue:GetChildren()+#directory.Parent.Responses:GetChildren())+1;
-	print("Di:"..#directory.Parent.Dialogue:GetChildren());
-	print("Res:"..#directory.Parent.Responses:GetChildren());
 	
 	-- Create the dialogue folder
 	local DialogueObj = Instance.new("Folder");
@@ -705,13 +703,10 @@ local function OpenDialogueEditor()
 			
 			if TargetDirectory.Dialogue:FindFirstChild(directory) then
 				CurrentDirectory = TargetDirectory.Dialogue;
-				print(1)
 			elseif TargetDirectory.Responses:FindFirstChild(directory) then
 				CurrentDirectory = TargetDirectory.Responses;
-				print(2)
 			elseif CurrentDirectory:FindFirstChild(directory) then
 				CurrentDirectory = CurrentDirectory[directory].Dialogue;
-				print(3)
 			end;
 			
 		end;
