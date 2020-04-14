@@ -59,6 +59,7 @@ local function CloseDialogueEditor()
 end;
 
 local function SyncDialogueGui(directoryDialogue)
+	
 	if ViewingPriority == "1" then
 		DialogueMakerFrame.ViewStatus.DialogueLocationStatus.Text = "Viewing the beginning of the conversation";
 	else
@@ -363,13 +364,6 @@ local function SyncDialogueGui(directoryDialogue)
 					Condition = script.ConditionTemplate:Clone();
 					Condition.Priority.Value = dialogue;
 					Condition.NPC.Value = Model;
-					if dialogue.Response.Value then
-						Condition.Type.Value = "Response";
-					elseif dialogue.Redirect.Value then
-						Condition.Type.Value = "Redirect";
-					else
-						Condition.Type.Value = "Dialogue";
-					end
 					Condition.Name = "Condition";
 					Condition.Parent = ServerScriptService.DialogueServerScript.Conditions;
 					
@@ -402,13 +396,6 @@ local function SyncDialogueGui(directoryDialogue)
 					Action = script.ActionTemplate:Clone();
 					Action.Priority.Value = dialogue;
 					Action.NPC.Value = Model;
-					if dialogue.Response.Value then
-						Action.Type.Value = "Response";
-					elseif dialogue.Redirect.Value then
-						Action.Type.Value = "Redirect";
-					else
-						Action.Type.Value = "Dialogue";
-					end
 					Action.Name = beforeOrAfter.."Action";
 					
 					Action.Parent = ServerScriptService.DialogueServerScript.Actions[beforeOrAfter];
