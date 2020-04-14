@@ -44,10 +44,10 @@ RemoteConnections.GetAllThemes.OnServerInvoke = function(player)
 	
 end;
 
-RemoteConnections.PlayerPassesCondition.OnServerInvoke = function(player,npc,priority,dialogueType)
+RemoteConnections.PlayerPassesCondition.OnServerInvoke = function(player,npc,priority)
 	
 	-- Ensure security
-	if not npc:IsA("Model") or not priority:IsA("Folder") or typeof(dialogueType) ~= "string" then
+	if not npc:IsA("Model") or not priority:IsA("Folder") then
 		warn("[Dialogue Maker] "..player.Name.." failed a security check");
 		error("[Dialogue Maker] Invalid parameters given to check if "..player.Name.." passes a condition");
 	end;
@@ -56,7 +56,7 @@ RemoteConnections.PlayerPassesCondition.OnServerInvoke = function(player,npc,pri
 	local Condition;
 	for _, condition in ipairs(script.Conditions:GetChildren()) do
 		
-		if condition.NPC.Value == npc and condition.Priority.Value == priority and condition.Type.Value == dialogueType then
+		if condition.NPC.Value == npc and condition.Priority.Value == priority then
 			Condition = condition;
 			break;
 		end;
@@ -72,10 +72,10 @@ RemoteConnections.PlayerPassesCondition.OnServerInvoke = function(player,npc,pri
 	
 end;
 
-RemoteConnections.ExecuteAction.OnServerInvoke = function(player,npc,priority,dialogueType,beforeOrAfter)
+RemoteConnections.ExecuteAction.OnServerInvoke = function(player,npc,priority,beforeOrAfter)
 	
 	-- Ensure security
-	if not npc:IsA("Model") or not priority:IsA("Folder") or typeof(dialogueType) ~= "string" or typeof(beforeOrAfter) ~= "string" then
+	if not npc:IsA("Model") or not priority:IsA("Folder") or typeof(beforeOrAfter) ~= "string" then
 		warn("[Dialogue Maker] "..player.Name.." failed a security check");
 		error("[Dialogue Maker] Invalid parameters given to check if "..player.Name.." passes a condition");
 	end;
@@ -84,7 +84,7 @@ RemoteConnections.ExecuteAction.OnServerInvoke = function(player,npc,priority,di
 	local Action;
 	for _, action in ipairs(script.Actions[beforeOrAfter]:GetChildren()) do
 		
-		if action.NPC.Value == npc and action.Priority.Value == priority and action.Type.Value == dialogueType then
+		if action.NPC.Value == npc and action.Priority.Value == priority then
 			Action = action;
 			break;
 		end;
