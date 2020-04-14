@@ -1,7 +1,7 @@
 # Roblox Dialogue Maker plugin
 
 ## About
-The Dialogue Maker is am open-source plugin for creating RPG-like dialogue boxes for NPCs in your Roblox game! It comes with a GUI that allows you to add messages and player responses to your NPCs.
+The Dialogue Maker is an open-source plugin for creating RPG-like dialogue boxes for NPCs in your Roblox game! It comes with a GUI that allows you to add messages and player responses to your NPCs.
 
 ## Features
 * Responsive dialogue editor
