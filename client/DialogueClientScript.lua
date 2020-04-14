@@ -96,7 +96,9 @@ local function ReadDialogue(npc)
 				
 				-- Clear previous responses
 				for _, response in ipairs(ResponseContainer:GetChildren()) do
-					response:Destroy();
+					if not response:IsA("UIListLayout") then
+						response:Destroy();
+					end;
 				end;
 				
 				TextContainer = ThemeDialogueContainer.NPCTextContainerWithResponses;
@@ -166,10 +168,14 @@ local function ReadDialogue(npc)
 					
 					if RemoteConnections.PlayerPassesCondition:InvokeServer(npc,response,"Response") then
 					
+						print(true)
 						local ResponseButton = ResponseTemplate:Clone();
+						ResponseButton.Name = "Response";
 						ResponseButton.Text = response.Message.Value;
 						ResponseButton.Parent = ResponseContainer;
 						ResponseButton.MouseButton1Click:Connect(function()
+							ResponseContainer.Visible = false;
+							
 							Response = response;
 							
 							if response.HasAfterAction.Value then
@@ -179,6 +185,8 @@ local function ReadDialogue(npc)
 							WaitingForResponse = false;
 						end);
 						
+					else
+						print(false)
 					end;
 					
 				end;
@@ -197,7 +205,7 @@ local function ReadDialogue(npc)
 			
 			-- Run after action
 			if CurrentDirectory.HasAfterAction.Value then
-				RemoteConnections.ExecuteAction:InvokeServer(npc,"1."..DialoguePriority,"Dialogue","After");
+				RemoteConnections.ExecuteAction:InvokeServer(npc,CurrentDirectory,"Dialogue","After");
 			end;
 			
 			if Response then
