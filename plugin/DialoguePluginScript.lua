@@ -59,8 +59,6 @@ end;
 
 local function SyncDialogueGui(directoryDialogue)
 	
-	print("Now viewing "..ViewingPriority);
-	
 	if directoryDialogue.Parent:FindFirstChild("Response") and directoryDialogue.Parent.Response.Value then
 		ViewingA = "Response";
 	else
@@ -259,6 +257,7 @@ local function SyncDialogueGui(directoryDialogue)
 						dialogue.Parent = directoryDialogue.Parent.Responses;
 					end;
 					
+					print("sync")
 					SyncDialogueGui(directoryDialogue);
 					
 				end;
@@ -275,11 +274,13 @@ local function AddDialogueToMessageList(directory,text)
 	
 	-- Let's create the dialogue first.
 	-- Get message priority
-	local Priority = ViewingPriority.."."..(#directory:GetChildren()+#directory.Parent.Responses:GetChildren())+1;
+	local Priority = ViewingPriority.."."..(#directory.Parent.Dialogue:GetChildren()+#directory.Parent.Responses:GetChildren())+1;
+	print("Di:"..#directory.Parent.Dialogue:GetChildren());
+	print("Res:"..#directory.Parent.Responses:GetChildren());
 	
 	-- Create the dialogue folder
 	local DialogueObj = Instance.new("Folder");
-	DialogueObj.Name = (#directory:GetChildren()+#directory.Parent.Responses:GetChildren())+1;
+	DialogueObj.Name = (#directory.Parent.Dialogue:GetChildren()+#directory.Parent.Responses:GetChildren())+1;
 	
 	local DialoguePriority = Instance.new("StringValue");
 	DialoguePriority.Name = "Priority";
@@ -316,10 +317,10 @@ local function AddDialogueToMessageList(directory,text)
 	DialogueChildResponses.Name = "Responses";
 	DialogueChildResponses.Parent = DialogueObj;
 	
-	DialogueObj.Parent = directory;
+	DialogueObj.Parent = directory.Parent.Dialogue;
 	
 	-- Now let's re-order the dialogue
-	SyncDialogueGui(directory);
+	SyncDialogueGui(directory.Parent.Dialogue);
 	
 end;
 
@@ -675,7 +676,7 @@ local function OpenDialogueEditor()
 		
 	end);
 	
-	Tools.AddDialogue.MouseButton1Click:Connect(function()
+	Events.AddDialogue = Tools.AddDialogue.MouseButton1Click:Connect(function()
 		
 		local Path = ViewingPriority:split(".");
 		local CurrentDirectory = CurrentDialogueContainer;
@@ -704,10 +705,13 @@ local function OpenDialogueEditor()
 			
 			if TargetDirectory.Dialogue:FindFirstChild(directory) then
 				CurrentDirectory = TargetDirectory.Dialogue;
+				print(1)
 			elseif TargetDirectory.Responses:FindFirstChild(directory) then
 				CurrentDirectory = TargetDirectory.Responses;
+				print(2)
 			elseif CurrentDirectory:FindFirstChild(directory) then
 				CurrentDirectory = CurrentDirectory[directory].Dialogue;
+				print(3)
 			end;
 			
 		end;
