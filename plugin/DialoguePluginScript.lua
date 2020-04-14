@@ -59,6 +59,23 @@ end;
 
 local function SyncDialogueGui(directoryDialogue)
 	
+	if ViewingPriority == "1" then
+		DialogueMakerFrame.ViewStatus.DialogueLocationStatus.Text = "Viewing the beginning of the conversation";
+	else
+		DialogueMakerFrame.ViewStatus.DialogueLocationStatus.Text = "Viewing "..ViewingPriority;
+		Events.ViewParent = Tools.ViewParent.MouseButton1Click:Connect(function()
+			Events.ViewParent:Disconnect();
+			Tools.ViewParent.BackgroundColor3 = Color3.fromRGB(159,159,159);
+			
+			local NewViewingPriority = ViewingPriority:split(".");
+			NewViewingPriority[#NewViewingPriority] = nil;
+			ViewingPriority = table.concat(NewViewingPriority,".");
+			
+			SyncDialogueGui(directoryDialogue.Parent.Parent.Parent.Dialogue);
+		end);
+		Tools.ViewParent.BackgroundColor3 = Color3.fromRGB(255,255,255);
+	end;
+	
 	if directoryDialogue.Parent:FindFirstChild("Response") and directoryDialogue.Parent.Response.Value then
 		ViewingA = "Response";
 	else
@@ -141,7 +158,7 @@ local function SyncDialogueGui(directoryDialogue)
 								
 								-- Make sure everyone's a number
 								if not tonumber(priority) then
-									warn(DialogueStatus.Priority.Text.." is not a valid priority. Make sure you're not using any characters other than numbers and periods.");
+									warn("[Dialogue Maker] "..DialogueStatus.Priority.Text.." is not a valid priority. Make sure you're not using any characters other than numbers and periods.");
 									InvalidPriority = true;
 									break;
 								end;
@@ -150,7 +167,7 @@ local function SyncDialogueGui(directoryDialogue)
 								local TargetDirectory = CurrentDirectory:FindFirstChild(priority);
 								if not TargetDirectory and index ~= #SplitPriority then
 									
-									warn(DialogueStatus.Priority.Text.." is not a valid priority. Make sure all parent directories exist.");
+									warn("[Dialogue Maker] "..DialogueStatus.Priority.Text.." is not a valid priority. Make sure all parent directories exist.");
 									InvalidPriority = true;
 									break;
 									
@@ -158,14 +175,7 @@ local function SyncDialogueGui(directoryDialogue)
 									
 									if CurrentDirectory.Parent.Dialogue:FindFirstChild(priority) or CurrentDirectory.Parent.Responses:FindFirstChild(priority) then
 										
-										print("in:"..index)
-										print("priority:"..DialogueStatus.Priority.Text)
-										print("p1:"..CurrentDirectory.Name)
-										print("p2:"..CurrentDirectory.Parent.Name)
-										print("p3:"..CurrentDirectory.Parent.Parent.Name)
-										print("p4:"..CurrentDirectory.Parent.Parent.Parent.Name)
-										
-										warn(DialogueStatus.Priority.Text.." is not a valid priority. Make sure that "..DialogueStatus.Priority.Text.." isn't already being used.");
+										warn("[Dialogue Maker] "..DialogueStatus.Priority.Text.." is not a valid priority. Make sure that "..DialogueStatus.Priority.Text.." isn't already being used.");
 										InvalidPriority = true;
 									
 									else
@@ -344,6 +354,10 @@ local function SyncDialogueGui(directoryDialogue)
 			DialogueStatus.ViewChildren.MouseButton1Click:Connect(function()
 				
 				ViewingPriority = dialogue.Priority.Value;
+				if Events.ViewParent then
+					Events.ViewParent:Disconnect();
+					Events.ViewParent = nil;
+				end;
 				
 				-- Go to the target directory
 				local Path = ViewingPriority:split(".");
