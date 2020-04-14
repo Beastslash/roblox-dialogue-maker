@@ -141,7 +141,7 @@ local function SyncDialogueGui(directoryDialogue)
 				for _, child in ipairs(ServerScriptService.DialogueServerScript.Conditions:GetChildren()) do
 					
 					-- Check if the child is a condition
-					if child:IsA("ModuleScript") and child.Priority.Value == dialogue.Priority.Value and child.NPC.Value == Model then
+					if child:IsA("ModuleScript") and child.Priority.Value == dialogue and child.NPC.Value == Model then
 						
 						-- Return the condiiton
 						Condition = child;
@@ -155,7 +155,7 @@ local function SyncDialogueGui(directoryDialogue)
 					
 					-- Create a new condition
 					Condition = script.ConditionTemplate:Clone();
-					Condition.Priority.Value = dialogue.Priority.Value;
+					Condition.Priority.Value = dialogue;
 					Condition.NPC.Value = Model;
 					if dialogue.Response.Value then
 						Condition.Type.Value = "Response";
@@ -178,7 +178,7 @@ local function SyncDialogueGui(directoryDialogue)
 				for _, child in ipairs(ServerScriptService.DialogueServerScript.Actions[beforeOrAfter]:GetChildren()) do
 					
 					-- Check if the child is a condition
-					if child:IsA("ModuleScript") and child.Priority.Value == dialogue.Priority.Value and child.NPC.Value == Model then
+					if child:IsA("ModuleScript") and child.Priority.Value == dialogue and child.NPC.Value == Model then
 						
 						-- Return the condiiton
 						Action = child;
@@ -192,7 +192,7 @@ local function SyncDialogueGui(directoryDialogue)
 					
 					-- Create a new condition
 					Action = script.ActionTemplate:Clone();
-					Action.Priority.Value = dialogue.Priority.Value;
+					Action.Priority.Value = dialogue;
 					Action.NPC.Value = Model;
 					if dialogue.Response.Value then
 						Action.Type.Value = "Response";
