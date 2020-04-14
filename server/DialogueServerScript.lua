@@ -47,7 +47,7 @@ end;
 RemoteConnections.PlayerPassesCondition.OnServerInvoke = function(player,npc,priority,dialogueType)
 	
 	-- Ensure security
-	if not npc:IsA("Model") or typeof(priority) ~= "string" or typeof(dialogueType) ~= "string" then
+	if not npc:IsA("Model") or not priority:IsA("Folder") or typeof(dialogueType) ~= "string" then
 		warn("[Dialogue Maker] "..player.Name.." failed a security check");
 		error("[Dialogue Maker] Invalid parameters given to check if "..player.Name.." passes a condition");
 	end;
@@ -75,7 +75,7 @@ end;
 RemoteConnections.ExecuteAction.OnServerInvoke = function(player,npc,priority,dialogueType,beforeOrAfter)
 	
 	-- Ensure security
-	if not npc:IsA("Model") or typeof(priority) ~= "string" or typeof(dialogueType) ~= "string" or typeof(beforeOrAfter) ~= "string" then
+	if not npc:IsA("Model") or not priority:IsA("Folder") or typeof(dialogueType) ~= "string" or typeof(beforeOrAfter) ~= "string" then
 		warn("[Dialogue Maker] "..player.Name.." failed a security check");
 		error("[Dialogue Maker] Invalid parameters given to check if "..player.Name.." passes a condition");
 	end;
