@@ -101,6 +101,9 @@ local function SyncDialogueGui(directoryDialogue)
 		for _, dialogue in ipairs(category) do
 			
 			local DialogueStatus = DialogueMessageTemplate:Clone();
+			local SplitPriority = dialogue.Priority.Value:split(".")
+			DialogueStatus.PriorityButton.Text = SplitPriority[#SplitPriority];
+			DialogueStatus.Priority.PlaceholderText = dialogue.Priority.Value;
 			DialogueStatus.Priority.Text = dialogue.Priority.Value;
 			DialogueStatus.Message.Text = dialogue.Message.Value;
 			DialogueStatus.Visible = true;
@@ -111,6 +114,120 @@ local function SyncDialogueGui(directoryDialogue)
 				DialogueStatus.BackgroundTransparency = 0.4;
 				
 			end;
+			
+			DialogueStatus.PriorityButton.MouseButton1Click:Connect(function()
+				
+				DialogueStatus.PriorityButton.Visible = false;
+				DialogueStatus.Priority.Visible = true;
+				DialogueStatus.Priority:CaptureFocus();
+				local FocusEvent;
+				FocusEvent = DialogueStatus.Priority.FocusLost:Connect(function(input)
+					
+					DialogueStatus.Priority.Visible = false;
+					
+					if DialogueStatus.Priority.Text ~= dialogue.Response.Value then
+						
+						SplitPriority = DialogueStatus.Priority.Text:split(".");
+						local SplitPriorityWithPeriods = DialogueStatus.Priority.Text:split("");
+						
+						-- Make sure the priority is valid
+						local InvalidPriority = false;
+						if SplitPriorityWithPeriods[1] == "." or SplitPriorityWithPeriods[#SplitPriorityWithPeriods] == "." then
+							InvalidPriority = true;
+						end;
+						local CurrentDirectory = CurrentDialogueContainer;
+						if not InvalidPriority then
+							for index, priority in ipairs(SplitPriority) do
+								
+								-- Make sure everyone's a number
+								if not tonumber(priority) then
+									warn(DialogueStatus.Priority.Text.." is not a valid priority. Make sure you're not using any characters other than numbers and periods.");
+									InvalidPriority = true;
+									break;
+								end;
+								
+								-- Make sure the folder exists
+								local TargetDirectory = CurrentDirectory:FindFirstChild(priority);
+								if not TargetDirectory and index ~= #SplitPriority then
+									
+									warn(DialogueStatus.Priority.Text.." is not a valid priority. Make sure all parent directories exist.");
+									InvalidPriority = true;
+									break;
+									
+								elseif index == #SplitPriority then
+									
+									if CurrentDirectory.Parent.Dialogue:FindFirstChild(priority) or CurrentDirectory.Parent.Responses:FindFirstChild(priority) then
+										
+										print("in:"..index)
+										print("priority:"..DialogueStatus.Priority.Text)
+										print("p1:"..CurrentDirectory.Name)
+										print("p2:"..CurrentDirectory.Parent.Name)
+										print("p3:"..CurrentDirectory.Parent.Parent.Name)
+										print("p4:"..CurrentDirectory.Parent.Parent.Parent.Name)
+										
+										warn(DialogueStatus.Priority.Text.." is not a valid priority. Make sure that "..DialogueStatus.Priority.Text.." isn't already being used.");
+										InvalidPriority = true;
+									
+									else
+										
+										if dialogue.Response.Value then
+											CurrentDirectory = CurrentDirectory.Parent.Responses;
+										else
+											CurrentDirectory = CurrentDirectory.Parent.Dialogue;
+										end;
+										
+										local UserSplitPriority = DialogueStatus.Priority.Text:split(".");
+										dialogue.Priority.Value = DialogueStatus.Priority.Text;
+										dialogue.Name = UserSplitPriority[#UserSplitPriority];
+										dialogue.Parent = CurrentDirectory;
+										
+									end;
+									break;
+									
+								end;
+								
+								if TargetDirectory.Dialogue:FindFirstChild(priority) then
+									CurrentDirectory = TargetDirectory.Dialogue;
+								elseif TargetDirectory.Responses:FindFirstChild(priority) then
+									CurrentDirectory = TargetDirectory.Responses;
+								elseif CurrentDirectory:FindFirstChild(priority) then
+									CurrentDirectory = CurrentDirectory[priority].Dialogue;
+								end;
+								
+							end;
+						end;
+						
+						-- Refresh the GUI
+						SyncDialogueGui(directoryDialogue);
+						
+					else
+						
+						DialogueStatus.PriorityButton.Visible = true;
+						
+					end;
+					
+				end);
+				
+			end);
+				
+			DialogueStatus.PriorityButton.MouseButton2Click:Connect(function() 
+				
+				if dialogue.Parent.Parent.Parent.Name == "Dialogue" and ViewingPriority ~= "1" then
+					
+					-- Check if the status is a message
+					if dialogue.Response.Value then
+						dialogue.Response.Value = false;
+						dialogue.Parent = directoryDialogue.Parent.Dialogue;
+					else
+						dialogue.Response.Value = true;
+						dialogue.Parent = directoryDialogue.Parent.Responses;
+					end;
+					
+					SyncDialogueGui(directoryDialogue);
+					
+				end;
+				
+			end);
 			
 			Events.EditingMessage[dialogue] = DialogueStatus.Message.MouseButton1Click:Connect(function()
 				
@@ -241,26 +358,6 @@ local function SyncDialogueGui(directoryDialogue)
 				end;
 				
 				SyncDialogueGui(CurrentDirectory);
-				
-			end);
-			
-			-- Toggle message/response
-			DialogueStatus.InputEnded:Connect(function(input)
-				
-				if input.UserInputType == Enum.UserInputType.MouseButton2 and dialogue.Parent.Parent.Parent.Name == "Dialogue" and ViewingPriority ~= "1" then
-					
-					-- Check if the status is a message
-					if dialogue.Response.Value then
-						dialogue.Response.Value = false;
-						dialogue.Parent = directoryDialogue.Parent.Dialogue;
-					else
-						dialogue.Response.Value = true;
-						dialogue.Parent = directoryDialogue.Parent.Responses;
-					end;
-					
-					SyncDialogueGui(directoryDialogue);
-					
-				end;
 				
 			end);
 		
