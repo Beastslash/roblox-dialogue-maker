@@ -60,7 +60,13 @@ local function ReadDialogue(npc)
 			
 			-- Move to the target directory
 			for index, directory in ipairs(TargetDirectoryPath) do
-				CurrentDirectory = CurrentDirectory.Dialogue[directory];
+				if CurrentDirectory.Dialogue:FindFirstChild(directory) then
+					CurrentDirectory = CurrentDirectory.Dialogue[directory];
+				elseif CurrentDirectory.Responses:FindFirstChild(directory) then
+					CurrentDirectory = CurrentDirectory.Responses[directory];
+				elseif CurrentDirectory:FindFirstChild(directory) then
+					CurrentDirectory = CurrentDirectory[directory];
+				end;
 			end;
 			
 			-- Run the before action if there is one
@@ -145,16 +151,30 @@ local function ReadDialogue(npc)
 			end;
 			NPCTalking = false;
 			
+			local Response;
 			if ResponsesEnabled then
 				for _, response in ipairs(CurrentDirectory.Responses:GetChildren()) do
 					
-					local ResponseButton = ResponseTemplate:Clone();
-					ResponseButton.Text = response.Message.Value;
-					ResponseButton.Parent = ResponseContainer;
+					if RemoteConnections.PlayerPassesCondition:InvokeServer(npc,response.Priority.Value,"Response") then
+					
+						local ResponseButton = ResponseTemplate:Clone();
+						ResponseButton.Text = response.Message.Value;
+						ResponseButton.Parent = ResponseContainer;
+						ResponseButton.MouseButton1Click:Connect(function()
+							Response = response;
+							
+							if response.HasAfterAction.Value then
+								RemoteConnections.ExecuteAction:InvokeServer(npc,response.Priority.Value,"Response","After");
+							end;
+							
+							WaitingForResponse = false;
+						end);
+						
+					end;
 					
 				end;
 				ResponseContainer.Visible = true;
-			end
+			end;
 			
 			coroutine.wrap(function()
 				if DialogueSettings.TimeoutEnabled.Value and DialogueSettings.TimeoutInSeconds.Value then
@@ -172,13 +192,29 @@ local function ReadDialogue(npc)
 				RemoteConnections.ExecuteAction:InvokeServer(npc,"1."..DialoguePriority,"Dialogue","After");
 			end;
 			
-			-- Check if there is more dialogue
-			if #CurrentDirectory.Dialogue:GetChildren() ~= 0 then
-				DialoguePriority = DialoguePriority..".1";
-				CurrentDirectory = RootDirectory;
+			if Response then
+				
+				if #Response.Dialogue:GetChildren() ~= 0 then
+					
+					DialoguePriority = string.sub(Response.Priority.Value..".1",3);
+					CurrentDirectory = RootDirectory;
+					
+				else
+					DialogueGui:Destroy();
+					PlayerTalkingWithNPC = false;
+				end;
+				
 			else
-				DialogueGui:Destroy();
-				PlayerTalkingWithNPC = false;
+				
+				-- Check if there is more dialogue
+				if #CurrentDirectory.Dialogue:GetChildren() ~= 0 then
+					DialoguePriority = DialoguePriority..".1";
+					CurrentDirectory = RootDirectory;
+				else
+					DialogueGui:Destroy();
+					PlayerTalkingWithNPC = false;
+				end;
+				
 			end;
 			
 		else
