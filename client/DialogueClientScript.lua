@@ -53,21 +53,21 @@ local function ReadDialogue(npc)
 	-- Show the dialouge to the player
 	while PlayerTalkingWithNPC and game:GetService("RunService").Heartbeat:Wait() do
 		
-		if RemoteConnections.PlayerPassesCondition:InvokeServer(npc,"1."..DialoguePriority,"Dialogue") then
-			
-			local TargetDirectoryPath = DialoguePriority:split(".");
-			local Attempts = #DialogueContainer:GetChildren();
-			
-			-- Move to the target directory
-			for index, directory in ipairs(TargetDirectoryPath) do
-				if CurrentDirectory.Dialogue:FindFirstChild(directory) then
-					CurrentDirectory = CurrentDirectory.Dialogue[directory];
-				elseif CurrentDirectory.Responses:FindFirstChild(directory) then
-					CurrentDirectory = CurrentDirectory.Responses[directory];
-				elseif CurrentDirectory:FindFirstChild(directory) then
-					CurrentDirectory = CurrentDirectory[directory];
-				end;
+		local TargetDirectoryPath = DialoguePriority:split(".");
+		local Attempts = #DialogueContainer:GetChildren();
+		
+		-- Move to the target directory
+		for index, directory in ipairs(TargetDirectoryPath) do
+			if CurrentDirectory.Dialogue:FindFirstChild(directory) then
+				CurrentDirectory = CurrentDirectory.Dialogue[directory];
+			elseif CurrentDirectory.Responses:FindFirstChild(directory) then
+				CurrentDirectory = CurrentDirectory.Responses[directory];
+			elseif CurrentDirectory:FindFirstChild(directory) then
+				CurrentDirectory = CurrentDirectory[directory];
 			end;
+		end;
+		
+		if RemoteConnections.PlayerPassesCondition:InvokeServer(npc,CurrentDirectory,"Dialogue") then
 			
 			-- Run the before action if there is one
 			if CurrentDirectory.HasBeforeAction.Value then
@@ -164,7 +164,7 @@ local function ReadDialogue(npc)
 				-- Add response buttons
 				for _, response in ipairs(CurrentDirectory.Responses:GetChildren()) do
 					
-					if RemoteConnections.PlayerPassesCondition:InvokeServer(npc,response.Priority.Value,"Response") then
+					if RemoteConnections.PlayerPassesCondition:InvokeServer(npc,response,"Response") then
 					
 						local ResponseButton = ResponseTemplate:Clone();
 						ResponseButton.Text = response.Message.Value;
@@ -173,7 +173,7 @@ local function ReadDialogue(npc)
 							Response = response;
 							
 							if response.HasAfterAction.Value then
-								RemoteConnections.ExecuteAction:InvokeServer(npc,response.Priority.Value,"Response","After");
+								RemoteConnections.ExecuteAction:InvokeServer(npc,response,"Response","After");
 							end;
 							
 							WaitingForResponse = false;
