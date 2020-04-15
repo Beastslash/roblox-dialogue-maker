@@ -72,7 +72,9 @@ local function ReadDialogue(npc)
 		if CurrentDirectory.Redirect.Value and RemoteConnections.PlayerPassesCondition:InvokeServer(npc,CurrentDirectory) then
 			
 			RemoteConnections.ExecuteAction:InvokeServer(npc,CurrentDirectory,"Before");
-			DialoguePriority = CurrentDirectory.RedirectPriority.Value;
+			local DialoguePriorityPath = CurrentDirectory.RedirectPriority.Value:split(".");
+			table.remove(DialoguePriorityPath,1);
+			DialoguePriority = table.concat(DialoguePriorityPath,".");
 			CurrentDirectory = RootDirectory;
 			RemoteConnections.ExecuteAction:InvokeServer(npc,CurrentDirectory,"After");
 			
