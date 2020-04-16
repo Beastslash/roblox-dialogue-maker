@@ -454,6 +454,8 @@ local function SyncDialogueGui(directoryDialogue)
 	
 	end;
 	
+	DialogueMessageList.CanvasSize = UDim2.new(0,0,0,DialogueMessageList.UIListLayout.AbsoluteContentSize.Y);
+	
 end;
 
 local function AddDialogueToMessageList(directory,text)
