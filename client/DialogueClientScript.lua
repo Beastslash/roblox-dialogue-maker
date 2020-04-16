@@ -16,6 +16,7 @@ local Themes = script.Themes;
 local DefaultTheme = RemoteConnections.GetDefaultTheme:InvokeServer();
 local PlayerTalkingWithNPC = false;
 local Events = {};
+local SpeechBubble = {};
 
 local function ReadDialogue(npc)
 	
@@ -24,6 +25,10 @@ local function ReadDialogue(npc)
 	end;
 	
 	PlayerTalkingWithNPC = true;
+	
+	if SpeechBubble[npc] then
+		SpeechBubble[npc].Enabled = false;
+	end;
 	
 	local DialogueContainer = npc.DialogueContainer;
 	local DialogueSettings = DialogueContainer.Settings;
@@ -200,6 +205,9 @@ local function ReadDialogue(npc)
 					end;
 					
 				end;
+				
+				ResponseContainer.CanvasSize = UDim2.new(ResponseContainer.CanvasSize.X,ResponseContainer.UIListLayout.AbsoluteContentSize.Y);
+				
 			end;
 			
 			coroutine.wrap(function()
@@ -253,6 +261,10 @@ local function ReadDialogue(npc)
 		
 	end;
 	
+	if SpeechBubble[npc] then
+		SpeechBubble[npc].Enabled = true;
+	end;
+	
 	-- Unfreeze the player
 	Player.Character.HumanoidRootPart.Anchored = false;
 	
@@ -277,14 +289,14 @@ for _, npc in ipairs(NPCDialogue) do
 				if DialogueSettings.SpeechBubblePart.Value:IsA("BasePart") then
 					
 					-- Create a speech bubble
-					local SpeechBubble = Instance.new("BillboardGui");
-					SpeechBubble.Name = "SpeechBubble";
-					SpeechBubble.Active = true;
-					SpeechBubble.LightInfluence = 0;
-					SpeechBubble.ResetOnSpawn = false;
-					SpeechBubble.Size = UDim2.new(2.5,0,2.5,0);
-					SpeechBubble.StudsOffset = Vector3.new(0,2,0);
-					SpeechBubble.Adornee = DialogueSettings.SpeechBubblePart.Value;
+					SpeechBubble[npc] = Instance.new("BillboardGui");
+					SpeechBubble[npc].Name = "SpeechBubble";
+					SpeechBubble[npc].Active = true;
+					SpeechBubble[npc].LightInfluence = 0;
+					SpeechBubble[npc].ResetOnSpawn = false;
+					SpeechBubble[npc].Size = UDim2.new(2.5,0,2.5,0);
+					SpeechBubble[npc].StudsOffset = Vector3.new(0,2,0);
+					SpeechBubble[npc].Adornee = DialogueSettings.SpeechBubblePart.Value;
 					
 					local SpeechBubbleButton = Instance.new("ImageButton");
 					SpeechBubbleButton.BackgroundTransparency = 1;
@@ -292,7 +304,7 @@ for _, npc in ipairs(NPCDialogue) do
 					SpeechBubbleButton.Name = "SpeechBubbleButton";
 					SpeechBubbleButton.Size = UDim2.new(1,0,1,0);
 					SpeechBubbleButton.Image = "rbxassetid://4883127463";
-					SpeechBubbleButton.Parent = SpeechBubble;
+					SpeechBubbleButton.Parent = SpeechBubble[npc];
 					
 					-- Listen if the player clicks the speech bubble
 					SpeechBubbleButton.MouseButton1Click:Connect(function()
@@ -301,7 +313,7 @@ for _, npc in ipairs(NPCDialogue) do
 						
 					end);
 					
-					SpeechBubble.Parent = PlayerGui;
+					SpeechBubble[npc].Parent = PlayerGui;
 					
 				else
 					warn("[Dialogue Viewer] The SpeechBubblePart for "..npc.Name.." is not a Part.");
@@ -323,7 +335,9 @@ for _, npc in ipairs(NPCDialogue) do
 						-- Make sure our player touched it and not someone else
 						local PlayerFromCharacter = Players:GetPlayerFromCharacter(part.Parent);
 						if PlayerFromCharacter == Player then
+							
 							ReadDialogue(npc);
+							
 						end;
 						
 					end);
