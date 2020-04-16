@@ -61,6 +61,85 @@ end;
 
 local function SyncDialogueGui(directoryDialogue)
 	
+	-- Reset the current dialogue container
+	CurrentDialogueContainer = Model:FindFirstChild("DialogueContainer");
+	if not CurrentDialogueContainer then
+		warn("[Dialogue Maker] "..Model.Name.."'s DialogueContainer was moved or deleted! Creating a new one...");
+		
+		-- Add the dialogue container to the NPC
+		CurrentDialogueContainer = Instance.new("Folder");
+		CurrentDialogueContainer.Name = "DialogueContainer";
+		
+		-- Add configuration to the container
+		local DialogueSettings = Instance.new("Configuration");
+		DialogueSettings.Name = "Settings";
+		DialogueSettings.Parent = CurrentDialogueContainer;
+		
+		-- Add flags to the configuration
+		local PromptRegionEnabled = Instance.new("BoolValue");
+		PromptRegionEnabled.Name = "PromptRegionEnabled";
+		PromptRegionEnabled.Parent = DialogueSettings;
+		
+		local PromptRadius = Instance.new("ObjectValue");
+		PromptRadius.Name = "PromptRegionPart";
+		PromptRadius.Parent = DialogueSettings;
+		
+		local TimeoutEnabled = Instance.new("BoolValue");
+		TimeoutEnabled.Name = "TimeoutEnabled";
+		TimeoutEnabled.Parent = DialogueSettings;
+		
+		local Timeout = Instance.new("IntValue");
+		Timeout.Name = "TimeoutInSeconds";
+		Timeout.Parent = DialogueSettings;
+		
+		local SpeechBubbleEnabled = Instance.new("BoolValue");
+		SpeechBubbleEnabled.Name = "SpeechBubbleEnabled";
+		SpeechBubbleEnabled.Parent = DialogueSettings;
+		
+		local SpeechBubblePart = Instance.new("ObjectValue");
+		SpeechBubblePart.Name = "SpeechBubblePart";
+		SpeechBubblePart.Parent = DialogueSettings;
+		
+		local ClickEnabled = Instance.new("BoolValue");
+		ClickEnabled.Name = "ClickEnabled";
+		ClickEnabled.Parent = DialogueSettings;
+		
+		local ClickDetectorLocation = Instance.new("ObjectValue");
+		ClickDetectorLocation.Name = "ClickDetectorLocation";
+		ClickDetectorLocation.Parent = DialogueSettings;
+		
+		local Theme = Instance.new("StringValue");
+		Theme.Name = "Theme";
+		Theme.Parent = DialogueSettings;
+		
+		-- Create a root folder
+		local TempRootFolder = Instance.new("Folder");
+		TempRootFolder.Name = "1";
+		TempRootFolder.Parent = CurrentDialogueContainer;
+				
+		-- Create a folder to hold dialogue
+		local Dialogue = Instance.new("Folder");
+		Dialogue.Name = "Dialogue";
+		Dialogue.Parent = TempRootFolder;
+		
+		-- Create a folder to hold responses
+		local Responses = Instance.new("Folder");
+		Responses.Name = "Responses";
+		Responses.Parent = TempRootFolder;
+		
+		-- Create a folder to hold redirects
+		local Redirects = Instance.new("Folder");
+		Redirects.Name = "Redirects";
+		Redirects.Parent = TempRootFolder;
+		
+		-- Add the dialogue folder to the model
+		CurrentDialogueContainer.Parent = Model;
+		
+		ViewingPriority = "1";
+		SyncDialogueGui(CurrentDialogueContainer["1"].Dialogue);
+		return;
+	end;
+	
 	if ViewingPriority == "1" then
 		DialogueMakerFrame.ViewStatus.DialogueLocationStatus.Text = "Viewing the beginning of the conversation";
 	else
