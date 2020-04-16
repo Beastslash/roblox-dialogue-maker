@@ -274,7 +274,7 @@ for _, npc in ipairs(NPCDialogue) do
 			
 			if DialogueSettings.SpeechBubblePart.Value then
 				
-				if DialogueSettings.SpeechBubblePart.Value:IsA("Part") then
+				if DialogueSettings.SpeechBubblePart.Value:IsA("BasePart") then
 					
 					-- Create a speech bubble
 					local SpeechBubble = Instance.new("BillboardGui");
@@ -315,7 +315,7 @@ for _, npc in ipairs(NPCDialogue) do
 			
 			if DialogueSettings.PromptRegionPart.Value then
 				
-				if DialogueSettings.PromptRegionPart.Value:IsA("Part") then
+				if DialogueSettings.PromptRegionPart.Value:IsA("BasePart") then
 					
 					local PlayerTouched;
 					DialogueSettings.PromptRegionPart.Value.Touched:Connect(function(part)
