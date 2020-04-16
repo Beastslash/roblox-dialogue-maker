@@ -59,6 +59,9 @@ local function CloseDialogueEditor()
 	
 end;
 
+local DeleteModeEnabled = false;
+local DeletePromptShown = false;
+
 local function SyncDialogueGui(directoryDialogue)
 	
 	-- Reset the current dialogue container
@@ -147,6 +150,7 @@ local function SyncDialogueGui(directoryDialogue)
 		
 		Events.ViewParent = Tools.ViewParent.MouseButton1Click:Connect(function()
 			Events.ViewParent:Disconnect();
+			Events.DeleteMode:Disconnect();
 			
 			Tools.ViewParent.BackgroundColor3 = Color3.fromRGB(159,159,159);
 			
@@ -160,6 +164,34 @@ local function SyncDialogueGui(directoryDialogue)
 		Tools.ViewParent.BackgroundColor3 = Color3.fromRGB(255,255,255);
 		
 	end;
+	
+	Events.DeleteMode = Tools.DeleteMode.MouseButton1Click:Connect(function()
+		
+		if DeleteModeEnabled then
+			
+			-- Disable delete mode
+			DeleteModeEnabled = false;
+			
+			-- Turn the button white again
+			Tools.DeleteMode.BackgroundColor3 = Color3.fromRGB(255,255,255);
+			
+			-- Tell the user that we're no longer in delete mode
+			print("[Dialogue Maker] Whew. Delete Mode has been disabled.");
+			
+		else
+			
+			-- Enable delete mode
+			DeleteModeEnabled = true;
+			
+			-- Turn the button red
+			Tools.DeleteMode.BackgroundColor3 = Color3.fromRGB(255,46,46);
+			
+			-- Tell the user that we're in delete mode
+			print("[Dialogue Maker] Warning: Delete Mode has been enabled!");
+			
+		end;
+		
+	end);
 	
 	print("[Dialogue Maker] Viewing "..ViewingPriority);
 	
@@ -243,91 +275,151 @@ local function SyncDialogueGui(directoryDialogue)
 				
 			end;
 			
-			DialogueStatus.PriorityButton.MouseButton1Click:Connect(function()
+			local function ShowDeleteModePrompt()
 				
-				DialogueStatus.PriorityButton.Visible = false;
-				DialogueStatus.Priority.Visible = true;
-				DialogueStatus.Priority:CaptureFocus();
-				local FocusEvent;
-				FocusEvent = DialogueStatus.Priority.FocusLost:Connect(function(input)
+				-- Debounce
+				if DeletePromptShown then
+					return;
+				end;
+				
+				DeletePromptShown = true;
+				
+				-- Show the deletion options to the user
+				DialogueStatus.DeleteFrame.Visible = true;
+				
+				-- Add the deletion functionality
+				Events.DeleteYesButton = DialogueStatus.DeleteFrame.YesButton.MouseButton1Click:Connect(function()
 					
-					DialogueStatus.Priority.Visible = false;
+					-- Debounce
+					Events.DeleteYesButton:Disconnect();
+					Events.DeleteNoButton:Disconnect();
+					Events.DeleteMode:Disconnect();
 					
-					if DialogueStatus.Priority.Text ~= dialogue.Response.Value then
-						
-						SplitPriority = DialogueStatus.Priority.Text:split(".");
-						local SplitPriorityWithPeriods = DialogueStatus.Priority.Text:split("");
-						
-						-- Make sure the priority is valid
-						local InvalidPriority = false;
-						if SplitPriorityWithPeriods[1] == "." or SplitPriorityWithPeriods[#SplitPriorityWithPeriods] == "." then
-							InvalidPriority = true;
-						end;
-						local CurrentDirectory = CurrentDialogueContainer;
-						if not InvalidPriority then
-							for index, priority in ipairs(SplitPriority) do
-								
-								-- Make sure everyone's a number
-								if not tonumber(priority) then
-									warn("[Dialogue Maker] "..DialogueStatus.Priority.Text.." is not a valid priority. Make sure you're not using any characters other than numbers and periods.");
-									InvalidPriority = true;
-									break;
-								end;
-								
-								-- Make sure the folder exists
-								local TargetDirectory = CurrentDirectory:FindFirstChild(priority);
-								if not TargetDirectory and index ~= #SplitPriority then
-									
-									warn("[Dialogue Maker] "..DialogueStatus.Priority.Text.." is not a valid priority. Make sure all parent directories exist.");
-									InvalidPriority = true;
-									break;
-									
-								elseif index == #SplitPriority then
-									
-									if CurrentDirectory.Parent.Dialogue:FindFirstChild(priority) or CurrentDirectory.Parent.Responses:FindFirstChild(priority) then
-										
-										warn("[Dialogue Maker] "..DialogueStatus.Priority.Text.." is not a valid priority. Make sure that "..DialogueStatus.Priority.Text.." isn't already being used.");
-										InvalidPriority = true;
-									
-									else
-										
-										if dialogue.Response.Value then
-											CurrentDirectory = CurrentDirectory.Parent.Responses;
-										else
-											CurrentDirectory = CurrentDirectory.Parent.Dialogue;
-										end;
-										
-										local UserSplitPriority = DialogueStatus.Priority.Text:split(".");
-										dialogue.Priority.Value = DialogueStatus.Priority.Text;
-										dialogue.Name = UserSplitPriority[#UserSplitPriority];
-										dialogue.Parent = CurrentDirectory;
-										
-									end;
-									break;
-									
-								end;
-								
-								if TargetDirectory.Dialogue:FindFirstChild(priority) then
-									CurrentDirectory = TargetDirectory.Dialogue;
-								elseif TargetDirectory.Responses:FindFirstChild(priority) then
-									CurrentDirectory = TargetDirectory.Responses;
-								elseif CurrentDirectory:FindFirstChild(priority) then
-									CurrentDirectory = CurrentDirectory[priority].Dialogue;
-								end;
-								
-							end;
-						end;
-						
-						-- Refresh the GUI
-						SyncDialogueGui(directoryDialogue);
-						
-					else
-						
-						DialogueStatus.PriorityButton.Visible = true;
-						
-					end;
+					-- Delete the dialogue
+					dialogue:Destroy();
+					
+					-- Hide the deletion options from the user
+					DialogueStatus.DeleteFrame.Visible = false;
+					
+					-- Allow the user to continue using the plugin
+					DeletePromptShown = false;
+					
+					-- Refresh the view
+					SyncDialogueGui(directoryDialogue);
 					
 				end);
+				
+				-- Give the user the option to back out
+				Events.DeleteNoButton = DialogueStatus.DeleteFrame.NoButton.MouseButton1Click:Connect(function()
+					
+					-- Debounce
+					Events.DeleteNoButton:Disconnect();
+					Events.DeleteYesButton:Disconnect();
+					
+					-- Hide the deletion options from the user
+					DialogueStatus.DeleteFrame.Visible = false;
+					
+					-- Allow the user to continue using the plugin
+					DeletePromptShown = false;
+					
+				end);
+				
+			end
+			
+			DialogueStatus.PriorityButton.MouseButton1Click:Connect(function()
+				
+				if DeleteModeEnabled then
+					
+					ShowDeleteModePrompt()
+					
+				else
+				
+					DialogueStatus.PriorityButton.Visible = false;
+					DialogueStatus.Priority.Visible = true;
+					DialogueStatus.Priority:CaptureFocus();
+					local FocusEvent;
+					FocusEvent = DialogueStatus.Priority.FocusLost:Connect(function(input)
+						
+						DialogueStatus.Priority.Visible = false;
+						
+						if DialogueStatus.Priority.Text ~= dialogue.Response.Value then
+							
+							SplitPriority = DialogueStatus.Priority.Text:split(".");
+							local SplitPriorityWithPeriods = DialogueStatus.Priority.Text:split("");
+							
+							-- Make sure the priority is valid
+							local InvalidPriority = false;
+							if SplitPriorityWithPeriods[1] == "." or SplitPriorityWithPeriods[#SplitPriorityWithPeriods] == "." then
+								InvalidPriority = true;
+							end;
+							local CurrentDirectory = CurrentDialogueContainer;
+							if not InvalidPriority then
+								for index, priority in ipairs(SplitPriority) do
+									
+									-- Make sure everyone's a number
+									if not tonumber(priority) then
+										warn("[Dialogue Maker] "..DialogueStatus.Priority.Text.." is not a valid priority. Make sure you're not using any characters other than numbers and periods.");
+										InvalidPriority = true;
+										break;
+									end;
+									
+									-- Make sure the folder exists
+									local TargetDirectory = CurrentDirectory:FindFirstChild(priority);
+									if not TargetDirectory and index ~= #SplitPriority then
+										
+										warn("[Dialogue Maker] "..DialogueStatus.Priority.Text.." is not a valid priority. Make sure all parent directories exist.");
+										InvalidPriority = true;
+										break;
+										
+									elseif index == #SplitPriority then
+										
+										if CurrentDirectory.Parent.Dialogue:FindFirstChild(priority) or CurrentDirectory.Parent.Responses:FindFirstChild(priority) then
+											
+											warn("[Dialogue Maker] "..DialogueStatus.Priority.Text.." is not a valid priority. Make sure that "..DialogueStatus.Priority.Text.." isn't already being used.");
+											InvalidPriority = true;
+										
+										else
+											
+											if dialogue.Response.Value then
+												CurrentDirectory = CurrentDirectory.Parent.Responses;
+											else
+												CurrentDirectory = CurrentDirectory.Parent.Dialogue;
+											end;
+											
+											local UserSplitPriority = DialogueStatus.Priority.Text:split(".");
+											dialogue.Priority.Value = DialogueStatus.Priority.Text;
+											dialogue.Name = UserSplitPriority[#UserSplitPriority];
+											dialogue.Parent = CurrentDirectory;
+											
+										end;
+										break;
+										
+									end;
+									
+									if TargetDirectory.Dialogue:FindFirstChild(priority) then
+										CurrentDirectory = TargetDirectory.Dialogue;
+									elseif TargetDirectory.Responses:FindFirstChild(priority) then
+										CurrentDirectory = TargetDirectory.Responses;
+									elseif CurrentDirectory:FindFirstChild(priority) then
+										CurrentDirectory = CurrentDirectory[priority].Dialogue;
+									end;
+									
+								end;
+							end;
+							
+							-- Refresh the GUI
+							SyncDialogueGui(directoryDialogue);
+							
+						else
+							
+							DialogueStatus.PriorityButton.Visible = true;
+							
+						end;
+						
+					
+					end);
+				
+				end;
 				
 			end);
 			
@@ -355,6 +447,11 @@ local function SyncDialogueGui(directoryDialogue)
 				Events.ConvertFromRedirect[dialogue] = DialogueStatus.RedirectPriority.MouseButton2Click:Connect(function()
 				
 					Events.ConvertFromRedirect[dialogue]:Disconnect();
+					Events.DeleteMode:Disconnect();
+					if Events.ViewParent then
+						Events.ViewParent:Disconnect();
+						Events.ViewParent = nil;
+					end;
 				
 					dialogue.Redirect.Value = false;
 					if dialogue.Response.Value then
@@ -381,6 +478,12 @@ local function SyncDialogueGui(directoryDialogue)
 					DialogueStatus.RedirectPriority.TextBox.FocusLost:Connect(function(enterPressed)
 						if enterPressed then
 							Events.EditingRedirect[dialogue]:Disconnect();
+							Events.DeleteMode:Disconnect();
+							if Events.ViewParent then
+								Events.ViewParent:Disconnect();
+								Events.ViewParent = nil;
+							end;
+							
 							dialogue.RedirectPriority.Value = DialogueStatus.RedirectPriority.TextBox.Text;
 							DialogueStatus.RedirectPriority.TextBox.Visible = false;
 							SyncDialogueGui(directoryDialogue);
@@ -395,6 +498,11 @@ local function SyncDialogueGui(directoryDialogue)
 				Events.ConvertToRedirect[dialogue] = DialogueStatus.Message.MouseButton2Click:Connect(function()
 					
 					Events.ConvertToRedirect[dialogue]:Disconnect();
+					Events.DeleteMode:Disconnect();
+					if Events.ViewParent then
+						Events.ViewParent:Disconnect();
+						Events.ViewParent = nil;
+					end;
 					
 					dialogue.Redirect.Value = true;
 					dialogue.Parent = directoryDialogue.Parent.Redirects;
@@ -415,6 +523,12 @@ local function SyncDialogueGui(directoryDialogue)
 					DialogueStatus.Message.TextBox:CaptureFocus();
 					DialogueStatus.Message.TextBox.FocusLost:Connect(function(enterPressed)
 						if enterPressed then
+							Events.EditingMessage[dialogue]:Disconnect();
+							Events.DeleteMode:Disconnect();
+							if Events.ViewParent then
+								Events.ViewParent:Disconnect();
+								Events.ViewParent = nil;
+							end;
 							dialogue.Message.Value = DialogueStatus.Message.TextBox.Text;
 							DialogueStatus.Message.TextBox.Visible = false;
 							SyncDialogueGui(directoryDialogue);
@@ -518,6 +632,8 @@ local function SyncDialogueGui(directoryDialogue)
 						Events.ViewParent = nil;
 					end;
 					
+					Events.DeleteMode:Disconnect();
+					
 					-- Go to the target directory
 					local Path = ViewingPriority:split(".");
 					local CurrentDirectory = CurrentDialogueContainer;
@@ -534,6 +650,8 @@ local function SyncDialogueGui(directoryDialogue)
 					
 				end);
 			end;
+			
+			
 		end;
 	
 	end;
@@ -608,6 +726,8 @@ local function AddDialogueToMessageList(directory,text)
 		Events.ViewParent = nil;
 	end;
 	
+	Events.DeleteMode:Disconnect();
+	
 	-- Now let's re-order the dialogue
 	SyncDialogueGui(directory.Parent.Dialogue);
 	
@@ -616,7 +736,7 @@ end;
 -- Open the editor when called
 local function OpenDialogueEditor()
 	
-	PluginGui = plugin:CreateDockWidgetPluginGui("Dialogue Maker", DockWidgetPluginGuiInfo.new(Enum.InitialDockState.Float,true,true,417,241,353,176));
+	PluginGui = plugin:CreateDockWidgetPluginGui("Dialogue Maker", DockWidgetPluginGuiInfo.new(Enum.InitialDockState.Float,true,true,508,241,508,241));
 	PluginGui.Title = "Dialogue Maker";
 	PluginGui:BindToClose(CloseDialogueEditor);
 	
