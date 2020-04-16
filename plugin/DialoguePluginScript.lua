@@ -519,6 +519,11 @@ local function AddDialogueToMessageList(directory,text)
 	
 	DialogueObj.Parent = directory.Parent.Dialogue;
 	
+	if Events.ViewParent then
+		Events.ViewParent:Disconnect();
+		Events.ViewParent = nil;
+	end;
+	
 	-- Now let's re-order the dialogue
 	SyncDialogueGui(directory.Parent.Dialogue);
 	
