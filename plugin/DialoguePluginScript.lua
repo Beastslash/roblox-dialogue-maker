@@ -1,10 +1,3 @@
---[[
-	
-	DialoguePluginScript.lua
-	Written by Christian Toney (DraconicChris)
-	
-]]--
-
 -- Roblox services
 local Selection = game:GetService("Selection");
 local StarterPlayer = game:GetService("StarterPlayer");
@@ -41,8 +34,8 @@ local function CloseDialogueEditor()
 	for key, event in pairs(Events) do
 		if event.Connected then
 			event:Disconnect();
-			Events[key] = nil;
 		end;
+		Events[key] = nil;
 	end;
 	
 	ViewingPriority = "1";
@@ -951,7 +944,7 @@ local function OpenDialogueEditor()
 				else
 					
 					-- Check if the selection is a part
-					if #CurrentSelection ~= 1 or not CurrentSelection[1] or not CurrentSelection[1]:IsA("Part") then
+					if #CurrentSelection ~= 1 or not CurrentSelection[1] or not CurrentSelection[1]:IsA("BasePart") then
 						PartSelected = false;
 						PartSelectionFrame.SelectAPart.Text = "Select a part";
 						return;
@@ -1171,7 +1164,7 @@ EditDialogueButton.Click:Connect(function()
 	local ModelHasPart = false;
 	
 	for _, object in ipairs(Model:GetChildren()) do
-		if object:IsA("Part") then
+		if object:IsA("BasePart") then
 			ModelHasPart = true;
 			break;
 		end
