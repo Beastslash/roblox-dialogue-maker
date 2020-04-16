@@ -64,7 +64,7 @@ RemoteConnections.PlayerPassesCondition.OnServerInvoke = function(player,npc,pri
 	end;
 	
 	-- Check if there is no condition or the condition passed
-	if not Condition or require(Condition)() then
+	if not Condition or require(Condition)(player) then
 		return true;
 	else
 		return false;
@@ -97,6 +97,16 @@ RemoteConnections.ExecuteAction.OnServerInvoke = function(player,npc,priority,be
 		Action = require(Action);
 		
 		local Old = getfenv(Action.Execute);
+		setfenv(Action.Variables,setmetatable({
+			Player = player
+		},{
+		__index = function(t,i)
+			if Old[i] then
+				return Old[i];
+			else
+				-- Whoops.
+			end;
+		end;}));
 		setfenv(Action.Execute,setmetatable({
 			Player = player
 		},{
@@ -109,7 +119,7 @@ RemoteConnections.ExecuteAction.OnServerInvoke = function(player,npc,priority,be
 		end;}));
 			
 		-- Check if there are any variables the user wants us to overwrite
-		for variable, value in pairs(Action.Variables) do
+		for variable, value in pairs(Action.Variables()) do
 			
 			if not DialogueVariables[player] then
 				DialogueVariables[player] = {};
@@ -147,7 +157,9 @@ RemoteConnections.GetVariable.OnServerInvoke = function(player,npc,variable)
 	end;
 	
 	if not DialogueVariables[player][npc] then
-		DialogueVariables[player][npc] = {};
+		DialogueVariables[player][npc] = {
+			PlayerName = player.Name;
+		};
 	end;
 	
 	-- Check the current variables
