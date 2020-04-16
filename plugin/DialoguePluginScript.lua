@@ -144,6 +144,7 @@ local function SyncDialogueGui(directoryDialogue)
 		DialogueMakerFrame.ViewStatus.DialogueLocationStatus.Text = "Viewing the beginning of the conversation";
 	else
 		DialogueMakerFrame.ViewStatus.DialogueLocationStatus.Text = "Viewing "..ViewingPriority;
+		
 		Events.ViewParent = Tools.ViewParent.MouseButton1Click:Connect(function()
 			Events.ViewParent:Disconnect();
 			
@@ -155,8 +156,12 @@ local function SyncDialogueGui(directoryDialogue)
 			
 			SyncDialogueGui(directoryDialogue.Parent.Parent.Parent.Dialogue);
 		end);
+			
 		Tools.ViewParent.BackgroundColor3 = Color3.fromRGB(255,255,255);
+		
 	end;
+	
+	print("[Dialogue Maker] Viewing "..ViewingPriority);
 	
 	if directoryDialogue.Parent:FindFirstChild("Response") and directoryDialogue.Parent.Response.Value then
 		ViewingA = "Response";
