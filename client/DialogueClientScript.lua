@@ -178,7 +178,7 @@ local function ReadDialogue(npc, dialogueSettings)
 			for _, letter in ipairs(MessageText:split("")) do
 				
 				-- Check if the player wants to skip their dialogue
-				if not NPCTalking then
+				if not NPCTalking or not PlayerTalkingWithNPC then
 					
 					break;
 					
@@ -193,7 +193,7 @@ local function ReadDialogue(npc, dialogueSettings)
 			NPCTalking = false;
 			
 			local Response;
-			if ResponsesEnabled then
+			if ResponsesEnabled and PlayerTalkingWithNPC then
 				
 				-- Add response buttons
 				for _, response in ipairs(CurrentDirectory.Responses:GetChildren()) do
@@ -244,16 +244,16 @@ local function ReadDialogue(npc, dialogueSettings)
 				
 			end)();
 			
-			while WaitingForResponse do
+			while WaitingForResponse and PlayerTalkingWithNPC do
 				game:GetService("RunService").Heartbeat:Wait();
 			end;
 			
 			-- Run after action
-			if CurrentDirectory.HasAfterAction.Value then
+			if CurrentDirectory.HasAfterAction.Value and PlayerTalkingWithNPC then
 				RemoteConnections.ExecuteAction:InvokeServer(npc,CurrentDirectory,"After");
 			end;
 			
-			if Response then
+			if Response and PlayerTalkingWithNPC then
 				
 				if #Response.Dialogue:GetChildren() ~= 0 then
 					
@@ -268,7 +268,7 @@ local function ReadDialogue(npc, dialogueSettings)
 			else
 				
 				-- Check if there is more dialogue
-				if #CurrentDirectory.Dialogue:GetChildren() ~= 0 or #CurrentDirectory.Redirects:GetChildren() ~= 0 then
+				if PlayerTalkingWithNPC and (#CurrentDirectory.Dialogue:GetChildren() ~= 0 or #CurrentDirectory.Redirects:GetChildren() ~= 0) then
 					DialoguePriority = DialoguePriority..".1";
 					CurrentDirectory = RootDirectory;
 				else
@@ -278,7 +278,7 @@ local function ReadDialogue(npc, dialogueSettings)
 				
 			end;
 			
-		else
+		elseif PlayerTalkingWithNPC then
 				
 			local SplitPriority = DialoguePriority:split(".");
 			SplitPriority[#SplitPriority] = SplitPriority[#SplitPriority] + 1;
@@ -420,3 +420,9 @@ for _, npc in ipairs(NPCDialogue) do
 end;
 
 print("[Dialogue Maker] Finished preparing dialogue.");
+
+Player.CharacterRemoving:Connect(function()
+	
+	PlayerTalkingWithNPC = false;
+	
+end);
