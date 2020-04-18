@@ -17,7 +17,7 @@ local Themes = script.Themes;
 local DefaultTheme = RemoteConnections.GetDefaultTheme:InvokeServer();
 local PlayerTalkingWithNPC = false;
 local Events = {};
-local SpeechBubble = {};
+local API = require(script.ClientAPI);
 
 local function ReadDialogue(npc, dialogueSettings)
 	
@@ -27,38 +27,14 @@ local function ReadDialogue(npc, dialogueSettings)
 	
 	PlayerTalkingWithNPC = true;
 	
-	if SpeechBubble[npc] then
-		SpeechBubble[npc].Enabled = false;
-	end;
-	
-	local OriginalCDLocation;
-	if dialogueSettings.ClickDetectorEnabled and dialogueSettings.ClickDetectorLocation and dialogueSettings.ClickDetectorLocation:IsA("ClickDetector") and dialogueSettings.ClickDetectorDisappearsWhenDialogueActive then
-		OriginalCDLocation = dialogueSettings.ClickDetectorLocation.Parent;
-		dialogueSettings.ClickDetectorLocation.Parent = nil;
-	end;
-	
-	local DialogueContainer = npc.DialogueContainer;
-	local ThemeUsed = Themes[DefaultTheme];
-	
-	-- Check if the theme is different from the server theme
-	if dialogueSettings.Theme ~= "" then
-		if Themes[dialogueSettings.Theme] then
-			ThemeUsed = Themes[dialogueSettings.Theme];
-		else
-			warn("[Dialogue Maker] \""..dialogueSettings.Theme.."\" wasn't a theme the client downloaded from the server, so we're going to use the default theme.");
-		end;
-	end;
-	
-	local PlayerControls = require(Player.PlayerScripts.PlayerModule):GetControls();
-	if dialogueSettings.FreezePlayer then
-		
-		-- Freeze the player
-		PlayerControls:Disable();
-		
-	end;
+	API.Triggers.DisableAllSpeechBubbles();
+	API.Triggers.DisableAllClickDetectors();
+	API.Player.SetPlayer(Player);
+	if dialogueSettings.FreezePlayer then API.Player.FreezePlayer(); end;
 	
 	-- Show the dialogue GUI to the player
-	local DialogueGui = ThemeUsed:Clone();
+	local DialogueContainer = npc.DialogueContainer;
+	local DialogueGui = API.Gui.CreateNewDialogueGui(dialogueSettings.Theme);
 	local ResponseContainer = DialogueGui.DialogueContainer.ResponseContainer;
 	local ResponseTemplate = ResponseContainer.ResponseTemplate:Clone();
 	ResponseContainer.ResponseTemplate:Destroy();
@@ -69,32 +45,20 @@ local function ReadDialogue(npc, dialogueSettings)
 	-- Show the dialouge to the player
 	while PlayerTalkingWithNPC and game:GetService("RunService").Heartbeat:Wait() do
 		
-		local TargetDirectoryPath = DialoguePriority:split(".");
-		local Attempts = #DialogueContainer:GetChildren();
-		
-		-- Move to the target directory
-		for index, directory in ipairs(TargetDirectoryPath) do
-			if CurrentDirectory.Dialogue:FindFirstChild(directory) then
-				CurrentDirectory = CurrentDirectory.Dialogue[directory];
-			elseif CurrentDirectory.Responses:FindFirstChild(directory) then
-				CurrentDirectory = CurrentDirectory.Responses[directory];
-			elseif CurrentDirectory.Redirects:FindFirstChild(directory) then
-				CurrentDirectory = CurrentDirectory.Redirects[directory];
-			elseif CurrentDirectory:FindFirstChild(directory) then
-				CurrentDirectory = CurrentDirectory[directory];
-			end;
-		end;
+		CurrentDirectory = API.Dialogue.GoToDirectory(CurrentDirectory, DialoguePriority:split("."));
 		
 		if CurrentDirectory.Redirect.Value and RemoteConnections.PlayerPassesCondition:InvokeServer(npc,CurrentDirectory) then
 			
 			RemoteConnections.ExecuteAction:InvokeServer(npc,CurrentDirectory,"Before");
+			
 			local DialoguePriorityPath = CurrentDirectory.RedirectPriority.Value:split(".");
 			table.remove(DialoguePriorityPath,1);
 			DialoguePriority = table.concat(DialoguePriorityPath,".");
 			CurrentDirectory = RootDirectory;
+			
 			RemoteConnections.ExecuteAction:InvokeServer(npc,CurrentDirectory,"After");
 			
-		elseif RemoteConnections.PlayerPassesCondition:InvokeServer(npc,CurrentDirectory) then
+		elseif RemoteConnections.PlayerPassesCondition:InvokeServer(npc, CurrentDirectory) then
 			
 			-- Run the before action if there is one
 			if CurrentDirectory.HasBeforeAction.Value then
@@ -102,16 +66,7 @@ local function ReadDialogue(npc, dialogueSettings)
 			end;
 			
 			-- Check if the message has any variables
-			local MessageText = CurrentDirectory.Message.Value;
-			for match in string.gmatch(MessageText,"%[/variable=(.+)%]") do
-				
-				-- Get the match from the server
-				local VariableValue = RemoteConnections.GetVariable:InvokeServer(npc,match);
-				if VariableValue then
-					MessageText = MessageText:gsub("%[/variable=(.+)%]",VariableValue);
-				end;
-				
-			end;
+			local MessageText = API.Dialogue.ReplaceVariablesWithValues(npc, CurrentDirectory.Message.Value);
 			
 			-- Show the message to the player
 			local ThemeDialogueContainer = DialogueGui.DialogueContainer;
@@ -121,12 +76,7 @@ local function ReadDialogue(npc, dialogueSettings)
 			local ResponsesEnabled = false;
 			if #CurrentDirectory.Responses:GetChildren() > 0 then
 				
-				-- Clear previous responses
-				for _, response in ipairs(ResponseContainer:GetChildren()) do
-					if not response:IsA("UIListLayout") then
-						response:Destroy();
-					end;
-				end;
+				API.Dialogue.ClearResponses(ResponseContainer);
 				
 				TextContainer = ThemeDialogueContainer.NPCTextContainerWithResponses;
 				ThemeDialogueContainer.NPCTextContainerWithResponses.Visible = true;
@@ -149,20 +99,27 @@ local function ReadDialogue(npc, dialogueSettings)
 			
 			local NPCTalking = true;
 			local WaitingForResponse = true;
+			local Skipped = false;
+			local FullMessageText = "";
 			
 			-- Make the NPC stop talking if the player clicks the frame
+			local NPCPaused = false;
 			Events.DialogueClicked = ThemeDialogueContainer.InputBegan:Connect(function(input)
 				
 				-- Make sure the player clicked the frame
 				if input.UserInputType == Enum.UserInputType.MouseButton1 then
 					if NPCTalking then
 						
+						if NPCPaused then
+							NPCPaused = false;
+						end;
+						
 						-- Check settings set by the developer
 						if dialogueSettings.AllowPlayerToSkipDelay then
 							
 							-- Replace the incomplete dialogue with the full text
-							TextContainer.Line.Text = MessageText;
-							NPCTalking = false;
+							TextContainer.Line.Text = FullMessageText;
+							Skipped = true;
 							
 						end;
 						
@@ -175,31 +132,48 @@ local function ReadDialogue(npc, dialogueSettings)
 			end);
 			
 			-- Put the letters of the message together for an animation effect
-			for _, letter in ipairs(MessageText:split("")) do
-				
-				-- Check if the player wants to skip their dialogue
-				if not NPCTalking or not PlayerTalkingWithNPC then
-					
-					break;
-					
+			local DividedText = API.Dialogue.DivideTextToFitBox(MessageText, TextContainer);
+			for index, page in ipairs(DividedText) do
+				FullMessageText = page.FullText;
+				Message = "";
+				for wordIndex, word in ipairs(page) do
+					if wordIndex ~= 1 then Message = Message.." " end;
+					for _, letter in ipairs(word:split("")) do
+						
+						-- Check if the player wants to skip their dialogue
+						if Skipped or not NPCTalking or not PlayerTalkingWithNPC then
+							
+							break;
+							
+						end;
+						
+						Message = Message..letter;
+						TextContainer.Line.Text = Message;
+						
+						wait(dialogueSettings.LetterDelay);
+						
+					end;
 				end;
 				
-				Message = Message..letter;
-				TextContainer.Line.Text = Message;
-				
-				wait(dialogueSettings.LetterDelay);
-				
+				if DividedText[index+1] and NPCTalking then
+					NPCPaused = true;
+					
+					while NPCPaused and NPCTalking do 
+						game:GetService("RunService").Heartbeat:Wait() 
+					end;
+					
+					NPCPaused = false;
+					Skipped = false;
+				end;
 			end;
 			NPCTalking = false;
 			
-			local Response;
+			local ResponseChosen;
 			if ResponsesEnabled and PlayerTalkingWithNPC then
 				
 				-- Add response buttons
 				for _, response in ipairs(CurrentDirectory.Responses:GetChildren()) do
-					
 					if RemoteConnections.PlayerPassesCondition:InvokeServer(npc,response) then
-					
 						local ResponseButton = ResponseTemplate:Clone();
 						ResponseButton.Name = "Response";
 						ResponseButton.Text = response.Message.Value;
@@ -207,7 +181,7 @@ local function ReadDialogue(npc, dialogueSettings)
 						ResponseButton.MouseButton1Click:Connect(function()
 							ResponseContainer.Visible = false;
 							
-							Response = response;
+							ResponseChosen = response;
 							
 							if response.HasAfterAction.Value then
 								RemoteConnections.ExecuteAction:InvokeServer(npc,response,"After");
@@ -215,11 +189,7 @@ local function ReadDialogue(npc, dialogueSettings)
 							
 							WaitingForResponse = false;
 						end);
-						
-					else
-						print(false)
 					end;
-					
 				end;
 				
 				ResponseContainer.CanvasSize = UDim2.new(ResponseContainer.CanvasSize.X,ResponseContainer.UIListLayout.AbsoluteContentSize.Y);
@@ -253,11 +223,11 @@ local function ReadDialogue(npc, dialogueSettings)
 				RemoteConnections.ExecuteAction:InvokeServer(npc,CurrentDirectory,"After");
 			end;
 			
-			if Response and PlayerTalkingWithNPC then
+			if ResponseChosen and PlayerTalkingWithNPC then
 				
-				if #Response.Dialogue:GetChildren() ~= 0 then
+				if #ResponseChosen.Dialogue:GetChildren() ~= 0 then
 					
-					DialoguePriority = string.sub(Response.Priority.Value..".1",3);
+					DialoguePriority = string.sub(ResponseChosen.Priority.Value..".1",3);
 					CurrentDirectory = RootDirectory;
 					
 				else
@@ -288,18 +258,9 @@ local function ReadDialogue(npc, dialogueSettings)
 		
 	end;
 	
-	if SpeechBubble[npc] then
-		SpeechBubble[npc].Enabled = true;
-	end;
-	
-	if OriginalCDLocation then
-		dialogueSettings.ClickDetectorLocation.Parent = OriginalCDLocation;
-	end;
-	
-	-- Unfreeze the player
-	if dialogueSettings.FreezePlayer then
-		PlayerControls:Enable();
-	end;
+	API.Triggers.EnableAllSpeechBubbles();
+	API.Triggers.EnableAllClickDetectors();
+	if dialogueSettings.FreezePlayer then API.Player.UnfreezePlayer(); end;
 	
 end;
 
@@ -321,32 +282,16 @@ for _, npc in ipairs(NPCDialogue) do
 				
 				if DialogueSettings.SpeechBubblePart:IsA("BasePart") then
 					
-					-- Create a speech bubble
-					SpeechBubble[npc] = Instance.new("BillboardGui");
-					SpeechBubble[npc].Name = "SpeechBubble";
-					SpeechBubble[npc].Active = true;
-					SpeechBubble[npc].LightInfluence = 0;
-					SpeechBubble[npc].ResetOnSpawn = false;
-					SpeechBubble[npc].Size = DialogueSettings.SpeechBubbleSize;
-					SpeechBubble[npc].StudsOffset = DialogueSettings.StudsOffset;
-					SpeechBubble[npc].Adornee = DialogueSettings.SpeechBubblePart;
-					
-					local SpeechBubbleButton = Instance.new("ImageButton");
-					SpeechBubbleButton.BackgroundTransparency = 1;
-					SpeechBubbleButton.BorderSizePixel = 0;
-					SpeechBubbleButton.Name = "SpeechBubbleButton";
-					SpeechBubbleButton.Size = UDim2.new(1,0,1,0);
-					SpeechBubbleButton.Image = DialogueSettings.SpeechBubbleImage;
-					SpeechBubbleButton.Parent = SpeechBubble[npc];
+					local SpeechBubble = API.Triggers.CreateSpeechBubble(npc, DialogueSettings);
 					
 					-- Listen if the player clicks the speech bubble
-					SpeechBubbleButton.MouseButton1Click:Connect(function()
+					SpeechBubble.SpeechBubbleButton.MouseButton1Click:Connect(function()
 						
 						ReadDialogue(npc, DialogueSettings);
 						
 					end);
 					
-					SpeechBubble[npc].Parent = PlayerGui;
+					SpeechBubble.Parent = PlayerGui;
 					
 				else
 					warn("[Dialogue Viewer] The SpeechBubblePart for "..npc.Name.." is not a Part.");
@@ -398,6 +343,8 @@ for _, npc in ipairs(NPCDialogue) do
 				end;
 				
 				if DialogueSettings.ClickDetectorLocation:IsA("ClickDetector") then
+					
+					API.Triggers.AddClickDetector(npc, DialogueSettings.ClickDetectorLocation);
 					
 					DialogueSettings.ClickDetectorLocation.MouseClick:Connect(function()
 						ReadDialogue(npc, DialogueSettings);
