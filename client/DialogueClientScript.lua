@@ -1,6 +1,7 @@
 -- Get Roblox services
 local ReplicatedStorage = game:GetService("ReplicatedStorage");
 local Players = game:GetService("Players");
+local ControllerService = game:GetService("ControllerService");
 
 local Player = Players.LocalPlayer;
 local PlayerGui = Player:WaitForChild("PlayerGui");
@@ -18,7 +19,7 @@ local PlayerTalkingWithNPC = false;
 local Events = {};
 local SpeechBubble = {};
 
-local function ReadDialogue(npc)
+local function ReadDialogue(npc, dialogueSettings)
 	
 	if PlayerTalkingWithNPC then
 		return;
@@ -30,21 +31,31 @@ local function ReadDialogue(npc)
 		SpeechBubble[npc].Enabled = false;
 	end;
 	
+	local OriginalCDLocation;
+	if dialogueSettings.ClickDetectorEnabled and dialogueSettings.ClickDetectorLocation and dialogueSettings.ClickDetectorLocation:IsA("ClickDetector") and dialogueSettings.ClickDetectorDisappearsWhenDialogueActive then
+		OriginalCDLocation = dialogueSettings.ClickDetectorLocation.Parent;
+		dialogueSettings.ClickDetectorLocation.Parent = nil;
+	end;
+	
 	local DialogueContainer = npc.DialogueContainer;
-	local DialogueSettings = DialogueContainer.Settings;
 	local ThemeUsed = Themes[DefaultTheme];
 	
 	-- Check if the theme is different from the server theme
-	if DialogueSettings.Theme.Value ~= "" then
-		if Themes[DialogueSettings.Theme.Value] then
-			ThemeUsed = Themes[DialogueSettings.Theme.Value];
+	if dialogueSettings.Theme ~= "" then
+		if Themes[dialogueSettings.Theme] then
+			ThemeUsed = Themes[dialogueSettings.Theme];
 		else
-			warn("[Dialogue Maker] \""..DialogueSettings.Theme.Value.."\" wasn't a theme the client downloaded from the server, so we're going to use the default theme.");
+			warn("[Dialogue Maker] \""..dialogueSettings.Theme.."\" wasn't a theme the client downloaded from the server, so we're going to use the default theme.");
 		end;
 	end;
 	
-	-- Freeze the player
-	Player.Character.HumanoidRootPart.Anchored = true;
+	local PlayerControls = require(Player.PlayerScripts.PlayerModule):GetControls();
+	if dialogueSettings.FreezePlayer then
+		
+		-- Freeze the player
+		PlayerControls:Disable();
+		
+	end;
 	
 	-- Show the dialogue GUI to the player
 	local DialogueGui = ThemeUsed:Clone();
@@ -145,33 +156,38 @@ local function ReadDialogue(npc)
 				-- Make sure the player clicked the frame
 				if input.UserInputType == Enum.UserInputType.MouseButton1 then
 					if NPCTalking then
-						NPCTalking = false;
-					else
 						
-						-- Check if there are any available responses
-						if #CurrentDirectory.Responses:GetChildren() == 0 then
-							WaitingForResponse = false;
+						-- Check settings set by the developer
+						if dialogueSettings.AllowPlayerToSkipDelay then
+							
+							-- Replace the incomplete dialogue with the full text
+							TextContainer.Line.Text = MessageText;
+							NPCTalking = false;
+							
 						end;
 						
+					elseif #CurrentDirectory.Responses:GetChildren() == 0 then
+						WaitingForResponse = false;
 					end;
+					
 				end;
 				
 			end);
 			
+			-- Put the letters of the message together for an animation effect
 			for _, letter in ipairs(MessageText:split("")) do
 				
 				-- Check if the player wants to skip their dialogue
 				if not NPCTalking then
 					
-					-- Replace the incomplete dialogue with the full text
-					TextContainer.Line.Text = MessageText;
 					break;
 					
 				end;
 				
 				Message = Message..letter;
 				TextContainer.Line.Text = Message;
-				wait(.025);
+				
+				wait(dialogueSettings.LetterDelay);
 				
 			end;
 			NPCTalking = false;
@@ -210,11 +226,22 @@ local function ReadDialogue(npc)
 				
 			end;
 			
+			-- Run the timeout code in the background
 			coroutine.wrap(function()
-				if DialogueSettings.TimeoutEnabled.Value and DialogueSettings.TimeoutInSeconds.Value and not ResponsesEnabled then
-					wait(DialogueSettings.TimeoutInSeconds.Value);
+				
+				if dialogueSettings.TimeoutEnabled and dialogueSettings.ConversationTimeoutInSeconds then
+					
+					-- Wait for the player if the developer wants to
+					if ResponsesEnabled and dialogueSettings.WaitForResponse then
+						return;
+					end;
+					
+					-- Wait the timeout set by the developer
+					wait(dialogueSettings.ConversationTimeoutInSeconds);
 					WaitingForResponse = false;
+					
 				end;
+				
 			end)();
 			
 			while WaitingForResponse do
@@ -265,8 +292,14 @@ local function ReadDialogue(npc)
 		SpeechBubble[npc].Enabled = true;
 	end;
 	
+	if OriginalCDLocation then
+		dialogueSettings.ClickDetectorLocation.Parent = OriginalCDLocation;
+	end;
+	
 	-- Unfreeze the player
-	Player.Character.HumanoidRootPart.Anchored = false;
+	if dialogueSettings.FreezePlayer then
+		PlayerControls:Enable();
+	end;
 	
 end;
 
@@ -280,13 +313,13 @@ for _, npc in ipairs(NPCDialogue) do
 	-- Make sure all NPCs aren't affected if this one doesn't load properly
 	local success, msg = pcall(function()
 		
-		local DialogueSettings = npc.DialogueContainer.Settings;
+		local DialogueSettings = require(npc.DialogueContainer.Settings);
 		
-		if DialogueSettings.SpeechBubbleEnabled.Value then
+		if DialogueSettings.SpeechBubbleEnabled then
 			
-			if DialogueSettings.SpeechBubblePart.Value then
+			if DialogueSettings.SpeechBubblePart then
 				
-				if DialogueSettings.SpeechBubblePart.Value:IsA("BasePart") then
+				if DialogueSettings.SpeechBubblePart:IsA("BasePart") then
 					
 					-- Create a speech bubble
 					SpeechBubble[npc] = Instance.new("BillboardGui");
@@ -294,22 +327,22 @@ for _, npc in ipairs(NPCDialogue) do
 					SpeechBubble[npc].Active = true;
 					SpeechBubble[npc].LightInfluence = 0;
 					SpeechBubble[npc].ResetOnSpawn = false;
-					SpeechBubble[npc].Size = UDim2.new(2.5,0,2.5,0);
-					SpeechBubble[npc].StudsOffset = Vector3.new(0,2,0);
-					SpeechBubble[npc].Adornee = DialogueSettings.SpeechBubblePart.Value;
+					SpeechBubble[npc].Size = DialogueSettings.SpeechBubbleSize;
+					SpeechBubble[npc].StudsOffset = DialogueSettings.StudsOffset;
+					SpeechBubble[npc].Adornee = DialogueSettings.SpeechBubblePart;
 					
 					local SpeechBubbleButton = Instance.new("ImageButton");
 					SpeechBubbleButton.BackgroundTransparency = 1;
 					SpeechBubbleButton.BorderSizePixel = 0;
 					SpeechBubbleButton.Name = "SpeechBubbleButton";
 					SpeechBubbleButton.Size = UDim2.new(1,0,1,0);
-					SpeechBubbleButton.Image = "rbxassetid://4883127463";
+					SpeechBubbleButton.Image = DialogueSettings.SpeechBubbleImage;
 					SpeechBubbleButton.Parent = SpeechBubble[npc];
 					
 					-- Listen if the player clicks the speech bubble
 					SpeechBubbleButton.MouseButton1Click:Connect(function()
 						
-						ReadDialogue(npc)
+						ReadDialogue(npc, DialogueSettings);
 						
 					end);
 					
@@ -323,52 +356,66 @@ for _, npc in ipairs(NPCDialogue) do
 			
 		end;
 		
-		if DialogueSettings.PromptRegionEnabled.Value then
+		if DialogueSettings.PromptRegionEnabled then
 			
-			if DialogueSettings.PromptRegionPart.Value then
+			if DialogueSettings.PromptRegionPart then
 				
-				if DialogueSettings.PromptRegionPart.Value:IsA("BasePart") then
+				if DialogueSettings.PromptRegionPart:IsA("BasePart") then
 					
 					local PlayerTouched;
-					DialogueSettings.PromptRegionPart.Value.Touched:Connect(function(part)
+					DialogueSettings.PromptRegionPart.Touched:Connect(function(part)
 						
 						-- Make sure our player touched it and not someone else
 						local PlayerFromCharacter = Players:GetPlayerFromCharacter(part.Parent);
 						if PlayerFromCharacter == Player then
 							
-							ReadDialogue(npc);
+							ReadDialogue(npc, DialogueSettings);
 							
 						end;
 						
 					end);
 						
 				else
-					warn("[Dialogue Viewer] The PromptRegionPart for "..npc.Name.." is not a Part.");
+					warn("[Dialogue Maker] The PromptRegionPart for "..npc.Name.." is not a Part.");
 				end;
 				
 			end;
 			
 		end;
 		
-		if DialogueSettings.ClickEnabled.Value then
+		if DialogueSettings.ClickDetectorEnabled then
 			
-			if DialogueSettings.ClickDetectorLocation.Value then
+			if DialogueSettings.ClickDetectorLocation or DialogueSettings.AutomaticallyCreateClickDetector then
 				
-				if DialogueSettings.ClickDetectorLocation.Value:IsA("ClickDetector") then
+				if DialogueSettings.AutomaticallyCreateClickDetector then
 					
-					DialogueSettings.ClickDetectorLocation.Value.MouseClick:Connect(function()
-						ReadDialogue(npc);
+					local ClickDetector = Instance.new("ClickDetector");
+					ClickDetector.MaxActivationDistance = DialogueSettings.DetectorActivationDistance;
+					ClickDetector.Parent = npc;
+					
+					DialogueSettings.ClickDetectorLocation = ClickDetector;
+					
+				end;
+				
+				if DialogueSettings.ClickDetectorLocation:IsA("ClickDetector") then
+					
+					DialogueSettings.ClickDetectorLocation.MouseClick:Connect(function()
+						ReadDialogue(npc, DialogueSettings);
 					end);
 					
 				else
-					warn("[Dialogue Viewer] The ClickDetectorLocation for "..npc.Name.." is not a ClickDetector.");
+					warn("[Dialogue Maker] The ClickDetectorLocation for "..npc.Name.." is not a ClickDetector.");
 				end;
 				
 			end;
 			
 		end;
 		
-	end)
+	end);
+		
+	if not success then
+		warn("[Dialogue Maker] Couldn't load NPC "..npc.Name..": "..msg);
+	end;
 	
 end;
 
