@@ -14,7 +14,7 @@ The Dialogue Maker is an open-source plugin for creating RPG-like dialogue boxes
 * Add dialogue redirects and make the conversation more efficient
 
 ## Where can I get it?
-You can either get the version Beastslash updates at the Roblox Library or you can build your own version by using the scripts in this repository.
+You can either get [the version Beastslash updates at the Roblox Library](https://www.roblox.com/library/4930928141/Dialogue-Maker-Beta) or you can build your own version by using the scripts in this repository.
 
 ## How do I use it?
 Check out [How to use the Dialogue Maker](https://github.com/beastslash/roblox-dialogue-maker/wiki/How-to-use-the-Dialogue-Maker) on the wiki!
