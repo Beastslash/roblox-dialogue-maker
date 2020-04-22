@@ -42,6 +42,14 @@ local function ReadDialogue(npc, dialogueSettings)
 	local RootDirectory = DialogueContainer["1"];
 	local CurrentDirectory = RootDirectory;
 	
+	-- Check if the NPC has a name
+	if typeof(dialogueSettings.Name) == "string" and dialogueSettings.Name ~= "" then
+		DialogueGui.DialogueContainer.NPCNameFrame.Visible = true;
+		DialogueGui.DialogueContainer.NPCNameFrame.NPCName.Text = dialogueSettings.Name;
+	else
+		DialogueGui.DialogueContainer.NPCNameFrame.Visible = false;
+	end;
+	
 	-- Show the dialouge to the player
 	while PlayerTalkingWithNPC and game:GetService("RunService").Heartbeat:Wait() do
 		
@@ -81,7 +89,6 @@ local function ReadDialogue(npc, dialogueSettings)
 				TextContainer = ThemeDialogueContainer.NPCTextContainerWithResponses;
 				ThemeDialogueContainer.NPCTextContainerWithResponses.Visible = true;
 				ThemeDialogueContainer.NPCTextContainerWithoutResponses.Visible = false;
-				ThemeDialogueContainer.ResponseContainer.Visible = true;
 				ResponsesEnabled = true;
 				
 			else
@@ -192,7 +199,8 @@ local function ReadDialogue(npc, dialogueSettings)
 					end;
 				end;
 				
-				ResponseContainer.CanvasSize = UDim2.new(ResponseContainer.CanvasSize.X,ResponseContainer.UIListLayout.AbsoluteContentSize.Y);
+				ResponseContainer.CanvasSize = UDim2.new(0,ResponseContainer.CanvasSize.X,0,ResponseContainer.UIListLayout.AbsoluteContentSize.Y);
+				ThemeDialogueContainer.ResponseContainer.Visible = true;
 				
 			end;
 			
@@ -225,7 +233,7 @@ local function ReadDialogue(npc, dialogueSettings)
 			
 			if ResponseChosen and PlayerTalkingWithNPC then
 				
-				if #ResponseChosen.Dialogue:GetChildren() ~= 0 then
+				if (#ResponseChosen.Dialogue:GetChildren() ~= 0 or #ResponseChosen.Redirects:GetChildren() ~= 0) then
 					
 					DialoguePriority = string.sub(ResponseChosen.Priority.Value..".1",3);
 					CurrentDirectory = RootDirectory;
