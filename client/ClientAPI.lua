@@ -128,6 +128,7 @@ function API.Player.UnfreezePlayer()
 end;
 
 function API.Dialogue.GoToDirectory(currentDirectory, targetPath)
+	
 	for index, directory in ipairs(targetPath) do
 		if currentDirectory.Dialogue:FindFirstChild(directory) then
 			currentDirectory = currentDirectory.Dialogue[directory];
@@ -176,7 +177,7 @@ function API.Dialogue.DivideTextToFitBox(text, textContainer)
 	
 	local Divisions = {};
 	local Page = 1;
-	Line.Text = "";
+	
 	for index, word in ipairs(text:split(" ")) do
 		if index == 1 then
 			Line.Text = word;
@@ -194,7 +195,6 @@ function API.Dialogue.DivideTextToFitBox(text, textContainer)
 			for _, letter in ipairs(word:split("")) do
 				Line.Text = Line.Text..letter;
 				if not Line.TextFits then
-					
 					-- Remove the letter from the text
 					Line.Text = Line.Text:sub(1,string.len(Line.Text)-1);
 					table.insert(Divisions[Page], Line.Text);
