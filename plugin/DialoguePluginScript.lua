@@ -14,7 +14,7 @@ local DialogueMakerFrame = script.DialogueMakerGUI.MainFrame:Clone();
 local DialogueMessageList = DialogueMakerFrame.DialogueContainer.DialogueMessageList;
 local DialogueMessageTemplate = DialogueMessageList.DialogueMessageTemplate:Clone();
 local Tools = DialogueMakerFrame.Tools;
-local Events = {EditingMessage = {}; EditingRedirect = {}; ConvertFromRedirect = {}; ConvertToRedirect = {}};
+local Events = {ViewChildren = {}; EditingMessage = {}; EditingRedirect = {}; ConvertFromRedirect = {}; ConvertToRedirect = {}};
 
 DialogueMakerFrame.DialogueContainer.DialogueMessageList.DialogueMessageTemplate:Destroy();
 
@@ -33,10 +33,9 @@ local function CloseDialogueEditor()
 		if event.Connected then
 			event:Disconnect();
 		end;
-		Events[key] = nil;
 	end;
 	
-	Events = {EditingMessage = {}; EditingRedirect = {}; ConvertFromRedirect = {}; ConvertToRedirect = {}};
+	Events = {ViewChildren = {}; EditingMessage = {}; EditingRedirect = {}; ConvertFromRedirect = {}; ConvertToRedirect = {}};
 	
 	ViewingPriority = "1";
 	DialogueMakerFrame = DialogueMakerFrame:Clone();
@@ -60,7 +59,7 @@ local function RepairNPC()
 		if new then
 			print("[Dialogue Maker] Created a DialogueContainer inside of "..Model.Name)
 		else
-			warn("[Dialogue Maker] "..Model.Name.."'s DialogueContainer was moved or deleted! Creating a new one...");
+			print("[Dialogue Maker] "..Model.Name.."'s DialogueContainer was moved or deleted! Creating a new one...");
 		end
 		
 		-- Add the dialogue container to the NPC
@@ -122,6 +121,10 @@ local function SyncDialogueGui(directoryDialogue)
 	-- Make sure everything with the NPC is OK
 	RepairNPC();
 	
+	-- Check if there are any past events
+	if Events.ViewParent then Events.ViewParent:Disconnect(); Events.ViewParent = nil; end;
+	if Events.DeleteMode then Events.DeleteMode:Disconnect(); Events.DeleteMode = nil; end;
+	
 	if ViewingPriority == "1" then
 		DialogueMakerFrame.ViewStatus.DialogueLocationStatus.Text = "Viewing the beginning of the conversation";
 	else
@@ -174,19 +177,13 @@ local function SyncDialogueGui(directoryDialogue)
 	
 	print("[Dialogue Maker] Viewing "..ViewingPriority);
 	
-	if directoryDialogue.Parent:FindFirstChild("Response") and directoryDialogue.Parent.Response.Value then
-		ViewingA = "Response";
-	else
-		ViewingA = "Dialogue";
-	end;
+	ViewingA = (directoryDialogue.Parent:FindFirstChild("Response") and directoryDialogue.Parent.Response.Value and "Response") or "Dialogue";
 	
 	-- Clean up the old dialogue
 	for _, status in ipairs(DialogueMessageList:GetChildren()) do
-		
 		if not status:IsA("UIListLayout") then
 			status:Destroy();
 		end;
-		
 	end;
 	
 	-- Sort the directory based on priority
@@ -209,11 +206,7 @@ local function SyncDialogueGui(directoryDialogue)
 	table.sort(RedirectChildren, SortByMessagePriority);
 	
 	-- Check if there is a redirect
-	if RedirectChildren[1] then
-		DialogueMessageList.Parent.DescriptionLabels.Text.Text = "Text / Redirect";
-	else
-		DialogueMessageList.Parent.DescriptionLabels.Text.Text = "Text";
-	end;
+	DialogueMessageList.Parent.DescriptionLabels.Text.Text = (RedirectChildren[1] and "Text / Redirect") or "Text";
 	
 	-- Keep track if a message GUI is open
 	local EditingMessage = false;
@@ -226,7 +219,7 @@ local function SyncDialogueGui(directoryDialogue)
 		for _, dialogue in ipairs(category) do
 			
 			local DialogueStatus = DialogueMessageTemplate:Clone();
-			local SplitPriority = dialogue.Priority.Value:split(".")
+			local SplitPriority = dialogue.Priority.Value:split(".");
 			DialogueStatus.PriorityButton.Text = SplitPriority[#SplitPriority];
 			DialogueStatus.Priority.PlaceholderText = dialogue.Priority.Value;
 			DialogueStatus.Priority.Text = dialogue.Priority.Value;
@@ -249,18 +242,13 @@ local function SyncDialogueGui(directoryDialogue)
 				DialogueStatus.Message.Visible = false;
 				
 			else
-				
 				DialogueStatus.BackgroundTransparency = 1;
-				
 			end;
 			
 			local function ShowDeleteModePrompt()
 				
 				-- Debounce
-				if DeletePromptShown then
-					return;
-				end;
-				
+				if DeletePromptShown then return; end;
 				DeletePromptShown = true;
 				
 				-- Show the deletion options to the user
@@ -308,11 +296,8 @@ local function SyncDialogueGui(directoryDialogue)
 			DialogueStatus.PriorityButton.MouseButton1Click:Connect(function()
 				
 				if DeleteModeEnabled then
-					
 					ShowDeleteModePrompt()
-					
 				else
-				
 					DialogueStatus.PriorityButton.Visible = false;
 					DialogueStatus.Priority.Visible = true;
 					DialogueStatus.Priority:CaptureFocus();
@@ -359,11 +344,7 @@ local function SyncDialogueGui(directoryDialogue)
 										
 										else
 											
-											if dialogue.Response.Value then
-												CurrentDirectory = CurrentDirectory.Parent.Responses;
-											else
-												CurrentDirectory = CurrentDirectory.Parent.Dialogue;
-											end;
+											CurrentDirectory = (dialogue.Response.Value and CurrentDirectory.Parent.Responses) or CurrentDirectory.Parent.Dialogue;
 											
 											local UserSplitPriority = DialogueStatus.Priority.Text:split(".");
 											dialogue.Priority.Value = DialogueStatus.Priority.Text;
@@ -375,14 +356,7 @@ local function SyncDialogueGui(directoryDialogue)
 										
 									end;
 									
-									if TargetDirectory.Dialogue:FindFirstChild(priority) then
-										CurrentDirectory = TargetDirectory.Dialogue;
-									elseif TargetDirectory.Responses:FindFirstChild(priority) then
-										CurrentDirectory = TargetDirectory.Responses;
-									elseif CurrentDirectory:FindFirstChild(priority) then
-										CurrentDirectory = CurrentDirectory[priority].Dialogue;
-									end;
-									
+									CurrentDirectory = (TargetDirectory.Dialogue:FindFirstChild(priority) and TargetDirectory.Dialogue) or (TargetDirectory.Responses:FindFirstChild(priority) and TargetDirectory.Responses) or (CurrentDirectory:FindFirstChild(priority) and CurrentDirectory[priority].Dialogue);
 								end;
 							end;
 							
@@ -390,16 +364,10 @@ local function SyncDialogueGui(directoryDialogue)
 							SyncDialogueGui(directoryDialogue);
 							
 						else
-							
 							DialogueStatus.PriorityButton.Visible = true;
-							
 						end;
-						
-					
 					end);
-				
 				end;
-				
 			end);
 			
 			DialogueStatus.PriorityButton.MouseButton2Click:Connect(function() 
@@ -426,18 +394,8 @@ local function SyncDialogueGui(directoryDialogue)
 				Events.ConvertFromRedirect[dialogue] = DialogueStatus.RedirectPriority.MouseButton2Click:Connect(function()
 				
 					Events.ConvertFromRedirect[dialogue]:Disconnect();
-					Events.DeleteMode:Disconnect();
-					if Events.ViewParent then
-						Events.ViewParent:Disconnect();
-						Events.ViewParent = nil;
-					end;
-				
 					dialogue.Redirect.Value = false;
-					if dialogue.Response.Value then
-						dialogue.Parent = directoryDialogue.Parent.Responses;
-					else
-						dialogue.Parent = directoryDialogue.Parent.Dialogue;
-					end;
+					dialogue.Parent = (dialogue.Response.Value and directoryDialogue.Parent.Responses) or directoryDialogue.Parent.Dialogue;
 					
 					SyncDialogueGui(directoryDialogue);
 					
@@ -445,10 +403,8 @@ local function SyncDialogueGui(directoryDialogue)
 					
 				Events.EditingRedirect[dialogue] = DialogueStatus.RedirectPriority.MouseButton1Click:Connect(function()
 					
-					if EditingMessage then
-						return;
-					end;
-					
+					-- Debounce
+					if EditingMessage then return; end;
 					EditingMessage = true;
 					
 					DialogueStatus.RedirectPriority.TextBox.Text = dialogue.Message.Value;
@@ -519,6 +475,26 @@ local function SyncDialogueGui(directoryDialogue)
 				
 			end
 			
+			-- Check if there's already a condition for the dialogue
+			for _, condition in ipairs(ServerScriptService.DialogueServerScript.Conditions:GetChildren()) do
+				if condition:IsA("ModuleScript") and condition.Priority.Value == dialogue and condition.NPC.Value == Model then
+					DialogueStatus.ConditionButton.ImageColor3 = Color3.fromRGB(35, 255, 116);
+				end;
+			end;
+			
+			-- Check if there's already actions for the dialogue
+			for _, action in ipairs(ServerScriptService.DialogueServerScript.Actions.Before:GetChildren()) do
+				if action:IsA("ModuleScript") and action.Priority.Value == dialogue and action.NPC.Value == Model then
+					DialogueStatus.BeforeActionButton.ImageColor3 = Color3.fromRGB(35, 255, 116);
+				end
+			end;
+			
+			for _, action in ipairs(ServerScriptService.DialogueServerScript.Actions.After:GetChildren()) do
+				if action:IsA("ModuleScript") and action.Priority.Value == dialogue and action.NPC.Value == Model then
+					DialogueStatus.AfterActionButton.ImageColor3 = Color3.fromRGB(35, 255, 116);
+				end
+			end;
+			
 			DialogueStatus.ConditionButton.MouseButton1Click:Connect(function()
 				
 				-- Look through the condition list and find the condition we want
@@ -546,6 +522,8 @@ local function SyncDialogueGui(directoryDialogue)
 					Condition.Parent = ServerScriptService.DialogueServerScript.Conditions;
 					
 				end;
+				
+				DialogueStatus.ConditionButton.ImageColor3 = Color3.fromRGB(35, 255, 116);
 				
 				-- Open the condition script
 				plugin:OpenScript(Condition);
@@ -582,6 +560,8 @@ local function SyncDialogueGui(directoryDialogue)
 					
 				end;
 				
+				DialogueStatus[beforeOrAfter.."ActionButton"].ImageColor3 = Color3.fromRGB(35, 255, 116);
+				
 				-- Open the condition script
 				plugin:OpenScript(Action);
 				
@@ -602,7 +582,9 @@ local function SyncDialogueGui(directoryDialogue)
 			if dialogue.Redirect.Value then
 				DialogueStatus.ViewChildren.Visible = false;
 			else
-				DialogueStatus.ViewChildren.MouseButton1Click:Connect(function()
+				Events.ViewChildren[DialogueStatus] = DialogueStatus.ViewChildren.MouseButton1Click:Connect(function()
+					
+					Events.ViewChildren[DialogueStatus]:Disconnect();
 					
 					ViewingPriority = dialogue.Priority.Value;
 					
@@ -756,9 +738,10 @@ local function OpenDialogueEditor()
 		
 		local Path = ViewingPriority:split(".");
 		local CurrentDirectory = CurrentDialogueContainer;
+		
 		for _, directory in ipairs(Path) do
 			
-			local TargetDirectory = CurrentDirectory:FindFirstChild(directory);
+			local TargetDirectory = CurrentDirectory:FindFirstChild(directory) or CurrentDirectory.Parent.Dialogue:FindFirstChild(directory) or CurrentDirectory.Parent.Responses:FindFirstChild(directory);
 			if not TargetDirectory then
 				
 				-- Create a folder to hold dialogue and responses
@@ -788,8 +771,12 @@ local function OpenDialogueEditor()
 				CurrentDirectory = TargetDirectory.Dialogue;
 			elseif TargetDirectory.Responses:FindFirstChild(directory) then
 				CurrentDirectory = TargetDirectory.Responses;
+			elseif TargetDirectory:FindFirstChild(directory) then
+				CurrentDirectory = TargetDirectory;
 			elseif CurrentDirectory:FindFirstChild(directory) then
 				CurrentDirectory = CurrentDirectory[directory].Dialogue;
+			else
+				CurrentDirectory = TargetDirectory.Dialogue;
 			end;
 			
 		end;
