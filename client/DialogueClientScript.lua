@@ -53,7 +53,7 @@ local function ReadDialogue(npc, dialogueSettings)
 	-- Show the dialouge to the player
 	while PlayerTalkingWithNPC and game:GetService("RunService").Heartbeat:Wait() do
 		
-		CurrentDirectory = API.Dialogue.GoToDirectory(CurrentDirectory, DialoguePriority:split("."));
+		CurrentDirectory = API.Dialogue.GoToDirectory(RootDirectory, DialoguePriority:split("."));
 		
 		if CurrentDirectory.Redirect.Value and RemoteConnections.PlayerPassesCondition:InvokeServer(npc,CurrentDirectory) then
 			
@@ -257,7 +257,7 @@ local function ReadDialogue(npc, dialogueSettings)
 			end;
 			
 		elseif PlayerTalkingWithNPC then
-				
+			
 			local SplitPriority = DialoguePriority:split(".");
 			SplitPriority[#SplitPriority] = SplitPriority[#SplitPriority] + 1;
 			DialoguePriority = table.concat(SplitPriority,".");
