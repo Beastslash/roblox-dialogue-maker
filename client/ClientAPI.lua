@@ -146,17 +146,43 @@ end;
 
 function API.Dialogue.ReplaceVariablesWithValues(npc, text)
 	
-	for match in string.gmatch(text, "%[/variable=(.+)%]") do
+	print("Old: "..text)
+	
+	for match in string.gmatch(text, "%[%/variable=([^%]]+)%]") do
 				
 		-- Get the match from the server
 		local VariableValue = RemoteConnections.GetVariable:InvokeServer(npc, match);
 		if VariableValue then
-			text = text:gsub("%[/variable=(.+)%]",VariableValue);
+			text = text:gsub("%[%/variable=([^%]]+)%]",VariableValue);
 		end;
 		
 	end;
 	
+	print("New text: "..text)
+	
 	return text;
+	
+end;
+
+function API.Dialogue.GetStringSectionInfo(text)
+	
+	for match in string.gmatch(text,"%[TextColor3=[^%]]+%]([^\]]+)%[%/TextColor3%]") do
+		print(match)
+	end;
+	
+end;
+
+function API.Dialogue.PlaySound(gui, messageType)
+	
+	if gui:FindFirstChild("DialogueClickSound") and gui.DialogueClickSound:IsA("Sound") then
+		
+		if messageType == "Message" then
+			gui.MessageClickSound:Play();
+		elseif messageType == "Response" then
+			gui.ResponseClickSound:Play();
+		end;
+		
+	end;
 	
 end;
 
