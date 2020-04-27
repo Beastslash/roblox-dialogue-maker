@@ -115,6 +115,92 @@ function Toolbar.Initialize()
 		
 	end);
 	
+	local ResettingScripts = false;
+	ResetScriptsButton.Click:Connect(function()
+		
+		-- Debounce
+		if ResettingScripts then
+			warn("[Dialogue Maker] Scripts are currently being reset!");
+			return;
+		end;
+		ResettingScripts = true;
+		
+		print("[Dialogue Maker] Resetting all dialogue scripts...");
+		
+		-- Replace client script
+		local DialogueClientScript = StarterPlayerScripts:FindFirstChild("DialogueClientScript");
+		local ThemesFolder;
+		if DialogueClientScript then
+			if DialogueClientScript:FindFirstChild("Themes") and DialogueClientScript.Themes:IsA("Folder") then
+				ThemesFolder = DialogueClientScript.Themes:Clone();
+			end;
+			DialogueClientScript:Destroy();
+		end;
+		DialogueClientScript = script.Parent.Parent.GameScripts.DialogueClientScript:Clone();
+		DialogueClientScript.Disabled = false;
+		DialogueClientScript.Parent = StarterPlayerScripts;
+		if ThemesFolder then
+			DialogueClientScript.Themes:Destroy();
+			ThemesFolder.Parent = DialogueClientScript;
+		end;
+		
+		-- Replace server script
+		local DialogueServerScript = ServerScriptService:FindFirstChild("DialogueServerScript");
+		local ActionsFolder;
+		local ConditionsFolder;
+		local DefaultVariablesFolder;
+		local DialogueLocationsFolder;
+		local SettingsModule;
+		if DialogueServerScript and DialogueServerScript:IsA("Script") then
+			if DialogueServerScript:FindFirstChild("Actions") then
+				ActionsFolder = DialogueServerScript.Actions:Clone();
+			end;
+			if DialogueServerScript:FindFirstChild("Conditions") then
+				ConditionsFolder = DialogueServerScript.Conditions:Clone();
+			end;
+			if DialogueServerScript:FindFirstChild("DefaultVariablesFolder") then
+				DefaultVariablesFolder = DialogueServerScript.DefaultVariables:Clone();
+			end;
+			if DialogueServerScript:FindFirstChild("DialogueLocations") then
+				DialogueLocationsFolder = DialogueServerScript.DialogueLocations:Clone();
+			end;
+			if DialogueServerScript:FindFirstChild("Settings") then
+				SettingsModule = DialogueServerScript.Settings:Clone();
+			end;
+		end;
+		DialogueServerScript:Destroy();
+		
+		-- Replace the scripts
+		DialogueServerScript = script.Parent.Parent.GameScripts.DialogueServerScript:Clone();
+		DialogueServerScript.Disabled = false;
+		DialogueServerScript.Parent = ServerScriptService;
+		if ActionsFolder then
+			DialogueServerScript.Actions:Destroy();
+			ActionsFolder.Parent = DialogueServerScript;
+		end;
+		if ConditionsFolder then
+			DialogueServerScript.Conditions:Destroy();
+			ConditionsFolder.Parent = DialogueServerScript;
+		end;
+		if DefaultVariablesFolder then
+			DialogueServerScript.DefaultVariables:Destroy();
+			DefaultVariablesFolder.Parent = DialogueServerScript;
+		end;
+		if DialogueLocationsFolder then
+			DialogueServerScript.DialogueLocations:Destroy();
+			DialogueLocationsFolder.Parent = DialogueServerScript;
+		end;
+		if SettingsModule then
+			DialogueServerScript.Settings:Destroy();
+			SettingsModule.Parent = DialogueServerScript;
+		end;
+		
+		ResettingScripts = false;
+		
+		print("[Dialogue Maker] Successfully reset all Dialogue Maker scripts.");
+		
+	end);
+	
 end;
 
 return Toolbar;
