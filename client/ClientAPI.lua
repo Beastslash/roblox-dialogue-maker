@@ -166,7 +166,7 @@ end;
 
 function API.Dialogue.GetStringSectionInfo(text)
 	
-	for match in string.gmatch(text,"%[TextColor3=[^%]]+%]([^\]]+)%[%/TextColor3%]") do
+	for match in string.gmatch(text,"%[TextColor3=[^%]]+%]([^%]]+)%[%/TextColor3%]") do
 		print(match)
 	end;
 	
