@@ -30,6 +30,7 @@ local function ReadDialogue(npc, dialogueSettings)
 	API.Triggers.DisableAllSpeechBubbles();
 	API.Triggers.DisableAllClickDetectors();
 	API.Player.SetPlayer(Player);
+	
 	if dialogueSettings.FreezePlayer then API.Player.FreezePlayer(); end;
 	
 	-- Show the dialogue GUI to the player
@@ -38,7 +39,9 @@ local function ReadDialogue(npc, dialogueSettings)
 	local ResponseContainer = DialogueGui.DialogueContainer.ResponseContainer;
 	local ResponseTemplate = ResponseContainer.ResponseTemplate:Clone();
 	ResponseContainer.ResponseTemplate:Destroy();
+	
 	local DialoguePriority = "1";
+	
 	local RootDirectory = DialogueContainer["1"];
 	local CurrentDirectory = RootDirectory;
 	
@@ -102,6 +105,14 @@ local function ReadDialogue(npc, dialogueSettings)
 			
 			local Message = "";
 			
+			if ThemeDialogueContainer:FindFirstChild("ClickToContinue") then
+				if dialogueSettings.AllowPlayerToSkipDelay then
+					ThemeDialogueContainer.ClickToContinue.Visible = true;
+				else
+					ThemeDialogueContainer.ClickToContinue.Visible = false;
+				end;
+			end;
+			
 			DialogueGui.Parent = PlayerGui;
 			
 			local NPCTalking = true;
@@ -118,13 +129,16 @@ local function ReadDialogue(npc, dialogueSettings)
 					if NPCTalking then
 						
 						if NPCPaused then
+							API.Dialogue.PlaySound(DialogueGui, "Message");
 							NPCPaused = false;
+							return;
 						end;
 						
 						-- Check settings set by the developer
 						if dialogueSettings.AllowPlayerToSkipDelay then
 							
 							-- Replace the incomplete dialogue with the full text
+							API.Dialogue.PlaySound(DialogueGui, "Message");
 							TextContainer.Line.Text = FullMessageText;
 							Skipped = true;
 							
@@ -138,6 +152,9 @@ local function ReadDialogue(npc, dialogueSettings)
 				
 			end);
 			
+			-- Get string section info
+			local StringSectionInfo = API.Dialogue.GetStringSectionInfo(MessageText);
+			
 			-- Put the letters of the message together for an animation effect
 			local DividedText = API.Dialogue.DivideTextToFitBox(MessageText, TextContainer);
 			for index, page in ipairs(DividedText) do
@@ -149,9 +166,7 @@ local function ReadDialogue(npc, dialogueSettings)
 						
 						-- Check if the player wants to skip their dialogue
 						if Skipped or not NPCTalking or not PlayerTalkingWithNPC then
-							
 							break;
-							
 						end;
 						
 						Message = Message..letter;
@@ -186,6 +201,9 @@ local function ReadDialogue(npc, dialogueSettings)
 						ResponseButton.Text = response.Message.Value;
 						ResponseButton.Parent = ResponseContainer;
 						ResponseButton.MouseButton1Click:Connect(function()
+							
+							API.Dialogue.PlaySound(DialogueGui, "Response")
+							
 							ResponseContainer.Visible = false;
 							
 							ResponseChosen = response;
