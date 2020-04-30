@@ -7,11 +7,19 @@ local API = {
 
 -- Roblox services
 local ReplicatedStorage = game:GetService("ReplicatedStorage");
+local RunService = game:GetService("RunService");
 local RemoteConnections = ReplicatedStorage:WaitForChild("DialogueMakerRemoteConnections");
 
 local DefaultThemeName;
 local SpeechBubbles = {};
 local ClickDetectors = {};
+local Events = {};
+
+local DialogueSettings;
+local NPC;
+local RepsonseTemplate;
+
+local RichTextAPI = require(script.RichText)
 
 function API.Gui.GetDefaultThemeName()
 	
@@ -194,57 +202,161 @@ function API.Dialogue.ClearResponses(responseContainer)
 	end;
 end;
 
-function API.Dialogue.DivideTextToFitBox(text, textContainer)
+function API.Dialogue.SetNPC(npc)
+	NPC = npc;
+end
+
+function API.Dialogue.SetDialogueSettings(dialogueSettings)
+	DialogueSettings = dialogueSettings;
+end;
+
+function API.Dialogue.SetResponseTemplate(responseTemplate)
+	ResponseTemplate = responseTemplate;
+end
+
+local WaitingForPlayerResponse = false;
+
+function API.Dialogue.RunAnimation(textContainer, textContent, currentDirectory, responsesEnabled, dialoguePriority)
 	
-	local Line = textContainer.Line:Clone();
-	Line.Name = "LineTest"
-	Line.Visible = false;
-	Line.Parent = textContainer;
+	local NPCTalking = false;
+	local NPCPaused = false;
+	local Skipped = false;
+	local Text;
+	local PlayerResponse;
+	local FinishingOverflow = false;
+	local WaitingForOverflow = false;
 	
-	local Divisions = {};
-	local Page = 1;
-	
-	for index, word in ipairs(text:split(" ")) do
-		if index == 1 then
-			Line.Text = word;
-		else
-			Line.Text = Line.Text.." "..word
-		end;
-		
-		if not Divisions[Page] then Divisions[Page] = {}; end;
-		
-		if Line.TextFits then
-			table.insert(Divisions[Page],word);
-			Divisions[Page].FullText = Line.Text;
-		elseif not Divisions[Page][1] then
-			Line.Text = "";
-			for _, letter in ipairs(word:split("")) do
-				Line.Text = Line.Text..letter;
-				if not Line.TextFits then
-					-- Remove the letter from the text
-					Line.Text = Line.Text:sub(1,string.len(Line.Text)-1);
-					table.insert(Divisions[Page], Line.Text);
-					Divisions[Page].FullText = Line.Text;
+	local function SetTextContainerEvent(container)
+		Events.DialogueClicked = container.Parent.InputBegan:Connect(function(input)
+			
+			-- Make sure the player clicked the frame
+			if input.UserInputType == Enum.UserInputType.MouseButton1 then
+				
+				if NPCTalking then
 					
-					-- Take it from the top
-					Page = Page + 1;
-					Divisions[Page] = {};
-					Line.Text = letter;
+					if NPCPaused and not FinishingOverflow then
+						
+						FinishingOverflow = true;
+						
+						API.Dialogue.PlaySound(textContainer.Parent.Parent, "Message");
+							
+						NPCPaused = false;
+						Text = RichTextAPI:ContinueOverflow(textContainer, Text);
+						Text:Animate(true);
+						
+						if Text.Overflown then
+							NPCPaused = true;
+						else
+							WaitingForOverflow = false;
+						end
+						
+						FinishingOverflow = false;
+							
+						return;
+						
+					end;
 					
+					-- Check settings set by the developer
+					if DialogueSettings.AllowPlayerToSkipDelay then
+						
+						-- Replace the incomplete dialogue with the full text
+						API.Dialogue.PlaySound(textContainer.Parent.Parent, "Message");
+						Text:Show(false);
+						NPCPaused = true;
+						
+					end;
+					
+				elseif #currentDirectory.Responses:GetChildren() == 0 then
+					WaitingForPlayerResponse = false;
+					Events.DialogueClicked:Disconnect();
 				end;
+				
 			end;
 			
-			table.insert(Divisions[Page], Line.Text);
-			Divisions[Page].FullText = Line.Text;
-			
-		else
-			Page = Page + 1;
-		end;
+		end);
 	end;
 	
-	Line:Destroy();
+	Text = RichTextAPI:New(
+		textContainer, 
+		textContent, {
+			ContainerVerticalAlignment = Enum.VerticalAlignment.Top;
+			AnimateStepTime = DialogueSettings.LetterDelay;
+		},
+		false);
+		
+	WaitingForPlayerResponse = true;
+	NPCTalking = true;
+			
+	textContainer.Visible = true;
 	
-	return Divisions;
+	SetTextContainerEvent(textContainer);
+		
+	Text:Animate(true);
+		
+	if Text.Overflown then
+		NPCPaused = true;
+		WaitingForOverflow = true;
+	end;
+	
+	while WaitingForOverflow do
+		RunService.Heartbeat:Wait();
+	end;
+	
+	NPCTalking = false;
+	
+	if responsesEnabled and #currentDirectory.Responses:GetChildren() ~= 0 then
+		
+		print("Response time")
+		
+		local ResponseContainer = textContainer.Parent.ResponseContainer;
+		
+		-- Add response buttons
+		for _, response in ipairs(currentDirectory.Responses:GetChildren()) do
+			if RemoteConnections.PlayerPassesCondition:InvokeServer(NPC, response, response.Priority.Value) then
+				local ResponseButton = ResponseTemplate:Clone();
+				ResponseButton.Name = "Response";
+				ResponseButton.Text = response.Message.Value;
+				ResponseButton.Parent = ResponseContainer;
+				ResponseButton.MouseButton1Click:Connect(function()
+					
+					API.Dialogue.PlaySound(textContainer.Parent.Parent, "Response")
+					
+					ResponseContainer.Visible = false;
+					
+					PlayerResponse = response;
+					
+					if response.HasAfterAction.Value then
+						RemoteConnections.ExecuteAction:InvokeServer(NPC, response, "After");
+					end;
+					
+					WaitingForPlayerResponse = false;
+					
+				end);
+			end;
+		end;
+		
+		ResponseContainer.CanvasSize = UDim2.new(0,ResponseContainer.CanvasSize.X,0,ResponseContainer.UIListLayout.AbsoluteContentSize.Y);
+		ResponseContainer.Visible = true;
+		
+	end;
+	
+	print("Waiting for response")
+	while WaitingForPlayerResponse do
+		RunService.Heartbeat:Wait();
+	end;
+	warn("Go")
+	
+	if PlayerResponse then
+		return {Response = PlayerResponse};
+	end;
+	
+	return {};
+	
+end;
+
+function API.Dialogue.PlayerResponded(response)
+	
+	WaitingForPlayerResponse = false;
 	
 end;
 
