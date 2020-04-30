@@ -120,109 +120,19 @@ local function ReadDialogue(npc, dialogueSettings)
 			local Skipped = false;
 			local FullMessageText = "";
 			
-			-- Make the NPC stop talking if the player clicks the frame
-			local NPCPaused = false;
-			Events.DialogueClicked = ThemeDialogueContainer.InputBegan:Connect(function(input)
-				
-				-- Make sure the player clicked the frame
-				if input.UserInputType == Enum.UserInputType.MouseButton1 then
-					if NPCTalking then
-						
-						if NPCPaused then
-							API.Dialogue.PlaySound(DialogueGui, "Message");
-							NPCPaused = false;
-							return;
-						end;
-						
-						-- Check settings set by the developer
-						if dialogueSettings.AllowPlayerToSkipDelay then
-							
-							-- Replace the incomplete dialogue with the full text
-							API.Dialogue.PlaySound(DialogueGui, "Message");
-							TextContainer.Line.Text = FullMessageText;
-							Skipped = true;
-							
-						end;
-						
-					elseif #CurrentDirectory.Responses:GetChildren() == 0 then
-						WaitingForResponse = false;
-					end;
-					
-				end;
-				
-			end);
-			
-			-- Get string section info
-			local StringSectionInfo = API.Dialogue.GetStringSectionInfo(MessageText);
-			
 			-- Put the letters of the message together for an animation effect
-			local DividedText = API.Dialogue.DivideTextToFitBox(MessageText, TextContainer);
-			for index, page in ipairs(DividedText) do
-				FullMessageText = page.FullText;
-				Message = "";
-				for wordIndex, word in ipairs(page) do
-					if wordIndex ~= 1 then Message = Message.." " end;
-					for _, letter in ipairs(word:split("")) do
-						
-						-- Check if the player wants to skip their dialogue
-						if Skipped or not NPCTalking or not PlayerTalkingWithNPC then
-							break;
-						end;
-						
-						Message = Message..letter;
-						TextContainer.Line.Text = Message;
-						
-						wait(dialogueSettings.LetterDelay);
-						
-					end;
-				end;
-				
-				if DividedText[index+1] and NPCTalking then
-					NPCPaused = true;
-					
-					while NPCPaused and NPCTalking do 
-						game:GetService("RunService").Heartbeat:Wait() 
-					end;
-					
-					NPCPaused = false;
-					Skipped = false;
-				end;
-			end;
-			NPCTalking = false;
-			
-			local ResponseChosen;
-			if ResponsesEnabled and PlayerTalkingWithNPC then
-				
-				-- Add response buttons
-				for _, response in ipairs(CurrentDirectory.Responses:GetChildren()) do
-					if RemoteConnections.PlayerPassesCondition:InvokeServer(npc,response) then
-						local ResponseButton = ResponseTemplate:Clone();
-						ResponseButton.Name = "Response";
-						ResponseButton.Text = response.Message.Value;
-						ResponseButton.Parent = ResponseContainer;
-						ResponseButton.MouseButton1Click:Connect(function()
-							
-							API.Dialogue.PlaySound(DialogueGui, "Response")
-							
-							ResponseContainer.Visible = false;
-							
-							ResponseChosen = response;
-							
-							if response.HasAfterAction.Value then
-								RemoteConnections.ExecuteAction:InvokeServer(npc,response,"After");
-							end;
-							
-							WaitingForResponse = false;
-						end);
-					end;
-				end;
-				
-				ResponseContainer.CanvasSize = UDim2.new(0,ResponseContainer.CanvasSize.X,0,ResponseContainer.UIListLayout.AbsoluteContentSize.Y);
-				ThemeDialogueContainer.ResponseContainer.Visible = true;
-				
-			end;
+			API.Dialogue.SetDialogueSettings(dialogueSettings);
+			API.Dialogue.SetNPC(npc);
+			API.Dialogue.SetResponseTemplate(ResponseTemplate);
+			local TextAnimation = API.Dialogue.RunAnimation(
+				TextContainer, 
+				MessageText, 
+				CurrentDirectory, 
+				ResponsesEnabled,
+				DialoguePriority);
 			
 			-- Run the timeout code in the background
+			--[[
 			coroutine.wrap(function()
 				
 				if dialogueSettings.TimeoutEnabled and dialogueSettings.ConversationTimeoutInSeconds then
@@ -243,17 +153,18 @@ local function ReadDialogue(npc, dialogueSettings)
 			while WaitingForResponse and PlayerTalkingWithNPC do
 				game:GetService("RunService").Heartbeat:Wait();
 			end;
+			]]--
 			
 			-- Run after action
 			if CurrentDirectory.HasAfterAction.Value and PlayerTalkingWithNPC then
 				RemoteConnections.ExecuteAction:InvokeServer(npc,CurrentDirectory,"After");
 			end;
 			
-			if ResponseChosen and PlayerTalkingWithNPC then
+			if TextAnimation.Response and PlayerTalkingWithNPC then
 				
-				if (#ResponseChosen.Dialogue:GetChildren() ~= 0 or #ResponseChosen.Redirects:GetChildren() ~= 0) then
+				if (#TextAnimation.Response.Dialogue:GetChildren() ~= 0 or #TextAnimation.Response.Redirects:GetChildren() ~= 0) then
 					
-					DialoguePriority = string.sub(ResponseChosen.Priority.Value..".1",3);
+					DialoguePriority = string.sub(TextAnimation.Response.Priority.Value..".1",3);
 					CurrentDirectory = RootDirectory;
 					
 				else
