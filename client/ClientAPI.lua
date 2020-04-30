@@ -154,8 +154,6 @@ end;
 
 function API.Dialogue.ReplaceVariablesWithValues(npc, text)
 	
-	print("Old: "..text)
-	
 	for match in string.gmatch(text, "%[%/variable=([^%]]+)%]") do
 				
 		-- Get the match from the server
@@ -166,17 +164,7 @@ function API.Dialogue.ReplaceVariablesWithValues(npc, text)
 		
 	end;
 	
-	print("New text: "..text)
-	
 	return text;
-	
-end;
-
-function API.Dialogue.GetStringSectionInfo(text)
-	
-	for match in string.gmatch(text,"%[TextColor3=[^%]]+%]([^%]]+)%[%/TextColor3%]") do
-		print(match)
-	end;
 	
 end;
 
@@ -318,8 +306,6 @@ function API.Dialogue.RunAnimation(textContainer, textContent, currentDirectory,
 	
 	if responsesEnabled and #currentDirectory.Responses:GetChildren() ~= 0 then
 		
-		print("Response time")
-		
 		local ResponseContainer = textContainer.Parent.ResponseContainer;
 		
 		-- Add response buttons
@@ -354,11 +340,9 @@ function API.Dialogue.RunAnimation(textContainer, textContent, currentDirectory,
 		textContainer.Parent.ClickToContinue.Visible = true;
 	end;
 	
-	print("Waiting for response")
 	while WaitingForPlayerResponse do
 		RunService.Heartbeat:Wait();
 	end;
-	warn("Go")
 	
 	if PlayerResponse then
 		return {Response = PlayerResponse};
