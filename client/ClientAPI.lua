@@ -238,6 +238,14 @@ function API.Dialogue.RunAnimation(textContainer, textContent, currentDirectory,
 						
 						FinishingOverflow = true;
 						
+						if textContainer.Parent:FindFirstChild("ClickToContinue") then
+							if DialogueSettings.AllowPlayerToSkipDelay then
+								textContainer.Parent.ClickToContinue.Visible = true;
+							else
+								textContainer.Parent.ClickToContinue.Visible = false;
+							end;
+						end;
+							
 						API.Dialogue.PlaySound(textContainer.Parent.Parent, "Message");
 							
 						NPCPaused = false;
@@ -248,7 +256,11 @@ function API.Dialogue.RunAnimation(textContainer, textContent, currentDirectory,
 							NPCPaused = true;
 						else
 							WaitingForOverflow = false;
-						end
+						end;
+						
+						if textContainer.Parent:FindFirstChild("ClickToContinue") then
+							textContainer.Parent.ClickToContinue.Visible = true;
+						end;
 						
 						FinishingOverflow = false;
 							
@@ -338,6 +350,8 @@ function API.Dialogue.RunAnimation(textContainer, textContent, currentDirectory,
 		ResponseContainer.CanvasSize = UDim2.new(0,ResponseContainer.CanvasSize.X,0,ResponseContainer.UIListLayout.AbsoluteContentSize.Y);
 		ResponseContainer.Visible = true;
 		
+	elseif textContainer.Parent:FindFirstChild("ClickToContinue") then
+		textContainer.Parent.ClickToContinue.Visible = true;
 	end;
 	
 	print("Waiting for response")
