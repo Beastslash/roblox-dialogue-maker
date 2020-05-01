@@ -255,6 +255,7 @@ function Editor.SyncDialogueList(directoryDialogue)
 				
 				DialogueStatus.BackgroundTransparency = 0.4;
 				DialogueStatus.BackgroundColor3 = Color3.fromRGB(30,103,19);
+				DialogueStatus.BeforeActionButton.Visible = false;
 				
 			elseif dialogue.Redirect.Value then
 				
@@ -263,6 +264,7 @@ function Editor.SyncDialogueList(directoryDialogue)
 				DialogueStatus.RedirectPriority.Visible = true;
 				DialogueStatus.RedirectPriority.TextBox.PlaceholderText = "Type the exact priority you want to redirect to."
 				DialogueStatus.Message.Visible = false;
+				DialogueStatus.BeforeActionButton.Visible = false;
 				
 			else
 				DialogueStatus.BackgroundTransparency = 1;
