@@ -75,6 +75,7 @@ The text supplied in the constructor can be any text string. Insert a markup mod
 		<AnimateYield=1> -- Yield for one second at this point in the animation
 		<TextColor3=1,0,0> -- Set text color to red
 		<Color=Red> -- Equivalent to above. The shortcut for the property name is defined in the propertyShortcuts table, and the color shortcut is defined in the colors table.
+		<Shaking> -- 
 		
 	After you set any markup value, you can revert it back to default later by setting it to "/". For example:
 		<Font=/>
@@ -373,6 +374,22 @@ function richText:New(frame, text, startingProperties, allowOverflow, prevTextOb
 			-- Ok
 		elseif key == "Img" then
 			printImage(value)
+		elseif key == "Shaking" then
+			local OriginalPosition = frame.Position;
+			local OriginalRotation = frame.Rotation;
+			coroutine.wrap(function()
+				while runService.Heartbeat:Wait() do
+					frame.Position = UDim2.new(
+						OriginalPosition.X.Scale,
+						(OriginalPosition.X.Offset + math.random(0, 2)),
+						OriginalPosition.Y.Scale,
+						(OriginalPosition.Y.Offset + math.random(0, 2))
+					);
+					frame.Rotation = OriginalRotation + (tonumber("0.0"..math.random(0, 5)) * math.random(-1, 1));
+					wait(value);
+					runService.Heartbeat:Wait();
+				end;
+			end)();
 		else
 			-- Unknown value
 			return false	
@@ -569,7 +586,6 @@ function richText:New(frame, text, startingProperties, allowOverflow, prevTextOb
 		for _, t in pairs(labelSeries) do
 			local markupKey, markupValue = string.match(t, "<(.+)=(.+)>")
 			if markupKey and markupValue then
-				print("Matched: "..markupKey.." and "..markupValue)
 				if not applyMarkup(markupKey, markupValue) then
 					warn("Could not apply markup: ", t)
 				end			
