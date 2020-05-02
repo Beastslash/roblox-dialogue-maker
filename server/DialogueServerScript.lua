@@ -183,3 +183,9 @@ RemoteConnections.GetVariable.OnServerInvoke = function(player,npc,variable)
 	end;
 	
 end;
+
+RemoteConnections.GetTouchTimeout.OnServerInvoke = function()
+	
+	return Settings.TouchTimeout;
+	
+end;
