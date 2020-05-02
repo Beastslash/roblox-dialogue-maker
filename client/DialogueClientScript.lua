@@ -2,6 +2,8 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage");
 local Players = game:GetService("Players");
 local ControllerService = game:GetService("ControllerService");
+local RunService = game:GetService("RunService");
+local UserInputService = game:GetService("UserInputService");
 
 local Player = Players.LocalPlayer;
 local PlayerGui = Player:WaitForChild("PlayerGui");
@@ -17,6 +19,8 @@ local Themes = script.Themes;
 local DefaultTheme = RemoteConnections.GetDefaultTheme:InvokeServer();
 local PlayerTalkingWithNPC = false;
 local Events = {};
+
+local TouchTimeout = RemoteConnections.GetTouchTimeout:InvokeServer();
 local API = require(script.ClientAPI);
 
 local function ReadDialogue(npc, dialogueSettings)
@@ -205,6 +209,8 @@ local NPCDialogue = RemoteConnections.GetNPCDialogue:InvokeServer()
 	
 print("[Dialogue Maker] Preparing dialogue that was received from the server...");
 
+local ProximityNPCs = {};
+
 -- Iterate through every NPC in order to 
 for _, npc in ipairs(NPCDialogue) do
 	
@@ -245,18 +251,87 @@ for _, npc in ipairs(NPCDialogue) do
 				if DialogueSettings.PromptRegionPart:IsA("BasePart") then
 					
 					local PlayerTouched;
-					DialogueSettings.PromptRegionPart.Touched:Connect(function(part)
+					local LastTouchedTime;
+					local HotkeyShown = false;
+					
+					local function ShowHotkey()
+								
+						-- Debounce
+						if HotkeyShown then
+							return;
+						end;
 						
-						-- Make sure our player touched it and not someone else
-						local PlayerFromCharacter = Players:GetPlayerFromCharacter(part.Parent);
-						if PlayerFromCharacter == Player then
-							
+						HotkeyShown = true;
+						
+						local function StartConversation()
+							Events.HotkeyGamepadPress:Disconnect();
+							Events.HotkeyKeyboardPress:Disconnect();
 							ReadDialogue(npc, DialogueSettings);
+						end;
+						
+						local function CheckButton(input)
+							if not PlayerTalkingWithNPC and (input.KeyCode == DialogueSettings.PromptRegionHotkeyKeyboard or input.KeyCode == DialogueSettings.PromptRegionHotkeyGamepad) then
+								StartConversation();
+							end;
+						end
+						
+						if Events.HotkeyKeyboardPress then
+							Events.HotkeyKeyboardPress:Disconnect();
+						end;
+						
+						if Events.HotkeyGamepadPress then
+							Events.HotkeyGamepadPress:Disconnect()
+						end
+						
+						Events.HotkeyKeyboardPress = UserInputService.InputBegan:Connect(CheckButton);
+						Events.HotkeyGamepadPress = UserInputService.InputBegan:Connect(CheckButton);
+						
+					end;
+					
+					local function HideHotkey()
+						
+						-- Debounce
+						if not HotkeyShown then
+							return;
+						end;
+						
+						HotkeyShown = false;
+						
+						if Events.HotkeyGamepadPress then
+							Events.HotkeyGamepadPress:Disconnect();
+						end;
+						
+						if Events.HotkeyKeyboardPress then
+							Events.HotkeyKeyboardPress:Disconnect();
+						end;
+						
+					end;
+					
+					RunService.Stepped:Connect(function()
 							
+						if PlayerTalkingWithNPC then
+							HideHotkey();
+						else
+							local Distance = Player:DistanceFromCharacter(DialogueSettings.PromptRegionPart.Position);
+							if Distance <= DialogueSettings.PromptRegionPartDistance then
+								if DialogueSettings.PromptRegionAutoStart then
+									if not LastTouchedTime or os.time() - TouchTimeout > LastTouchedTime then
+										LastTouchedTime = os.time();
+										HideHotkey();
+										ReadDialogue(npc, DialogueSettings);
+									else
+										ShowHotkey();
+									end;
+								elseif DialogueSettings.PromptRegionHotkeyEnabled then
+									ShowHotkey();
+								end;
+							else
+								HideHotkey();
+							end;
 						end;
 						
 					end);
-						
+					
 				else
 					warn("[Dialogue Maker] The PromptRegionPart for "..npc.Name.." is not a Part.");
 				end;
