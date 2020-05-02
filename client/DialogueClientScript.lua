@@ -31,8 +31,8 @@ local function ReadDialogue(npc, dialogueSettings)
 	
 	PlayerTalkingWithNPC = true;
 	
-	API.Triggers.DisableAllSpeechBubbles();
-	API.Triggers.DisableAllClickDetectors();
+	API.Trigger.DisableAllSpeechBubbles();
+	API.Trigger.DisableAllClickDetectors();
 	API.Player.SetPlayer(Player);
 	
 	if dialogueSettings.FreezePlayer then API.Player.FreezePlayer(); end;
@@ -199,8 +199,8 @@ local function ReadDialogue(npc, dialogueSettings)
 		
 	end;
 	
-	API.Triggers.EnableAllSpeechBubbles();
-	API.Triggers.EnableAllClickDetectors();
+	API.Trigger.EnableAllSpeechBubbles();
+	API.Trigger.EnableAllClickDetectors();
 	if dialogueSettings.FreezePlayer then API.Player.UnfreezePlayer(); end;
 	
 end;
@@ -225,7 +225,7 @@ for _, npc in ipairs(NPCDialogue) do
 				
 				if DialogueSettings.SpeechBubblePart:IsA("BasePart") then
 					
-					local SpeechBubble = API.Triggers.CreateSpeechBubble(npc, DialogueSettings);
+					local SpeechBubble = API.Trigger.CreateSpeechBubble(npc, DialogueSettings);
 					
 					-- Listen if the player clicks the speech bubble
 					SpeechBubble.SpeechBubbleButton.MouseButton1Click:Connect(function()
@@ -250,6 +250,11 @@ for _, npc in ipairs(NPCDialogue) do
 				
 				if DialogueSettings.PromptRegionPart:IsA("BasePart") then
 					
+					API.Gui.SetKeybindGuis(
+						npc, 
+						API.Gui.GetThemeFolderFromSettings(DialogueSettings),
+						DialogueSettings.PromptRegionPart);
+					
 					local PlayerTouched;
 					local LastTouchedTime;
 					local HotkeyShown = false;
@@ -262,6 +267,8 @@ for _, npc in ipairs(NPCDialogue) do
 						end;
 						
 						HotkeyShown = true;
+						
+						API.Gui.ToggleKeyboardKeybindGui(npc, true);
 						
 						local function StartConversation()
 							Events.HotkeyGamepadPress:Disconnect();
@@ -296,6 +303,8 @@ for _, npc in ipairs(NPCDialogue) do
 						end;
 						
 						HotkeyShown = false;
+						
+						API.Gui.ToggleKeyboardKeybindGui(npc, false);
 						
 						if Events.HotkeyGamepadPress then
 							Events.HotkeyGamepadPress:Disconnect();
@@ -356,7 +365,7 @@ for _, npc in ipairs(NPCDialogue) do
 				
 				if DialogueSettings.ClickDetectorLocation:IsA("ClickDetector") then
 					
-					API.Triggers.AddClickDetector(npc, DialogueSettings.ClickDetectorLocation);
+					API.Trigger.AddClickDetector(npc, DialogueSettings.ClickDetectorLocation);
 					
 					DialogueSettings.ClickDetectorLocation.MouseClick:Connect(function()
 						ReadDialogue(npc, DialogueSettings);
