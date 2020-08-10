@@ -759,20 +759,12 @@ local function OpenDialogueEditor()
 				TargetDirectory = Instance.new("Folder");
 				TargetDirectory.Name = directory;
 				
-				-- Create a folder to hold dialogue
-				local Dialogue = Instance.new("Folder");
-				Dialogue.Name = "Dialogue";
-				Dialogue.Parent = TargetDirectory;
-				
-				-- Create a folder to hold responses
-				local Responses = Instance.new("Folder");
-				Responses.Name = "Responses";
-				Responses.Parent = TargetDirectory;
-				
-				-- Create a folder to hold responses
-				local Redirects = Instance.new("Folder");
-				Redirects.Name = "Redirects";
-				Redirects.Parent = TargetDirectory;
+				-- Create new dialogue folders
+				for _, folderName in ipairs({"Dialogue", "Responses", "Redirects"}) do
+					local Folder = Instance.new("Folder");
+					Folder.Name = folderName;
+					Folder.Parent = TargetDirectory;
+				end
 				
 				TargetDirectory.Parent = CurrentDirectory;
 				
