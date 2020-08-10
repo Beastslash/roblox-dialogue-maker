@@ -56,12 +56,6 @@ local function RepairNPC()
 	
 	if not Model:FindFirstChild("DialogueContainer") then
 		
-		if new then
-			print("[Dialogue Maker] Created a DialogueContainer inside of "..Model.Name)
-		else
-			print("[Dialogue Maker] "..Model.Name.."'s DialogueContainer was moved or deleted! Creating a new one...");
-		end
-		
 		-- Add the dialogue container to the NPC
 		CurrentDialogueContainer = Instance.new("Folder");
 		CurrentDialogueContainer.Name = "DialogueContainer";
@@ -74,21 +68,13 @@ local function RepairNPC()
 		local TempRootFolder = Instance.new("Folder");
 		TempRootFolder.Name = "1";
 		TempRootFolder.Parent = CurrentDialogueContainer;
-				
-		-- Create a folder to hold dialogue
-		local Dialogue = Instance.new("Folder");
-		Dialogue.Name = "Dialogue";
-		Dialogue.Parent = TempRootFolder;
 		
-		-- Create a folder to hold responses
-		local Responses = Instance.new("Folder");
-		Responses.Name = "Responses";
-		Responses.Parent = TempRootFolder;
-		
-		-- Create a folder to hold redirects
-		local Redirects = Instance.new("Folder");
-		Redirects.Name = "Redirects";
-		Redirects.Parent = TempRootFolder;
+		-- Create a folder for every dialogue type
+		for _, folderName in ipairs({"Dialogue", "Responses", "Redirects"}) do
+			local Folder = Instance.new("Folder");
+			Folder.Name = folderName;
+			Folder.Parent = TempRootFolder;
+		end;
 		
 		-- Add the dialogue folder to the model
 		CurrentDialogueContainer.Parent = Model;
