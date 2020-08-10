@@ -26,4 +26,3 @@ Sure! If you feel like that the Dialogue Maker can be improved for everyone, jus
 * **DraconicChris** - Project Lead
 * **ruax2891** - QA Tester
 * **LolMitch5** - QA Tester
-* **BinaryTimeLord** - QA Tester
