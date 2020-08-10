@@ -2,17 +2,12 @@ return {
 
 	-- [General] --
 	LetterDelay = 0.025; -- Change this to the amount of seconds you want to wait before the next letter in the NPC's message is shown. [accepts number >= 0]
-	AllowPlayerToSkipDelay = false; -- If true, this allows the player to show all of the message without waiting for it to be pieced back together. [accepts boolean]
+	AllowPlayerToSkipDelay = true; -- If true, this allows the player to show all of the message without waiting for it to be pieced back together. [accepts boolean]
 	FreezePlayer = true; -- If true, the player will freeze when the dialogue starts and will be unfrozen when the dialogue ends. [accepts boolean]
 
 	-- [Prompt Regions] --
-	PromptRegionEnabled = false; -- If true, the hotkey will appear on the player's screen if PromptRegionHotkeyEnabled is enabled. If PromptRegionAutoStart is enabled, then the conversation will automatically start. [accepts boolean]
+	PromptRegionEnabled = false; -- Do you want the conversation to automatically start when the player touches a part? [accepts boolean]
 	PromptRegionPart = nil; -- Change this value to a part. (Ex. workspace.Part) [accepts BasePart (i.e. Part, MeshPart, etc.) or nil]
-	PromptRegionPartDistance = 12; -- Change this to the distance from the PromptRegionPart to the player's character that you want to use to trigger the dialogue or show the hotkey. [accepts number]
-	PromptRegionHotkeyEnabled = false; -- If true, hotkeys will be enabled for this NPC. [accepts boolean]
-	PromptRegionHotkeyKeyboard = Enum.KeyCode.F; -- Change this to a key that triggers the dialogue when pressed. (Ex. Enum.KeyCode.F) [accepts Enum.KeyCode or nil]
-	PromptRegionHotkeyGamepad = Enum.KeyCode.ButtonY; -- Change this to a console button that triggers the dialogue when pressed. (Ex. Enum.KeyCode.ButtonY) [accepts Enum.KeyCode or nil]
-	PromptRegionAutoStart = false; -- If true, the conversation automatically starts when the player enters the NPC's space [accepts boolean]
 	
 	-- [Conversation Timeouts] --
 	ConversationTimeoutEnabled = false;	-- When true, the conversation to automatically ends after ConversationTimeoutSeconds seconds. [accepts boolean]

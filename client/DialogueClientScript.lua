@@ -2,8 +2,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage");
 local Players = game:GetService("Players");
 local ControllerService = game:GetService("ControllerService");
-local RunService = game:GetService("RunService");
-local UserInputService = game:GetService("UserInputService");
 
 local Player = Players.LocalPlayer;
 local PlayerGui = Player:WaitForChild("PlayerGui");
@@ -19,8 +17,6 @@ local Themes = script.Themes;
 local DefaultTheme = RemoteConnections.GetDefaultTheme:InvokeServer();
 local PlayerTalkingWithNPC = false;
 local Events = {};
-
-local TouchTimeout = RemoteConnections.GetTouchTimeout:InvokeServer();
 local API = require(script.ClientAPI);
 
 local function ReadDialogue(npc, dialogueSettings)
@@ -31,10 +27,9 @@ local function ReadDialogue(npc, dialogueSettings)
 	
 	PlayerTalkingWithNPC = true;
 	
-	API.Trigger.DisableAllSpeechBubbles();
-	API.Trigger.DisableAllClickDetectors();
+	API.Triggers.DisableAllSpeechBubbles();
+	API.Triggers.DisableAllClickDetectors();
 	API.Player.SetPlayer(Player);
-	
 	if dialogueSettings.FreezePlayer then API.Player.FreezePlayer(); end;
 	
 	-- Show the dialogue GUI to the player
@@ -43,9 +38,7 @@ local function ReadDialogue(npc, dialogueSettings)
 	local ResponseContainer = DialogueGui.DialogueContainer.ResponseContainer;
 	local ResponseTemplate = ResponseContainer.ResponseTemplate:Clone();
 	ResponseContainer.ResponseTemplate:Destroy();
-	
 	local DialoguePriority = "1";
-	
 	local RootDirectory = DialogueContainer["1"];
 	local CurrentDirectory = RootDirectory;
 	
@@ -109,14 +102,6 @@ local function ReadDialogue(npc, dialogueSettings)
 			
 			local Message = "";
 			
-			if ThemeDialogueContainer:FindFirstChild("ClickToContinue") then
-				if dialogueSettings.AllowPlayerToSkipDelay then
-					ThemeDialogueContainer.ClickToContinue.Visible = true;
-				else
-					ThemeDialogueContainer.ClickToContinue.Visible = false;
-				end;
-			end;
-			
 			DialogueGui.Parent = PlayerGui;
 			
 			local NPCTalking = true;
@@ -124,19 +109,102 @@ local function ReadDialogue(npc, dialogueSettings)
 			local Skipped = false;
 			local FullMessageText = "";
 			
+			-- Make the NPC stop talking if the player clicks the frame
+			local NPCPaused = false;
+			Events.DialogueClicked = ThemeDialogueContainer.InputBegan:Connect(function(input)
+				
+				-- Make sure the player clicked the frame
+				if input.UserInputType == Enum.UserInputType.MouseButton1 then
+					if NPCTalking then
+						
+						if NPCPaused then
+							NPCPaused = false;
+						end;
+						
+						-- Check settings set by the developer
+						if dialogueSettings.AllowPlayerToSkipDelay then
+							
+							-- Replace the incomplete dialogue with the full text
+							TextContainer.Line.Text = FullMessageText;
+							Skipped = true;
+							
+						end;
+						
+					elseif #CurrentDirectory.Responses:GetChildren() == 0 then
+						WaitingForResponse = false;
+					end;
+					
+				end;
+				
+			end);
+			
 			-- Put the letters of the message together for an animation effect
-			API.Dialogue.SetDialogueSettings(dialogueSettings);
-			API.Dialogue.SetNPC(npc);
-			API.Dialogue.SetResponseTemplate(ResponseTemplate);
-			local TextAnimation = API.Dialogue.RunAnimation(
-				TextContainer, 
-				MessageText, 
-				CurrentDirectory, 
-				ResponsesEnabled,
-				DialoguePriority);
+			local DividedText = API.Dialogue.DivideTextToFitBox(MessageText, TextContainer);
+			for index, page in ipairs(DividedText) do
+				FullMessageText = page.FullText;
+				Message = "";
+				for wordIndex, word in ipairs(page) do
+					if wordIndex ~= 1 then Message = Message.." " end;
+					for _, letter in ipairs(word:split("")) do
+						
+						-- Check if the player wants to skip their dialogue
+						if Skipped or not NPCTalking or not PlayerTalkingWithNPC then
+							
+							break;
+							
+						end;
+						
+						Message = Message..letter;
+						TextContainer.Line.Text = Message;
+						
+						wait(dialogueSettings.LetterDelay);
+						
+					end;
+				end;
+				
+				if DividedText[index+1] and NPCTalking then
+					NPCPaused = true;
+					
+					while NPCPaused and NPCTalking do 
+						game:GetService("RunService").Heartbeat:Wait() 
+					end;
+					
+					NPCPaused = false;
+					Skipped = false;
+				end;
+			end;
+			NPCTalking = false;
+			
+			local ResponseChosen;
+			if ResponsesEnabled and PlayerTalkingWithNPC then
+				
+				-- Add response buttons
+				for _, response in ipairs(CurrentDirectory.Responses:GetChildren()) do
+					if RemoteConnections.PlayerPassesCondition:InvokeServer(npc,response) then
+						local ResponseButton = ResponseTemplate:Clone();
+						ResponseButton.Name = "Response";
+						ResponseButton.Text = response.Message.Value;
+						ResponseButton.Parent = ResponseContainer;
+						ResponseButton.MouseButton1Click:Connect(function()
+							ResponseContainer.Visible = false;
+							
+							ResponseChosen = response;
+							
+							if response.HasAfterAction.Value then
+								RemoteConnections.ExecuteAction:InvokeServer(npc,response,"After");
+							end;
+							
+							WaitingForResponse = false;
+						end);
+					end;
+				end;
+				
+				ResponseContainer.CanvasSize = UDim2.new(0,ResponseContainer.CanvasSize.X,0,ResponseContainer.UIListLayout.AbsoluteContentSize.Y);
+				ThemeDialogueContainer.ResponseContainer.Visible = true;
+				
+			end;
 			
 			-- Run the timeout code in the background
-			--[[
 			coroutine.wrap(function()
 				
 				if dialogueSettings.TimeoutEnabled and dialogueSettings.ConversationTimeoutInSeconds then
@@ -157,18 +225,17 @@ local function ReadDialogue(npc, dialogueSettings)
 			while WaitingForResponse and PlayerTalkingWithNPC do
 				game:GetService("RunService").Heartbeat:Wait();
 			end;
-			]]--
 			
 			-- Run after action
 			if CurrentDirectory.HasAfterAction.Value and PlayerTalkingWithNPC then
 				RemoteConnections.ExecuteAction:InvokeServer(npc,CurrentDirectory,"After");
 			end;
 			
-			if TextAnimation.Response and PlayerTalkingWithNPC then
+			if ResponseChosen and PlayerTalkingWithNPC then
 				
-				if (#TextAnimation.Response.Dialogue:GetChildren() ~= 0 or #TextAnimation.Response.Redirects:GetChildren() ~= 0) then
+				if (#ResponseChosen.Dialogue:GetChildren() ~= 0 or #ResponseChosen.Redirects:GetChildren() ~= 0) then
 					
-					DialoguePriority = string.sub(TextAnimation.Response.Priority.Value..".1",3);
+					DialoguePriority = string.sub(ResponseChosen.Priority.Value..".1",3);
 					CurrentDirectory = RootDirectory;
 					
 				else
@@ -199,8 +266,8 @@ local function ReadDialogue(npc, dialogueSettings)
 		
 	end;
 	
-	API.Trigger.EnableAllSpeechBubbles();
-	API.Trigger.EnableAllClickDetectors();
+	API.Triggers.EnableAllSpeechBubbles();
+	API.Triggers.EnableAllClickDetectors();
 	if dialogueSettings.FreezePlayer then API.Player.UnfreezePlayer(); end;
 	
 end;
@@ -208,8 +275,6 @@ end;
 local NPCDialogue = RemoteConnections.GetNPCDialogue:InvokeServer()
 	
 print("[Dialogue Maker] Preparing dialogue that was received from the server...");
-
-local ProximityNPCs = {};
 
 -- Iterate through every NPC in order to 
 for _, npc in ipairs(NPCDialogue) do
@@ -225,7 +290,7 @@ for _, npc in ipairs(NPCDialogue) do
 				
 				if DialogueSettings.SpeechBubblePart:IsA("BasePart") then
 					
-					local SpeechBubble = API.Trigger.CreateSpeechBubble(npc, DialogueSettings);
+					local SpeechBubble = API.Triggers.CreateSpeechBubble(npc, DialogueSettings);
 					
 					-- Listen if the player clicks the speech bubble
 					SpeechBubble.SpeechBubbleButton.MouseButton1Click:Connect(function()
@@ -250,97 +315,19 @@ for _, npc in ipairs(NPCDialogue) do
 				
 				if DialogueSettings.PromptRegionPart:IsA("BasePart") then
 					
-					API.Gui.SetKeybindGuis(
-						npc, 
-						API.Gui.GetThemeFolderFromSettings(DialogueSettings),
-						DialogueSettings.PromptRegionPart);
-					
 					local PlayerTouched;
-					local LastTouchedTime;
-					local HotkeyShown = false;
-					
-					local function ShowHotkey()
-								
-						-- Debounce
-						if HotkeyShown then
-							return;
-						end;
+					DialogueSettings.PromptRegionPart.Touched:Connect(function(part)
 						
-						HotkeyShown = true;
-						
-						API.Gui.ToggleKeyboardKeybindGui(npc, true);
-						
-						local function StartConversation()
-							Events.HotkeyGamepadPress:Disconnect();
-							Events.HotkeyKeyboardPress:Disconnect();
-							ReadDialogue(npc, DialogueSettings);
-						end;
-						
-						local function CheckButton(input)
-							if not PlayerTalkingWithNPC and (input.KeyCode == DialogueSettings.PromptRegionHotkeyKeyboard or input.KeyCode == DialogueSettings.PromptRegionHotkeyGamepad) then
-								StartConversation();
-							end;
-						end
-						
-						if Events.HotkeyKeyboardPress then
-							Events.HotkeyKeyboardPress:Disconnect();
-						end;
-						
-						if Events.HotkeyGamepadPress then
-							Events.HotkeyGamepadPress:Disconnect()
-						end
-						
-						Events.HotkeyKeyboardPress = UserInputService.InputBegan:Connect(CheckButton);
-						Events.HotkeyGamepadPress = UserInputService.InputBegan:Connect(CheckButton);
-						
-					end;
-					
-					local function HideHotkey()
-						
-						-- Debounce
-						if not HotkeyShown then
-							return;
-						end;
-						
-						HotkeyShown = false;
-						
-						API.Gui.ToggleKeyboardKeybindGui(npc, false);
-						
-						if Events.HotkeyGamepadPress then
-							Events.HotkeyGamepadPress:Disconnect();
-						end;
-						
-						if Events.HotkeyKeyboardPress then
-							Events.HotkeyKeyboardPress:Disconnect();
-						end;
-						
-					end;
-					
-					RunService.Stepped:Connect(function()
+						-- Make sure our player touched it and not someone else
+						local PlayerFromCharacter = Players:GetPlayerFromCharacter(part.Parent);
+						if PlayerFromCharacter == Player then
 							
-						if PlayerTalkingWithNPC then
-							HideHotkey();
-						else
-							local Distance = Player:DistanceFromCharacter(DialogueSettings.PromptRegionPart.Position);
-							if Distance <= DialogueSettings.PromptRegionPartDistance then
-								if DialogueSettings.PromptRegionAutoStart then
-									if not LastTouchedTime or os.time() - TouchTimeout > LastTouchedTime then
-										LastTouchedTime = os.time();
-										HideHotkey();
-										ReadDialogue(npc, DialogueSettings);
-									else
-										ShowHotkey();
-									end;
-								elseif DialogueSettings.PromptRegionHotkeyEnabled then
-									ShowHotkey();
-								end;
-							else
-								HideHotkey();
-							end;
+							ReadDialogue(npc, DialogueSettings);
+							
 						end;
 						
 					end);
-					
+						
 				else
 					warn("[Dialogue Maker] The PromptRegionPart for "..npc.Name.." is not a Part.");
 				end;
@@ -365,7 +352,7 @@ for _, npc in ipairs(NPCDialogue) do
 				
 				if DialogueSettings.ClickDetectorLocation:IsA("ClickDetector") then
 					
-					API.Trigger.AddClickDetector(npc, DialogueSettings.ClickDetectorLocation);
+					API.Triggers.AddClickDetector(npc, DialogueSettings.ClickDetectorLocation);
 					
 					DialogueSettings.ClickDetectorLocation.MouseClick:Connect(function()
 						ReadDialogue(npc, DialogueSettings);
