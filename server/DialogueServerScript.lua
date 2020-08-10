@@ -72,7 +72,8 @@ RemoteConnections.PlayerPassesCondition.OnServerInvoke = function(player,npc,pri
 	
 end;
 
-RemoteConnections.ExecuteAction.OnServerInvoke = function(player,npc,priority,beforeOrAfter)
+local ActionCache = {};
+RemoteConnections.ExecuteAction.OnServerInvoke = function(player, npc, priority, beforeOrAfter)
 	
 	-- Ensure security
 	if not npc:IsA("Model") or not priority:IsA("Folder") or typeof(beforeOrAfter) ~= "string" then
@@ -82,17 +83,25 @@ RemoteConnections.ExecuteAction.OnServerInvoke = function(player,npc,priority,be
 	
 	-- Search for action
 	local Action;
-	for _, action in ipairs(script.Actions[beforeOrAfter]:GetChildren()) do
-		
-		if action.NPC.Value == npc and action.Priority.Value == priority then
-			Action = action;
-			break;
-		end;
-		
+	if ActionCache[npc] and ActionCache[npc][beforeOrAfter][priority] then
+		Action = ActionCache[npc][beforeOrAfter][priority];
+	elseif not ActionCache[npc] then
+		ActionCache[npc] = {
+			Before = {};
+			After = {};
+		};
 	end;
 	
-	if Action then
-	
+	if not Action then
+		for _, action in ipairs(script.Actions[beforeOrAfter]:GetChildren()) do
+			
+			if action.NPC.Value == npc and action.Priority.Value == priority then
+				Action = action;
+				break;
+			end;
+			
+		end;
+		
 		-- Add the player to the action
 		Action = require(Action);
 		
@@ -103,8 +112,6 @@ RemoteConnections.ExecuteAction.OnServerInvoke = function(player,npc,priority,be
 		__index = function(t,i)
 			if Old[i] then
 				return Old[i];
-			else
-				-- Whoops.
 			end;
 		end;}));
 		setfenv(Action.Execute,setmetatable({
@@ -113,8 +120,6 @@ RemoteConnections.ExecuteAction.OnServerInvoke = function(player,npc,priority,be
 		__index = function(t,i)
 			if Old[i] then
 				return Old[i];
-			else
-				-- Whoops.
 			end;
 		end;}));
 			
@@ -133,13 +138,16 @@ RemoteConnections.ExecuteAction.OnServerInvoke = function(player,npc,priority,be
 			
 		end;
 		
-		-- Check if the action is synchronous
-		if Action.Synchronous then
-			Action.Execute();
-		else
-			coroutine.wrap(Action.Execute)();
-		end;
-	
+		
+		ActionCache[npc][beforeOrAfter][priority] = Action;
+		
+	end;
+		
+	-- Check if the action is synchronous
+	if Action.Synchronous then
+		Action.Execute();
+	else
+		coroutine.wrap(Action.Execute)();
 	end;
 
 end;
