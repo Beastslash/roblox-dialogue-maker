@@ -8,7 +8,8 @@ local UserInputService = game:GetService("UserInputService");
 
 -- Toolbar configuration
 local Toolbar = plugin:CreateToolbar("Dialogue Maker by Beastslash");
-local EditDialogueButton = Toolbar:CreateButton("Edit Dialogue", "Edit dialogue of a selected NPC. The selected object must be a singular model.","rbxassetid://332218617");
+local EditDialogueButton = Toolbar:CreateButton("Edit Dialogue", "Edit dialogue of a selected NPC. The selected object must be a singular model.", "rbxassetid://332218617");
+local ResetScriptsButton = Toolbar:CreateButton("Fix Scripts", "Reset DialogueServerScript and DialogueClientScript back to the a stable version.", "rbxassetid://61995002");
 local PluginGui;
 local DialogueMakerFrame = script.DialogueMakerGUI.MainFrame:Clone();
 local DialogueMessageList = DialogueMakerFrame.DialogueContainer.DialogueMessageList;
@@ -891,5 +892,53 @@ EditDialogueButton.Click:Connect(function()
 	
 	-- Now we can open the dialogue editor.
 	OpenDialogueEditor();
+	
+end);
+
+local FixingScripts = false;
+ResetScriptsButton.Click:Connect(function()
+	
+	-- Debounce
+	assert(not FixingScripts, "[Dialogue Maker] Already fixing the scripts! Please wait.");
+	FixingScripts = true;
+	
+	-- Make a copy of both scripts
+	local NewDialogueServerScript = script.DialogueServerScript:Clone();
+	local NewDialogueClientScript = script.DialogueClientScript:Clone();
+	
+	-- Remove the children from them both
+	for _, dialogueScript in ipairs({NewDialogueServerScript, NewDialogueClientScript}) do
+		for _, child in ipairs(dialogueScript:GetChildren()) do
+			child:Destroy();
+		end;
+		
+		-- Enable the scripts
+		dialogueScript.Disabled = false;
+	end;
+	
+	-- Take the children from the old scripts
+	local OldDialogueServerScript = ServerScriptService:FindFirstChild("DialogueServerScript") or NewDialogueServerScript:Clone();
+	local OldDialogueClientScript = StarterPlayerScripts:FindFirstChild("DialogueClientScript") or NewDialogueClientScript:Clone();
+	
+	for _, dialogueScript in ipairs({OldDialogueServerScript, OldDialogueClientScript}) do
+		for _, child in ipairs(dialogueScript:GetChildren()) do
+			if dialogueScript == OldDialogueServerScript then
+				child.Parent = NewDialogueServerScript;
+			else
+				child.Parent = NewDialogueClientScript;
+			end;
+		end;
+		
+		-- Delete the old scripts
+		dialogueScript:Destroy();
+	end;
+	
+	-- Put the new scripts in their places
+	NewDialogueServerScript.Parent = ServerScriptService;
+	NewDialogueClientScript.Parent = StarterPlayerScripts;
+	
+	-- Done!
+	FixingScripts = false;
+	print("[Dialogue Maker] Fixed Dialogue Maker scripts!");
 	
 end);
