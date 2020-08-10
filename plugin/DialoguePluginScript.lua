@@ -14,7 +14,13 @@ local DialogueMakerFrame = script.DialogueMakerGUI.MainFrame:Clone();
 local DialogueMessageList = DialogueMakerFrame.DialogueContainer.DialogueMessageList;
 local DialogueMessageTemplate = DialogueMessageList.DialogueMessageTemplate:Clone();
 local Tools = DialogueMakerFrame.Tools;
-local Events = {ViewChildren = {}; EditingMessage = {}; EditingRedirect = {}; ConvertFromRedirect = {}; ConvertToRedirect = {}};
+local Events = {
+	ViewChildren = {}; 
+	EditingMessage = {}; 
+	EditingRedirect = {}; 
+	ConvertFromRedirect = {}; 
+	ConvertToRedirect = {}
+};
 
 DialogueMakerFrame.DialogueContainer.DialogueMessageList.DialogueMessageTemplate:Destroy();
 
@@ -708,7 +714,7 @@ end;
 -- Open the editor when called
 local function OpenDialogueEditor()
 	
-	PluginGui = plugin:CreateDockWidgetPluginGui("Dialogue Maker", DockWidgetPluginGuiInfo.new(Enum.InitialDockState.Float,true,true,508,241,508,241));
+	PluginGui = plugin:CreateDockWidgetPluginGui("Dialogue Maker", DockWidgetPluginGuiInfo.new(Enum.InitialDockState.Float, true, true, 508, 241, 508, 241));
 	PluginGui.Title = "Dialogue Maker";
 	PluginGui:BindToClose(CloseDialogueEditor);
 	
