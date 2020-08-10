@@ -24,8 +24,6 @@ Sure! If you feel like that the Dialogue Maker can be improved for everyone, jus
 
 ## Acknowledgements
 * **DraconicChris** - Project Lead
-* **Defaultio** - Creator of the Rich Text Markup module
-* **BloxaBrick** - Artist of F button that appears by default for keybinds
 * **ruax2891** - QA Tester
 * **LolMitch5** - QA Tester
 * **BinaryTimeLord** - QA Tester
