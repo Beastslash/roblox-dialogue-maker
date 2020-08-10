@@ -55,22 +55,22 @@ local function ReadDialogue(npc, dialogueSettings)
 		
 		CurrentDirectory = API.Dialogue.GoToDirectory(RootDirectory, DialoguePriority:split("."));
 		
-		if CurrentDirectory.Redirect.Value and RemoteConnections.PlayerPassesCondition:InvokeServer(npc,CurrentDirectory) then
+		if CurrentDirectory.Redirect.Value and RemoteConnections.PlayerPassesCondition:InvokeServer(npc, CurrentDirectory) then
 			
-			RemoteConnections.ExecuteAction:InvokeServer(npc,CurrentDirectory,"Before");
+			RemoteConnections.ExecuteAction:InvokeServer(npc, CurrentDirectory, "Before");
 			
 			local DialoguePriorityPath = CurrentDirectory.RedirectPriority.Value:split(".");
 			table.remove(DialoguePriorityPath,1);
 			DialoguePriority = table.concat(DialoguePriorityPath,".");
 			CurrentDirectory = RootDirectory;
 			
-			RemoteConnections.ExecuteAction:InvokeServer(npc,CurrentDirectory,"After");
+			RemoteConnections.ExecuteAction:InvokeServer(npc, CurrentDirectory,"After");
 			
 		elseif RemoteConnections.PlayerPassesCondition:InvokeServer(npc, CurrentDirectory) then
 			
 			-- Run the before action if there is one
 			if CurrentDirectory.HasBeforeAction.Value then
-				RemoteConnections.ExecuteAction:InvokeServer(npc,CurrentDirectory,"Before");
+				RemoteConnections.ExecuteAction:InvokeServer(npc, CurrentDirectory, "Before");
 			end;
 			
 			-- Check if the message has any variables
@@ -163,12 +163,13 @@ local function ReadDialogue(npc, dialogueSettings)
 				end;
 				
 				if DividedText[index+1] and NPCTalking then
+					ThemeDialogueContainer.ClickToContinue.Visible = true;
 					NPCPaused = true;
 					
 					while NPCPaused and NPCTalking do 
 						game:GetService("RunService").Heartbeat:Wait() 
 					end;
-					
+					ThemeDialogueContainer.ClickToContinue.Visible = false;
 					NPCPaused = false;
 					Skipped = false;
 				end;
@@ -228,7 +229,7 @@ local function ReadDialogue(npc, dialogueSettings)
 			
 			-- Run after action
 			if CurrentDirectory.HasAfterAction.Value and PlayerTalkingWithNPC then
-				RemoteConnections.ExecuteAction:InvokeServer(npc,CurrentDirectory,"After");
+				RemoteConnections.ExecuteAction:InvokeServer(npc, CurrentDirectory, "After");
 			end;
 			
 			if ResponseChosen and PlayerTalkingWithNPC then
