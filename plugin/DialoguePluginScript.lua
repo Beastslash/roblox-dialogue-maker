@@ -432,7 +432,12 @@ local function SyncDialogueGui(directoryDialogue)
 				end);
 				
 				Events.EditingMessage[dialogue] = DialogueStatus.Message.MouseButton1Click:Connect(function()
-				
+					
+					if DeleteModeEnabled then
+						ShowDeleteModePrompt();
+						return;
+					end;
+					
 					if EditingMessage then
 						return;
 					end;
@@ -482,6 +487,11 @@ local function SyncDialogueGui(directoryDialogue)
 			end;
 			
 			DialogueStatus.ConditionButton.MouseButton1Click:Connect(function()
+				
+				if DeleteModeEnabled then
+					ShowDeleteModePrompt();
+					return;
+				end;
 				
 				-- Look through the condition list and find the condition we want
 				local Condition;
@@ -555,11 +565,21 @@ local function SyncDialogueGui(directoryDialogue)
 			
 			DialogueStatus.BeforeActionButton.MouseButton1Click:Connect(function()
 				
+				if DeleteModeEnabled then
+					ShowDeleteModePrompt();
+					return;
+				end;
+				
 				OpenAction("Before");
 				
 			end);
 				
 			DialogueStatus.AfterActionButton.MouseButton1Click:Connect(function()
+				
+				if DeleteModeEnabled then
+					ShowDeleteModePrompt();
+					return;
+				end;
 				
 				OpenAction("After");
 				
@@ -569,6 +589,11 @@ local function SyncDialogueGui(directoryDialogue)
 				DialogueStatus.ViewChildren.Visible = false;
 			else
 				Events.ViewChildren[DialogueStatus] = DialogueStatus.ViewChildren.MouseButton1Click:Connect(function()
+					
+					if DeleteModeEnabled then
+						ShowDeleteModePrompt();
+						return;
+					end;
 					
 					Events.ViewChildren[DialogueStatus]:Disconnect();
 					
