@@ -9,7 +9,7 @@ local UserInputService = game:GetService("UserInputService");
 -- Toolbar configuration
 local Toolbar = plugin:CreateToolbar("Dialogue Maker by Beastslash");
 local EditDialogueButton = Toolbar:CreateButton("Edit Dialogue", "Edit dialogue of a selected NPC. The selected object must be a singular model.", "rbxassetid://332218617");
-local ResetScriptsButton = Toolbar:CreateButton("Fix Scripts", "Reset DialogueServerScript and DialogueClientScript back to the a stable version.", "rbxassetid://61995002");
+local ResetScriptsButton = Toolbar:CreateButton("Fix Scripts", "Reset DialogueMakerRemoteConnections, DialogueServerScript, and DialogueClientScript back to the a stable version.", "rbxassetid://61995002");
 local PluginGui;
 local DialogueMakerFrame = script.DialogueMakerGUI.MainFrame:Clone();
 local DialogueMessageList = DialogueMakerFrame.DialogueContainer.DialogueMessageList;
@@ -910,9 +910,10 @@ ResetScriptsButton.Click:Connect(function()
 	assert(not FixingScripts, "[Dialogue Maker] Already fixing the scripts! Please wait.");
 	FixingScripts = true;
 	
-	-- Make a copy of both scripts
+	-- Make copies
 	local NewDialogueServerScript = script.DialogueServerScript:Clone();
 	local NewDialogueClientScript = script.DialogueClientScript:Clone();
+	local ClientAPI = NewDialogueClientScript.ClientAPI:Clone();
 	
 	-- Remove the children from them both
 	for _, dialogueScript in ipairs({NewDialogueServerScript, NewDialogueClientScript}) do
@@ -922,6 +923,13 @@ ResetScriptsButton.Click:Connect(function()
 		
 		-- Enable the scripts
 		dialogueScript.Disabled = false;
+	end;
+	
+	-- Remove connections from RS
+	local NewDMRC = script.DialogueMakerRemoteConnections:Clone();
+	local OldDMRC = ReplicatedStorage:FindFirstChild("DialogueMakerRemoteConnections");
+	if OldDMRC then
+		OldDMRC:Destroy();
 	end;
 	
 	-- Take the children from the old scripts
@@ -941,9 +949,16 @@ ResetScriptsButton.Click:Connect(function()
 		dialogueScript:Destroy();
 	end;
 	
-	-- Put the new scripts in their places
+	local OldCAPI = NewDialogueClientScript:FindFirstChild("ClientAPI");
+	if OldCAPI then
+		OldCAPI:Destroy();
+	end;
+	
+	-- Put the new instances in their places
 	NewDialogueServerScript.Parent = ServerScriptService;
 	NewDialogueClientScript.Parent = StarterPlayerScripts;
+	ClientAPI.Parent = NewDialogueClientScript;
+	NewDMRC.Parent = ReplicatedStorage;
 	
 	-- Done!
 	FixingScripts = false;
