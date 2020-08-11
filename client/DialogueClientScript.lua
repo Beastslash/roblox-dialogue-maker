@@ -2,19 +2,23 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage");
 local Players = game:GetService("Players");
 local ControllerService = game:GetService("ControllerService");
+local RunService = game:GetService("RunService");
+local ContextActionService = game:GetService("ContextActionService");
 
 local Player = Players.LocalPlayer;
 local PlayerGui = Player:WaitForChild("PlayerGui");
-local RemoteConnections = ReplicatedStorage:WaitForChild("DialogueMakerRemoteConnections",3);
+local RemoteConnections = ReplicatedStorage:WaitForChild("DialogueMakerRemoteConnections", 3);
 
 -- Check if the DialogueMakerRemoteConnections folder was moved
-if not RemoteConnections then
-	error("[Dialogue Maker] Couldn't find the DialogueMakerRemoteConnections folder in the ReplicatedStorage.",0)
-end;
+assert(RemoteConnections, "[Dialogue Maker] Couldn't find the DialogueMakerRemoteConnections folder in the ReplicatedStorage.");
 
--- Get themes
-local Themes = script.Themes;
-local DefaultTheme = RemoteConnections.GetDefaultTheme:InvokeServer();
+-- Set some constants
+local THEMES = script.Themes;
+local DEFAULT_THEME = RemoteConnections.GetDefaultTheme:InvokeServer();
+local DEFAULT_MIN_DISTANCE = RemoteConnections.GetMinimumDistanceFromCharacter:InvokeServer();
+local DEFAULT_CHAT_TRIGGERS = RemoteConnections.GetDefaultTriggers:InvokeServer();
+local DEFAULT_CLICK_SOUND = RemoteConnections.GetDefaultClickSound:InvokeServer();
+
 local PlayerTalkingWithNPC = false;
 local Events = {};
 local API = require(script.ClientAPI);
@@ -42,6 +46,14 @@ local function ReadDialogue(npc, dialogueSettings)
 	local RootDirectory = DialogueContainer["1"];
 	local CurrentDirectory = RootDirectory;
 	
+	-- Setup click sound
+	local ClickSound = DialogueGui.ClickSound;
+	local ClickSoundEnabled = false;
+	if DEFAULT_CLICK_SOUND ~= 0 then
+		ClickSoundEnabled = true;
+		DialogueGui.ClickSound.SoundId = "rbxassetid://"..DEFAULT_CLICK_SOUND;
+	end;
+	
 	-- Check if the NPC has a name
 	if typeof(dialogueSettings.Name) == "string" and dialogueSettings.Name ~= "" then
 		DialogueGui.DialogueContainer.NPCNameFrame.Visible = true;
@@ -55,22 +67,20 @@ local function ReadDialogue(npc, dialogueSettings)
 		
 		CurrentDirectory = API.Dialogue.GoToDirectory(RootDirectory, DialoguePriority:split("."));
 		
-		if CurrentDirectory.Redirect.Value and RemoteConnections.PlayerPassesCondition:InvokeServer(npc,CurrentDirectory) then
-			
-			RemoteConnections.ExecuteAction:InvokeServer(npc,CurrentDirectory,"Before");
+		if CurrentDirectory.Redirect.Value and RemoteConnections.PlayerPassesCondition:InvokeServer(npc, CurrentDirectory) then
 			
 			local DialoguePriorityPath = CurrentDirectory.RedirectPriority.Value:split(".");
-			table.remove(DialoguePriorityPath,1);
-			DialoguePriority = table.concat(DialoguePriorityPath,".");
+			table.remove(DialoguePriorityPath, 1);
+			DialoguePriority = table.concat(DialoguePriorityPath, ".");
 			CurrentDirectory = RootDirectory;
 			
-			RemoteConnections.ExecuteAction:InvokeServer(npc,CurrentDirectory,"After");
+			RemoteConnections.ExecuteAction:InvokeServer(npc, CurrentDirectory, "After");
 			
 		elseif RemoteConnections.PlayerPassesCondition:InvokeServer(npc, CurrentDirectory) then
 			
 			-- Run the before action if there is one
 			if CurrentDirectory.HasBeforeAction.Value then
-				RemoteConnections.ExecuteAction:InvokeServer(npc,CurrentDirectory,"Before");
+				RemoteConnections.ExecuteAction:InvokeServer(npc, CurrentDirectory, "Before");
 			end;
 			
 			-- Check if the message has any variables
@@ -116,6 +126,10 @@ local function ReadDialogue(npc, dialogueSettings)
 				-- Make sure the player clicked the frame
 				if input.UserInputType == Enum.UserInputType.MouseButton1 then
 					if NPCTalking then
+						
+						if ClickSoundEnabled then
+							ClickSound:Play();
+						end;
 						
 						if NPCPaused then
 							NPCPaused = false;
@@ -163,12 +177,13 @@ local function ReadDialogue(npc, dialogueSettings)
 				end;
 				
 				if DividedText[index+1] and NPCTalking then
+					ThemeDialogueContainer.ClickToContinue.Visible = true;
 					NPCPaused = true;
 					
 					while NPCPaused and NPCTalking do 
 						game:GetService("RunService").Heartbeat:Wait() 
 					end;
-					
+					ThemeDialogueContainer.ClickToContinue.Visible = false;
 					NPCPaused = false;
 					Skipped = false;
 				end;
@@ -186,6 +201,11 @@ local function ReadDialogue(npc, dialogueSettings)
 						ResponseButton.Text = response.Message.Value;
 						ResponseButton.Parent = ResponseContainer;
 						ResponseButton.MouseButton1Click:Connect(function()
+							
+							if ClickSoundEnabled then
+								ClickSound:Play();
+							end;
+							
 							ResponseContainer.Visible = false;
 							
 							ResponseChosen = response;
@@ -228,7 +248,7 @@ local function ReadDialogue(npc, dialogueSettings)
 			
 			-- Run after action
 			if CurrentDirectory.HasAfterAction.Value and PlayerTalkingWithNPC then
-				RemoteConnections.ExecuteAction:InvokeServer(npc,CurrentDirectory,"After");
+				RemoteConnections.ExecuteAction:InvokeServer(npc, CurrentDirectory, "After");
 			end;
 			
 			if ResponseChosen and PlayerTalkingWithNPC then
@@ -302,7 +322,7 @@ for _, npc in ipairs(NPCDialogue) do
 					SpeechBubble.Parent = PlayerGui;
 					
 				else
-					warn("[Dialogue Viewer] The SpeechBubblePart for "..npc.Name.." is not a Part.");
+					warn("[Dialogue Maker] The SpeechBubblePart for "..npc.Name.." is not a Part.");
 				end;
 				
 			end;
@@ -366,6 +386,23 @@ for _, npc in ipairs(NPCDialogue) do
 			
 		end;
 		
+		local CanPressButton = false;
+		local function ReadDialogueWithKeybind()
+			if CanPressButton then
+				ReadDialogue(npc, DialogueSettings);
+			end;
+		end;
+		ContextActionService:BindAction("OpenDialogueWithKeybind", ReadDialogueWithKeybind, false, DEFAULT_CHAT_TRIGGERS.DEFAULT_CHAT_TRIGGER_KEY, DEFAULT_CHAT_TRIGGERS.DEFAULT_CHAT_TRIGGER_KEY_GAMEPAD);
+		
+		-- Check if the player is in range
+		RunService.Heartbeat:Connect(function()
+			if Player:DistanceFromCharacter(npc.HumanoidRootPart.Position) <= DEFAULT_MIN_DISTANCE then
+				CanPressButton = true;
+			else
+				CanPressButton = false;
+			end;
+		end);
+		
 	end);
 		
 	if not success then
@@ -373,7 +410,7 @@ for _, npc in ipairs(NPCDialogue) do
 	end;
 	
 end;
-
+	
 print("[Dialogue Maker] Finished preparing dialogue.");
 
 Player.CharacterRemoving:Connect(function()

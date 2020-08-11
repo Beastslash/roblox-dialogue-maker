@@ -8,13 +8,20 @@ local UserInputService = game:GetService("UserInputService");
 
 -- Toolbar configuration
 local Toolbar = plugin:CreateToolbar("Dialogue Maker by Beastslash");
-local EditDialogueButton = Toolbar:CreateButton("Edit Dialogue", "Edit dialogue of a selected NPC. The selected object must be a singular model.","rbxassetid://332218617");
+local EditDialogueButton = Toolbar:CreateButton("Edit Dialogue", "Edit dialogue of a selected NPC. The selected object must be a singular model.", "rbxassetid://332218617");
+local ResetScriptsButton = Toolbar:CreateButton("Fix Scripts", "Reset DialogueServerScript and DialogueClientScript back to the a stable version.", "rbxassetid://61995002");
 local PluginGui;
 local DialogueMakerFrame = script.DialogueMakerGUI.MainFrame:Clone();
 local DialogueMessageList = DialogueMakerFrame.DialogueContainer.DialogueMessageList;
 local DialogueMessageTemplate = DialogueMessageList.DialogueMessageTemplate:Clone();
 local Tools = DialogueMakerFrame.Tools;
-local Events = {ViewChildren = {}; EditingMessage = {}; EditingRedirect = {}; ConvertFromRedirect = {}; ConvertToRedirect = {}};
+local Events = {
+	ViewChildren = {}; 
+	EditingMessage = {}; 
+	EditingRedirect = {}; 
+	ConvertFromRedirect = {}; 
+	ConvertToRedirect = {}
+};
 
 DialogueMakerFrame.DialogueContainer.DialogueMessageList.DialogueMessageTemplate:Destroy();
 
@@ -563,17 +570,6 @@ local function SyncDialogueGui(directoryDialogue)
 				
 			end;
 			
-			DialogueStatus.BeforeActionButton.MouseButton1Click:Connect(function()
-				
-				if DeleteModeEnabled then
-					ShowDeleteModePrompt();
-					return;
-				end;
-				
-				OpenAction("Before");
-				
-			end);
-				
 			DialogueStatus.AfterActionButton.MouseButton1Click:Connect(function()
 				
 				if DeleteModeEnabled then
@@ -586,8 +582,29 @@ local function SyncDialogueGui(directoryDialogue)
 			end);
 			
 			if dialogue.Redirect.Value then
+				
+				-- Don't show the Before Action button for redirects
+				DialogueStatus.BeforeActionButton.Visible = false;
 				DialogueStatus.ViewChildren.Visible = false;
+				
 			else
+				
+				-- Don't show the Before Action button for responses
+				if not dialogue.Response.Value then
+					DialogueStatus.BeforeActionButton.MouseButton1Click:Connect(function()
+					
+						if DeleteModeEnabled then
+							ShowDeleteModePrompt();
+							return;
+						end;
+						
+						OpenAction("Before");
+						
+					end);
+				else
+					DialogueStatus.BeforeActionButton.Visible = false;
+				end;
+				
 				Events.ViewChildren[DialogueStatus] = DialogueStatus.ViewChildren.MouseButton1Click:Connect(function()
 					
 					if DeleteModeEnabled then
@@ -708,7 +725,7 @@ end;
 -- Open the editor when called
 local function OpenDialogueEditor()
 	
-	PluginGui = plugin:CreateDockWidgetPluginGui("Dialogue Maker", DockWidgetPluginGuiInfo.new(Enum.InitialDockState.Float,true,true,508,241,508,241));
+	PluginGui = plugin:CreateDockWidgetPluginGui("Dialogue Maker", DockWidgetPluginGuiInfo.new(Enum.InitialDockState.Float, true, true, 508, 241, 508, 241));
 	PluginGui.Title = "Dialogue Maker";
 	PluginGui:BindToClose(CloseDialogueEditor);
 	
@@ -759,20 +776,12 @@ local function OpenDialogueEditor()
 				TargetDirectory = Instance.new("Folder");
 				TargetDirectory.Name = directory;
 				
-				-- Create a folder to hold dialogue
-				local Dialogue = Instance.new("Folder");
-				Dialogue.Name = "Dialogue";
-				Dialogue.Parent = TargetDirectory;
-				
-				-- Create a folder to hold responses
-				local Responses = Instance.new("Folder");
-				Responses.Name = "Responses";
-				Responses.Parent = TargetDirectory;
-				
-				-- Create a folder to hold responses
-				local Redirects = Instance.new("Folder");
-				Redirects.Name = "Redirects";
-				Redirects.Parent = TargetDirectory;
+				-- Create new dialogue folders
+				for _, folderName in ipairs({"Dialogue", "Responses", "Redirects"}) do
+					local Folder = Instance.new("Folder");
+					Folder.Name = folderName;
+					Folder.Parent = TargetDirectory;
+				end
 				
 				TargetDirectory.Parent = CurrentDirectory;
 				
@@ -891,5 +900,53 @@ EditDialogueButton.Click:Connect(function()
 	
 	-- Now we can open the dialogue editor.
 	OpenDialogueEditor();
+	
+end);
+
+local FixingScripts = false;
+ResetScriptsButton.Click:Connect(function()
+	
+	-- Debounce
+	assert(not FixingScripts, "[Dialogue Maker] Already fixing the scripts! Please wait.");
+	FixingScripts = true;
+	
+	-- Make a copy of both scripts
+	local NewDialogueServerScript = script.DialogueServerScript:Clone();
+	local NewDialogueClientScript = script.DialogueClientScript:Clone();
+	
+	-- Remove the children from them both
+	for _, dialogueScript in ipairs({NewDialogueServerScript, NewDialogueClientScript}) do
+		for _, child in ipairs(dialogueScript:GetChildren()) do
+			child:Destroy();
+		end;
+		
+		-- Enable the scripts
+		dialogueScript.Disabled = false;
+	end;
+	
+	-- Take the children from the old scripts
+	local OldDialogueServerScript = ServerScriptService:FindFirstChild("DialogueServerScript") or NewDialogueServerScript:Clone();
+	local OldDialogueClientScript = StarterPlayerScripts:FindFirstChild("DialogueClientScript") or NewDialogueClientScript:Clone();
+	
+	for _, dialogueScript in ipairs({OldDialogueServerScript, OldDialogueClientScript}) do
+		for _, child in ipairs(dialogueScript:GetChildren()) do
+			if dialogueScript == OldDialogueServerScript then
+				child.Parent = NewDialogueServerScript;
+			else
+				child.Parent = NewDialogueClientScript;
+			end;
+		end;
+		
+		-- Delete the old scripts
+		dialogueScript:Destroy();
+	end;
+	
+	-- Put the new scripts in their places
+	NewDialogueServerScript.Parent = ServerScriptService;
+	NewDialogueClientScript.Parent = StarterPlayerScripts;
+	
+	-- Done!
+	FixingScripts = false;
+	print("[Dialogue Maker] Fixed Dialogue Maker scripts!");
 	
 end);
