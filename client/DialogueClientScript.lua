@@ -4,6 +4,7 @@ local Players = game:GetService("Players");
 local ControllerService = game:GetService("ControllerService");
 local RunService = game:GetService("RunService");
 local ContextActionService = game:GetService("ContextActionService");
+local UserInputService = game:GetService("UserInputService");
 
 local Player = Players.LocalPlayer;
 local PlayerGui = Player:WaitForChild("PlayerGui");
@@ -16,7 +17,7 @@ assert(RemoteConnections, "[Dialogue Maker] Couldn't find the DialogueMakerRemot
 local THEMES = script.Themes;
 local DEFAULT_THEME = RemoteConnections.GetDefaultTheme:InvokeServer();
 local DEFAULT_MIN_DISTANCE = RemoteConnections.GetMinimumDistanceFromCharacter:InvokeServer();
-local DEFAULT_CHAT_TRIGGERS = RemoteConnections.GetDefaultTriggers:InvokeServer();
+local KEYBINDS = RemoteConnections.GetKeybinds:InvokeServer();
 local DEFAULT_CLICK_SOUND = RemoteConnections.GetDefaultClickSound:InvokeServer();
 
 local PlayerTalkingWithNPC = false;
@@ -121,36 +122,63 @@ local function ReadDialogue(npc, dialogueSettings)
 			
 			-- Make the NPC stop talking if the player clicks the frame
 			local NPCPaused = false;
+			local ContinueDialogue;
+			ContinueDialogue = function(keybind)
+				
+				-- Make sure key is down
+				if keybind and not UserInputService:IsKeyDown(KEYBINDS.DEFAULT_CHAT_CONTINUE_KEY) and not UserInputService:IsKeyDown(KEYBINDS.DEFAULT_CHAT_CONTINUE_KEY_GAMEPAD) then
+					return;
+				end;
+				
+				ContextActionService:UnbindAction("ContinueDialogue");
+				if NPCTalking then
+					if ClickSoundEnabled then
+						ClickSound:Play();
+					end;
+					
+					if NPCPaused then
+						NPCPaused = false;
+					end;
+					
+					-- Check settings set by the developer
+					if dialogueSettings.AllowPlayerToSkipDelay then
+						
+						-- Replace the incomplete dialogue with the full text
+						TextContainer.Line.Text = FullMessageText;
+						Skipped = true;
+						
+					end;
+					
+					ContextActionService:BindAction("ContinueDialogue", ContinueDialogue, false, KEYBINDS.DEFAULT_CHAT_CONTINUE_KEY, KEYBINDS.DEFAULT_CHAT_CONTINUE_KEY_GAMEPAD);
+					
+				elseif #CurrentDirectory.Responses:GetChildren() == 0 then					
+					WaitingForResponse = false;
+				end;
+			end;
+			
 			Events.DialogueClicked = ThemeDialogueContainer.InputBegan:Connect(function(input)
 				
 				-- Make sure the player clicked the frame
 				if input.UserInputType == Enum.UserInputType.MouseButton1 then
-					if NPCTalking then
-						
-						if ClickSoundEnabled then
-							ClickSound:Play();
-						end;
-						
-						if NPCPaused then
-							NPCPaused = false;
-						end;
-						
-						-- Check settings set by the developer
-						if dialogueSettings.AllowPlayerToSkipDelay then
-							
-							-- Replace the incomplete dialogue with the full text
-							TextContainer.Line.Text = FullMessageText;
-							Skipped = true;
-							
-						end;
-						
-					elseif #CurrentDirectory.Responses:GetChildren() == 0 then
-						WaitingForResponse = false;
-					end;
+					
+					ContinueDialogue();
 					
 				end;
 				
 			end);
+			
+			local KEYS_PRESSED = UserInputService:GetKeysPressed();
+			local KeybindPressed = false;
+			if UserInputService:IsKeyDown(KEYBINDS.DEFAULT_CHAT_CONTINUE_KEY) or UserInputService:IsKeyDown(KEYBINDS.DEFAULT_CHAT_CONTINUE_KEY_GAMEPAD) then
+				coroutine.wrap(function()
+					while UserInputService:IsKeyDown(KEYBINDS.DEFAULT_CHAT_CONTINUE_KEY) or UserInputService:IsKeyDown(KEYBINDS.DEFAULT_CHAT_CONTINUE_KEY_GAMEPAD) do
+						RunService.Heartbeat:Wait();
+					end;
+					ContextActionService:BindAction("ContinueDialogue", ContinueDialogue, false, KEYBINDS.DEFAULT_CHAT_CONTINUE_KEY, KEYBINDS.DEFAULT_CHAT_CONTINUE_KEY_GAMEPAD);
+				end)();
+			else
+				ContextActionService:BindAction("ContinueDialogue", ContinueDialogue, false, KEYBINDS.DEFAULT_CHAT_CONTINUE_KEY, KEYBINDS.DEFAULT_CHAT_CONTINUE_KEY_GAMEPAD);
+			end;
 			
 			-- Put the letters of the message together for an animation effect
 			local DividedText = API.Dialogue.DivideTextToFitBox(MessageText, TextContainer);
@@ -254,7 +282,6 @@ local function ReadDialogue(npc, dialogueSettings)
 			if ResponseChosen and PlayerTalkingWithNPC then
 				
 				if (#ResponseChosen.Dialogue:GetChildren() ~= 0 or #ResponseChosen.Redirects:GetChildren() ~= 0) then
-					
 					DialoguePriority = string.sub(ResponseChosen.Priority.Value..".1",3);
 					CurrentDirectory = RootDirectory;
 					
@@ -386,23 +413,29 @@ for _, npc in ipairs(NPCDialogue) do
 			
 		end;
 		
-		local CanPressButton = false;
-		local function ReadDialogueWithKeybind()
-			if CanPressButton then
-				ReadDialogue(npc, DialogueSettings);
+		if KEYBINDS.KEYBINDS_ENABLED then
+			local CanPressButton = false;
+			local ReadDialogueWithKeybind;
+			ReadDialogueWithKeybind = function()
+				if CanPressButton then
+					if not UserInputService:IsKeyDown(KEYBINDS.DEFAULT_CHAT_TRIGGER_KEY) and not UserInputService:IsKeyDown(KEYBINDS.DEFAULT_CHAT_TRIGGER_KEY_GAMEPAD) then
+						return;
+					end;
+					ReadDialogue(npc, DialogueSettings);
+				end;
 			end;
+			ContextActionService:BindAction("OpenDialogueWithKeybind", ReadDialogueWithKeybind, false, KEYBINDS.DEFAULT_CHAT_TRIGGER_KEY, KEYBINDS.DEFAULT_CHAT_TRIGGER_KEY_GAMEPAD);
+			
+			-- Check if the player is in range
+			RunService.Heartbeat:Connect(function()
+				if Player:DistanceFromCharacter(npc.HumanoidRootPart.Position) <= DEFAULT_MIN_DISTANCE then
+					CanPressButton = true;
+				else
+					CanPressButton = false;
+				end;
+			end);
 		end;
-		ContextActionService:BindAction("OpenDialogueWithKeybind", ReadDialogueWithKeybind, false, DEFAULT_CHAT_TRIGGERS.DEFAULT_CHAT_TRIGGER_KEY, DEFAULT_CHAT_TRIGGERS.DEFAULT_CHAT_TRIGGER_KEY_GAMEPAD);
-		
-		-- Check if the player is in range
-		RunService.Heartbeat:Connect(function()
-			if Player:DistanceFromCharacter(npc.HumanoidRootPart.Position) <= DEFAULT_MIN_DISTANCE then
-				CanPressButton = true;
-			else
-				CanPressButton = false;
-			end;
-		end);
-		
+			
 	end);
 		
 	if not success then

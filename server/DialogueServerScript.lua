@@ -6,7 +6,7 @@ local Players = game:GetService("Players");
 local SETTINGS = require(script.Settings);
 
 -- Make sure that we have a connection with the remote functions/events
-local RemoteConnections = ReplicatedStorage:WaitForChild("DialogueMakerRemoteConnections",3);
+local RemoteConnections = ReplicatedStorage:WaitForChild("DialogueMakerRemoteConnections", 3);
 assert(RemoteConnections, "[Dialogue Maker] The DialogueMakerRemoteConnections folder couldn't be found in the ReplicatedStorage.");
 
 local DialogueLocations = {};
@@ -194,10 +194,13 @@ RemoteConnections.GetMinimumDistanceFromCharacter.OnServerInvoke = function()
 	return SETTINGS.MIN_DISTANCE_FROM_CHARACTER;
 end;
 
-RemoteConnections.GetDefaultTriggers.OnServerInvoke = function()
+RemoteConnections.GetKeybinds.OnServerInvoke = function()
 	return {
+		KEYBINDS_ENABLED = SETTINGS.KEYBINDS_ENABLED;
 		DEFAULT_CHAT_TRIGGER_KEY = SETTINGS.DEFAULT_CHAT_TRIGGER_KEY;
 		DEFAULT_CHAT_TRIGGER_KEY_GAMEPAD = SETTINGS.DEFAULT_CHAT_TRIGGER_KEY_GAMEPAD;
+		DEFAULT_CHAT_CONTINUE_KEY = SETTINGS.DEFAULT_CHAT_CONTINUE_KEY;
+		DEFAULT_CHAT_CONTINUE_KEY_GAMEPAD = SETTINGS.DEFAULT_CHAT_CONTINUE_KEY_GAMEPAD;
 	}
 end;
 
