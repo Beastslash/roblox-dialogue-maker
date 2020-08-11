@@ -2,19 +2,24 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage");
 local Players = game:GetService("Players");
 local ControllerService = game:GetService("ControllerService");
+local RunService = game:GetService("RunService");
+local ContextActionService = game:GetService("ContextActionService");
 
 local Player = Players.LocalPlayer;
 local PlayerGui = Player:WaitForChild("PlayerGui");
 local RemoteConnections = ReplicatedStorage:WaitForChild("DialogueMakerRemoteConnections", 3);
 
 -- Check if the DialogueMakerRemoteConnections folder was moved
-if not RemoteConnections then
-	error("[Dialogue Maker] Couldn't find the DialogueMakerRemoteConnections folder in the ReplicatedStorage.",0)
-end;
+assert(RemoteConnections, "[Dialogue Maker] Couldn't find the DialogueMakerRemoteConnections folder in the ReplicatedStorage.");
 
 -- Get themes
-local Themes = script.Themes;
-local DefaultTheme = RemoteConnections.GetDefaultTheme:InvokeServer();
+local THEMES = script.Themes;
+local DEFAULT_THEME = RemoteConnections.GetDefaultTheme:InvokeServer();
+local DEFAULT_MIN_DISTANCE = RemoteConnections.GetMinimumDistanceFromCharacter:InvokeServer();
+
+-- Get chat triggers
+local DEFAULT_CHAT_TRIGGERS = RemoteConnections.GetDefaultTriggers:InvokeServer();
+
 local PlayerTalkingWithNPC = false;
 local Events = {};
 local API = require(script.ClientAPI);
@@ -301,7 +306,7 @@ for _, npc in ipairs(NPCDialogue) do
 					SpeechBubble.Parent = PlayerGui;
 					
 				else
-					warn("[Dialogue Viewer] The SpeechBubblePart for "..npc.Name.." is not a Part.");
+					warn("[Dialogue Maker] The SpeechBubblePart for "..npc.Name.." is not a Part.");
 				end;
 				
 			end;
@@ -365,6 +370,23 @@ for _, npc in ipairs(NPCDialogue) do
 			
 		end;
 		
+		local CanPressButton = false;
+		local function ReadDialogueWithKeybind()
+			if CanPressButton then
+				ReadDialogue(npc, DialogueSettings);
+			end;
+		end;
+		ContextActionService:BindAction("OpenDialogueWithKeybind", ReadDialogueWithKeybind, false, DEFAULT_CHAT_TRIGGERS.DEFAULT_CHAT_TRIGGER_KEY, DEFAULT_CHAT_TRIGGERS.DEFAULT_CHAT_TRIGGER_KEY_GAMEPAD);
+		
+		-- Check if the player is in range
+		RunService.Heartbeat:Connect(function()
+			if Player:DistanceFromCharacter(npc.HumanoidRootPart.Position) <= DEFAULT_MIN_DISTANCE then
+				CanPressButton = true;
+			else
+				CanPressButton = false;
+			end;
+		end);
+		
 	end);
 		
 	if not success then
@@ -372,7 +394,7 @@ for _, npc in ipairs(NPCDialogue) do
 	end;
 	
 end;
-
+	
 print("[Dialogue Maker] Finished preparing dialogue.");
 
 Player.CharacterRemoving:Connect(function()

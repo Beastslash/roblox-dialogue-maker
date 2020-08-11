@@ -3,13 +3,11 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage");
 local Players = game:GetService("Players");
 
 -- Get dialogue settings
-local Settings = require(script.Settings);
+local SETTINGS = require(script.Settings);
 
 -- Make sure that we have a connection with the remote functions/events
 local RemoteConnections = ReplicatedStorage:WaitForChild("DialogueMakerRemoteConnections",3);
-if not RemoteConnections then
-	error("[Dialogue Maker] The DialogueMakerRemoteConnections folder couldn't be found in the ReplicatedStorage.");
-end;
+assert(RemoteConnections, "[Dialogue Maker] The DialogueMakerRemoteConnections folder couldn't be found in the ReplicatedStorage.");
 
 local DialogueLocations = {};
 local DialogueLocationsFolder = script.DialogueLocations;
@@ -29,7 +27,7 @@ RemoteConnections.GetNPCDialogue.OnServerInvoke = function(player)
 end;
 
 RemoteConnections.GetDefaultTheme.OnServerInvoke = function(player)
-	return Settings.DefaultTheme;
+	return SETTINGS.DEFAULT_THEME;
 end;
 
 RemoteConnections.GetAllThemes.OnServerInvoke = function(player)
@@ -190,4 +188,15 @@ RemoteConnections.GetVariable.OnServerInvoke = function(player,npc,variable)
 		return DialogueVariables[player][npc][variable];
 	end;
 	
+end;
+
+RemoteConnections.GetMinimumDistanceFromCharacter.OnServerInvoke = function()
+	return SETTINGS.MIN_DISTANCE_FROM_CHARACTER;
+end;
+
+RemoteConnections.GetDefaultTriggers.OnServerInvoke = function()
+	return {
+		DEFAULT_CHAT_TRIGGER_KEY = SETTINGS.DEFAULT_CHAT_TRIGGER_KEY;
+		DEFAULT_CHAT_TRIGGER_KEY_GAMEPAD = SETTINGS.DEFAULT_CHAT_TRIGGER_KEY_GAMEPAD;
+	}
 end;
