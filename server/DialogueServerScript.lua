@@ -200,3 +200,7 @@ RemoteConnections.GetDefaultTriggers.OnServerInvoke = function()
 		DEFAULT_CHAT_TRIGGER_KEY_GAMEPAD = SETTINGS.DEFAULT_CHAT_TRIGGER_KEY_GAMEPAD;
 	}
 end;
+
+RemoteConnections.GetDefaultClickSound.OnServerInvoke = function()
+	return SETTINGS.DEFAULT_CLICK_SOUND;
+end;

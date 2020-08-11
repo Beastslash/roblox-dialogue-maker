@@ -5,6 +5,7 @@ return {
 	
 	-- [ Response Settings ] --
 	SHOW_RESPONSES_AFTER_MSG_FINISHED = true; -- Prevents the player from selecting responses without first viewing the dialogue
+	DEFAULT_CLICK_SOUND = 0;
 	
 	-- [ Chat Triggers ] --
 	MIN_DISTANCE_FROM_CHARACTER = 10; 
