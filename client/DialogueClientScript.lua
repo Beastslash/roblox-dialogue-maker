@@ -12,13 +12,12 @@ local RemoteConnections = ReplicatedStorage:WaitForChild("DialogueMakerRemoteCon
 -- Check if the DialogueMakerRemoteConnections folder was moved
 assert(RemoteConnections, "[Dialogue Maker] Couldn't find the DialogueMakerRemoteConnections folder in the ReplicatedStorage.");
 
--- Get themes
+-- Set some constants
 local THEMES = script.Themes;
 local DEFAULT_THEME = RemoteConnections.GetDefaultTheme:InvokeServer();
 local DEFAULT_MIN_DISTANCE = RemoteConnections.GetMinimumDistanceFromCharacter:InvokeServer();
-
--- Get chat triggers
 local DEFAULT_CHAT_TRIGGERS = RemoteConnections.GetDefaultTriggers:InvokeServer();
+local DEFAULT_CLICK_SOUND = RemoteConnections.GetDefaultClickSound:InvokeServer();
 
 local PlayerTalkingWithNPC = false;
 local Events = {};
@@ -47,6 +46,14 @@ local function ReadDialogue(npc, dialogueSettings)
 	local RootDirectory = DialogueContainer["1"];
 	local CurrentDirectory = RootDirectory;
 	
+	-- Setup click sound
+	local ClickSound = DialogueGui.ClickSound;
+	local ClickSoundEnabled = false;
+	if DEFAULT_CLICK_SOUND ~= 0 then
+		ClickSoundEnabled = true;
+		DialogueGui.ClickSound.SoundId = "rbxassetid://"..DEFAULT_CLICK_SOUND;
+	end;
+	
 	-- Check if the NPC has a name
 	if typeof(dialogueSettings.Name) == "string" and dialogueSettings.Name ~= "" then
 		DialogueGui.DialogueContainer.NPCNameFrame.Visible = true;
@@ -63,11 +70,11 @@ local function ReadDialogue(npc, dialogueSettings)
 		if CurrentDirectory.Redirect.Value and RemoteConnections.PlayerPassesCondition:InvokeServer(npc, CurrentDirectory) then
 			
 			local DialoguePriorityPath = CurrentDirectory.RedirectPriority.Value:split(".");
-			table.remove(DialoguePriorityPath,1);
-			DialoguePriority = table.concat(DialoguePriorityPath,".");
+			table.remove(DialoguePriorityPath, 1);
+			DialoguePriority = table.concat(DialoguePriorityPath, ".");
 			CurrentDirectory = RootDirectory;
 			
-			RemoteConnections.ExecuteAction:InvokeServer(npc, CurrentDirectory,"After");
+			RemoteConnections.ExecuteAction:InvokeServer(npc, CurrentDirectory, "After");
 			
 		elseif RemoteConnections.PlayerPassesCondition:InvokeServer(npc, CurrentDirectory) then
 			
@@ -119,6 +126,10 @@ local function ReadDialogue(npc, dialogueSettings)
 				-- Make sure the player clicked the frame
 				if input.UserInputType == Enum.UserInputType.MouseButton1 then
 					if NPCTalking then
+						
+						if ClickSoundEnabled then
+							ClickSound:Play();
+						end;
 						
 						if NPCPaused then
 							NPCPaused = false;
@@ -190,6 +201,11 @@ local function ReadDialogue(npc, dialogueSettings)
 						ResponseButton.Text = response.Message.Value;
 						ResponseButton.Parent = ResponseContainer;
 						ResponseButton.MouseButton1Click:Connect(function()
+							
+							if ClickSoundEnabled then
+								ClickSound:Play();
+							end;
+							
 							ResponseContainer.Visible = false;
 							
 							ResponseChosen = response;
