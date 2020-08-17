@@ -914,6 +914,7 @@ ResetScriptsButton.Click:Connect(function()
 	local NewDialogueServerScript = script.DialogueServerScript:Clone();
 	local NewDialogueClientScript = script.DialogueClientScript:Clone();
 	local ClientAPI = NewDialogueClientScript.ClientAPI:Clone();
+	local NewThemes = NewDialogueClientScript.Themes:Clone();
 	
 	-- Remove the children from them both
 	for _, dialogueScript in ipairs({NewDialogueServerScript, NewDialogueClientScript}) do
@@ -932,10 +933,15 @@ ResetScriptsButton.Click:Connect(function()
 		OldDMRC:Destroy();
 	end;
 	
-	-- Take the children from the old scripts
 	local OldDialogueServerScript = ServerScriptService:FindFirstChild("DialogueServerScript") or NewDialogueServerScript:Clone();
 	local OldDialogueClientScript = StarterPlayerScripts:FindFirstChild("DialogueClientScript") or NewDialogueClientScript:Clone();
 	
+	-- Check for themes
+	if not OldDialogueClientScript:FindFirstChild("Themes") then
+		NewThemes.Parent = OldDialogueClientScript;
+	end;
+	
+	-- Take the children from the old scripts
 	for _, dialogueScript in ipairs({OldDialogueServerScript, OldDialogueClientScript}) do
 		for _, child in ipairs(dialogueScript:GetChildren()) do
 			if dialogueScript == OldDialogueServerScript then
