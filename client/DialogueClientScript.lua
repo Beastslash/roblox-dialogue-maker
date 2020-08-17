@@ -48,9 +48,16 @@ local function ReadDialogue(npc, dialogueSettings)
 	local CurrentDirectory = RootDirectory;
 	
 	-- Setup click sound
-	local ClickSound = DialogueGui.ClickSound;
+	local ClickSound = DialogueGui:FindFirstChild("ClickSound");
 	local ClickSoundEnabled = false;
-	if DEFAULT_CLICK_SOUND ~= 0 then
+	if DEFAULT_CLICK_SOUND and DEFAULT_CLICK_SOUND ~= 0 then
+		
+		if not ClickSound then
+			ClickSound = Instance.new("Sound");
+			ClickSound.Name = "ClickSound";
+			ClickSound.Parent = DialogueGui;
+		end;
+		
 		ClickSoundEnabled = true;
 		DialogueGui.ClickSound.SoundId = "rbxassetid://"..DEFAULT_CLICK_SOUND;
 	end;
@@ -167,17 +174,19 @@ local function ReadDialogue(npc, dialogueSettings)
 				
 			end);
 			
-			local KEYS_PRESSED = UserInputService:GetKeysPressed();
-			local KeybindPressed = false;
-			if UserInputService:IsKeyDown(KEYBINDS.DEFAULT_CHAT_CONTINUE_KEY) or UserInputService:IsKeyDown(KEYBINDS.DEFAULT_CHAT_CONTINUE_KEY_GAMEPAD) then
-				coroutine.wrap(function()
-					while UserInputService:IsKeyDown(KEYBINDS.DEFAULT_CHAT_CONTINUE_KEY) or UserInputService:IsKeyDown(KEYBINDS.DEFAULT_CHAT_CONTINUE_KEY_GAMEPAD) do
-						RunService.Heartbeat:Wait();
-					end;
+			if KEYBINDS.KEYBINDS_ENABLED then
+				local KEYS_PRESSED = UserInputService:GetKeysPressed();
+				local KeybindPressed = false;
+				if UserInputService:IsKeyDown(KEYBINDS.DEFAULT_CHAT_CONTINUE_KEY) or UserInputService:IsKeyDown(KEYBINDS.DEFAULT_CHAT_CONTINUE_KEY_GAMEPAD) then
+					coroutine.wrap(function()
+						while UserInputService:IsKeyDown(KEYBINDS.DEFAULT_CHAT_CONTINUE_KEY) or UserInputService:IsKeyDown(KEYBINDS.DEFAULT_CHAT_CONTINUE_KEY_GAMEPAD) do
+							RunService.Heartbeat:Wait();
+						end;
+						ContextActionService:BindAction("ContinueDialogue", ContinueDialogue, false, KEYBINDS.DEFAULT_CHAT_CONTINUE_KEY, KEYBINDS.DEFAULT_CHAT_CONTINUE_KEY_GAMEPAD);
+					end)();
+				else
 					ContextActionService:BindAction("ContinueDialogue", ContinueDialogue, false, KEYBINDS.DEFAULT_CHAT_CONTINUE_KEY, KEYBINDS.DEFAULT_CHAT_CONTINUE_KEY_GAMEPAD);
-				end)();
-			else
-				ContextActionService:BindAction("ContinueDialogue", ContinueDialogue, false, KEYBINDS.DEFAULT_CHAT_CONTINUE_KEY, KEYBINDS.DEFAULT_CHAT_CONTINUE_KEY_GAMEPAD);
+				end;
 			end;
 			
 			-- Put the letters of the message together for an animation effect
