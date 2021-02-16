@@ -166,7 +166,7 @@ local function ReadDialogue(npc, dialogueSettings)
 			Events.DialogueClicked = ThemeDialogueContainer.InputBegan:Connect(function(input)
 				
 				-- Make sure the player clicked the frame
-				if input.UserInputType == Enum.UserInputType.MouseButton1 then
+				if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 					
 					ContinueDialogue();
 					
