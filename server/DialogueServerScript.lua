@@ -32,13 +32,16 @@ end;
 
 RemoteConnections.GetAllThemes.OnServerInvoke = function(player)
 	
-	local Themes = {};
-	
-	for _, theme in ipairs(script.Themes:GetChildren()) do
-		Themes[theme.Name] = theme:Clone();
+	local ThemeFolder = script:FindFirstChild("Themes");
+	if ThemeFolder then
+		local Themes = {};
+		
+		for _, theme in ipairs(ThemeFolder:GetChildren()) do
+			Themes[theme.Name] = theme:Clone();
+		end;
+		
+		return Themes;
 	end;
-	
-	return Themes;
 	
 end;
 
