@@ -104,22 +104,17 @@ RemoteConnections.ExecuteAction.OnServerInvoke = function(player, npc, priority,
 		Action = require(Action);
 		
 		local Old = getfenv(Action.Execute);
-		setfenv(Action.Variables,setmetatable({
+		local MTable = setmetatable({
 			Player = player
 		},{
-		__index = function(t,i)
-			if Old[i] then
-				return Old[i];
+			__index = function(t,i)
+				if Old[i] then
+					return Old[i];
+				end;
 			end;
-		end;}));
-		setfenv(Action.Execute,setmetatable({
-			Player = player
-		},{
-		__index = function(t,i)
-			if Old[i] then
-				return Old[i];
-			end;
-		end;}));
+		});
+		setfenv(Action.Variables, MTable);
+		setfenv(Action.Execute, MTable);
 			
 		-- Check if there are any variables the user wants us to overwrite
 		for variable, value in pairs(Action.Variables()) do
