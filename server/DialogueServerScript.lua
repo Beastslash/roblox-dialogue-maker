@@ -100,7 +100,10 @@ RemoteConnections.ExecuteAction.OnServerInvoke = function(player, npc, priority,
 				Action = action;
 				break;
 			end;
-			
+		end;
+		
+		if not Action then
+			return;
 		end;
 		
 		-- Add the player to the action
