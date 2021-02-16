@@ -94,8 +94,8 @@ RemoteConnections.ExecuteAction.OnServerInvoke = function(player, npc, priority,
 	end;
 	
 	if not Action then
-		for _, action in ipairs(script.Actions[beforeOrAfter]:GetChildren()) do
-			
+		local ActionScripts = script.Actions:FindFirstChild(beforeOrAfter):GetChildren();
+		for _, action in ipairs(ActionScripts) do
 			if action.NPC.Value == npc and action.Priority.Value == priority then
 				Action = action;
 				break;
