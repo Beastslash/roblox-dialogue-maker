@@ -140,15 +140,15 @@ RemoteConnections.ExecuteAction.OnServerInvoke = function(player, npc, priority,
 		
 		ActionCache[npc][beforeOrAfter][priority] = Action;
 		
+		-- Check if the action is synchronous
+		if Action.Synchronous then
+			Action.Execute();
+		else
+			coroutine.wrap(Action.Execute)();
+		end;
+		
 	end;
 		
-	-- Check if the action is synchronous
-	if Action.Synchronous then
-		Action.Execute();
-	else
-		coroutine.wrap(Action.Execute)();
-	end;
-
 end;
 
 RemoteConnections.GetVariable.OnServerInvoke = function(player,npc,variable)
