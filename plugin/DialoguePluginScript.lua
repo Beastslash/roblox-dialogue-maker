@@ -29,7 +29,6 @@ local DialogueMakerOpen = false;
 local CurrentDialogueContainer;
 local ViewingPriority = "1";
 local ViewingA = "Dialogue";
-
 local Model;
 
 -- Close the editor when called
@@ -106,6 +105,27 @@ local function RepairNPC()
 		print("[Dialogue Maker] Added settings script to "..Model.Name)
 		
 	end;
+	
+	-- Check if they're registered on the sevrer
+	local DialogueServerScript = ServerScriptService:FindFirstChild("DialogueServerScript");
+	
+	assert(DialogueServerScript, "[Dialogue Maker] DialogueServerScript wasn't found in the ServerScriptService! \nPlease replace the script by pressing the \"Fix Scripts\" button.");
+	
+	local NPCRegistered;
+	for _, dialogueLocation in ipairs(DialogueServerScript.DialogueLocations:GetChildren()) do
+		if dialogueLocation.Value == Model then
+			NPCRegistered = true;
+			break;
+		end
+	end;
+	
+	if not NPCRegistered then
+		-- Add this model to the DialogueManager
+		local DialogueLocation = Instance.new("ObjectValue");
+		DialogueLocation.Value = Model;
+		DialogueLocation.Name = "DialogueLocation";
+		DialogueLocation.Parent = DialogueServerScript.DialogueLocations;
+	end
 	
 end;
 
@@ -858,7 +878,7 @@ EditDialogueButton.Click:Connect(function()
 	end;
 	
 	-- Check if there is a dialogue folder in the NPC
-	RepairNPC(true);
+	RepairNPC();
 	
 	-- Add the chat receiver script in the starter player scripts
 	if not StarterPlayerScripts:FindFirstChild("DialogueClientScript") then
