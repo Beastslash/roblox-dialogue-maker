@@ -22,7 +22,7 @@ local DEFAULT_CLICK_SOUND = RemoteConnections.GetDefaultClickSound:InvokeServer(
 
 local PlayerTalkingWithNPC = false;
 local Events = {};
-local API = require(script.API);
+local API = require(script.ClientAPI);
 
 local function ReadDialogue(npc, dialogueSettings)
 
@@ -34,15 +34,12 @@ local function ReadDialogue(npc, dialogueSettings)
 
   API.Triggers.DisableAllSpeechBubbles();
   API.Triggers.DisableAllClickDetectors();
-
-  local PlayerControls = require(Player.PlayerScripts.PlayerModule):GetControls();
-  if dialogueSettings.FreezePlayer then 
-    PlayerControls:Disable();
-  end;
+  API.Player.SetPlayer(Player);
+  if dialogueSettings.FreezePlayer then API.Player.FreezePlayer(); end;
 
   -- Show the dialogue GUI to the player
   local DialogueContainer = npc.DialogueContainer;
-  local DialogueGui = API.GUI.CreateNewDialogueGui(dialogueSettings.Theme);
+  local DialogueGui = API.Gui.CreateNewDialogueGui(dialogueSettings.Theme);
   local ResponseContainer = DialogueGui.DialogueContainer.ResponseContainer;
   local ResponseTemplate = ResponseContainer.ResponseTemplate:Clone();
   ResponseContainer.ResponseTemplate:Destroy();
@@ -121,14 +118,13 @@ local function ReadDialogue(npc, dialogueSettings)
 
       end;
 
-      local Message = "";
-
       DialogueGui.Parent = PlayerGui;
 
       local NPCTalking = true;
       local WaitingForResponse = true;
       local Skipped = false;
       local FullMessageText = "";
+      local Message = "";
 
       -- Make the NPC stop talking if the player clicks the frame
       local NPCPaused = false;
@@ -170,7 +166,9 @@ local function ReadDialogue(npc, dialogueSettings)
 
         -- Make sure the player clicked the frame
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+
           ContinueDialogue();
+
         end;
 
       end);
@@ -191,22 +189,119 @@ local function ReadDialogue(npc, dialogueSettings)
       end;
 
       -- Put the letters of the message together for an animation effect
+      local ImportantPositions = {};
+      if TextContainer.Line.RichText then
+
+        -- TODO: find a way to mix rich text syntax with fonts
+        local TagContentPattern = "<([^<>]-)>(.-)</";
+        local TagStart, TagEnd, Tag, Content, Value, Attribute, NewPattern;
+        local function UpdateTagData(str)
+          -- Find the tag
+          local _TagStart, _, _Tag, _ = str:find(TagContentPattern);
+
+          if _TagStart then
+            local _Attribute, _Value = nil, nil;
+            if _Tag:find(" ") then
+              -- Get the real tag
+              local Split1 = _Tag:split(" ");
+              _Tag = Split1[1];
+
+              -- Get the real attribute and value
+              local Split2 = Split1[2]:split("=");
+              _Attribute, _Value = Split2[1], Split2[2];
+            end
+
+            -- Make a new pattern based on the tag we have
+            local _NewPattern = TagContentPattern .. _Tag .. ">";
+            local _, _TagEnd, _, _Content = str:find(_NewPattern);
+
+            return _TagStart, _TagEnd, _Tag, _Content, _Attribute, _Value, _NewPattern;
+          end;
+        end;
+
+        TagStart, TagEnd, Tag, Content, Attribute, Value, NewPattern = UpdateTagData(MessageText);
+
+        while TagStart do
+          local TagGroup = MessageText:sub(TagStart, TagEnd);
+          local ContentStart, ContentEnd = TagGroup:find(Content, 1, true);
+
+          -- Get the sub-tags inside the first one
+          if not ImportantPositions[TagStart] then
+            ImportantPositions[TagStart] = {};
+          end;
+
+          local ETagStart, ETagEnd, ETag, EContent, EAttr, EVal, EPattern = UpdateTagData(Content);
+          while ETagStart do
+
+            -- Add the sub tag to the table
+            table.insert(ImportantPositions[TagStart], {ETag .. (EVal and (" " .. EAttr .. '=' .. EVal) or "")});
+
+            -- Scrub the tag from the content + length
+            Content = Content:gsub(Content:sub(ETagStart, ETagEnd), EContent);
+
+            ETagStart, ETagEnd, ETag, EContent, EAttr, EVal, EPattern = UpdateTagData(Content);
+
+          end;
+
+          -- Change all the final content lengths
+          local ContentLength = TagStart + Content:len() - 1;
+          for i, _ in ipairs(ImportantPositions[TagStart]) do
+            ImportantPositions[TagStart][i][2] = ContentLength;
+          end;
+
+          -- Add the main tag to the table
+          table.insert(ImportantPositions[TagStart], {Tag .. (Value and (" " .. Attribute .. '=' .. Value) or ""), ContentLength});
+
+          -- Scrub the tags from the original text
+          MessageText = MessageText:gsub(TagGroup, Content, 1);
+
+          -- Check if there's any more tags
+          TagStart, TagEnd, Tag, Content, Attribute, Value, NewPattern = UpdateTagData(MessageText);
+        end;
+      end;
+
       local DividedText = API.Dialogue.DivideTextToFitBox(MessageText, TextContainer);
+      local Position = 0;
+      local Adding = false;
       for index, page in ipairs(DividedText) do
         FullMessageText = page.FullText;
-        Message = "";
-        for wordIndex, word in ipairs(page) do
-          if wordIndex ~= 1 then Message = Message.." " end;
+        for wordIndex, word in ipairs(page) do    
+          if wordIndex ~= 1 then 
+            Position += 1; 
+            if Adding then
+              ImportantPositions[Position + 1] = ImportantPositions[Position];
+              Adding = false;
+            end;
+            Message = Message .. " ";
+          end;
           for _, letter in ipairs(word:split("")) do
 
+            Adding = false;
             -- Check if the player wants to skip their dialogue
             if Skipped or not NPCTalking or not PlayerTalkingWithNPC then
               break;
             end;
 
-            Message = Message..letter;
+            Position += 1;
+            local IP = ImportantPositions[Position];
+            if IP then
+              local Replacement = letter;
+              for _, tag in ipairs(IP) do
+                Replacement = "<" .. tag[1] .. ">" .. Replacement .. "</" .. tag[1]:match("%a+") .. ">";
+                if Position < tag[2] then 
+                  local Amount = Position;
+                  if not ImportantPositions[Position + 1] then
+                    ImportantPositions[Position + 1] = {};
+                  end;
+                  table.insert(ImportantPositions[Position + 1], tag);
+                  Adding = true;
+                end;
+              end;
+              Message = Message .. Replacement;
+            else 
+              Message = Message .. letter;
+            end;
             TextContainer.Line.Text = Message;
-
             wait(dialogueSettings.LetterDelay);
 
           end;
@@ -237,6 +332,7 @@ local function ReadDialogue(npc, dialogueSettings)
             ResponseButton.Text = response.Message.Value;
             ResponseButton.Parent = ResponseContainer;
             ResponseButton.MouseButton1Click:Connect(function()
+
               if ClickSoundEnabled then
                 ClickSound:Play();
               end;
@@ -287,9 +383,11 @@ local function ReadDialogue(npc, dialogueSettings)
       end;
 
       if ResponseChosen and PlayerTalkingWithNPC then
+
         if (#ResponseChosen.Dialogue:GetChildren() ~= 0 or #ResponseChosen.Redirects:GetChildren() ~= 0) then
           DialoguePriority = string.sub(ResponseChosen.Priority.Value..".1",3);
           CurrentDirectory = RootDirectory;
+
         else
           DialogueGui:Destroy();
           PlayerTalkingWithNPC = false;
@@ -309,18 +407,18 @@ local function ReadDialogue(npc, dialogueSettings)
       end;
 
     elseif PlayerTalkingWithNPC then
+
       local SplitPriority = DialoguePriority:split(".");
       SplitPriority[#SplitPriority] = SplitPriority[#SplitPriority] + 1;
       DialoguePriority = table.concat(SplitPriority,".");
+
     end;
 
   end;
 
   API.Triggers.EnableAllSpeechBubbles();
   API.Triggers.EnableAllClickDetectors();
-  if dialogueSettings.FreezePlayer then
-    PlayerControls:Enable();
-  end;
+  if dialogueSettings.FreezePlayer then API.Player.UnfreezePlayer(); end;
 
 end;
 
@@ -335,7 +433,6 @@ for _, npc in ipairs(NPCDialogue) do
   local success, msg = pcall(function()
 
     local DialogueSettings = require(npc.DialogueContainer.Settings);
-
     if DialogueSettings.SpeechBubbleEnabled and DialogueSettings.SpeechBubblePart then
       if DialogueSettings.SpeechBubblePart:IsA("BasePart") then
         local SpeechBubble = API.Triggers.CreateSpeechBubble(npc, DialogueSettings);
@@ -346,7 +443,6 @@ for _, npc in ipairs(NPCDialogue) do
         end);
 
         SpeechBubble.Parent = PlayerGui;
-
       else
         warn("[Dialogue Maker] The SpeechBubblePart for "..npc.Name.." is not a Part.");
       end;
@@ -359,9 +455,10 @@ for _, npc in ipairs(NPCDialogue) do
           -- Make sure our player touched it and not someone else
           local PlayerFromCharacter = Players:GetPlayerFromCharacter(part.Parent);
           if PlayerFromCharacter == Player then
-            ReadDialogue(npc, DialogueSettings);
-          end;
 
+            ReadDialogue(npc, DialogueSettings);
+
+          end;
         end);
       else
         warn("[Dialogue Maker] The PromptRegionPart for "..npc.Name.." is not a Part.");
@@ -374,31 +471,37 @@ for _, npc in ipairs(NPCDialogue) do
         local ClickDetector = Instance.new("ClickDetector");
         ClickDetector.MaxActivationDistance = DialogueSettings.DetectorActivationDistance;
         ClickDetector.Parent = npc;
+
         DialogueSettings.ClickDetectorLocation = ClickDetector;
 
       end;
 
       if DialogueSettings.ClickDetectorLocation:IsA("ClickDetector") then
-        
+
         API.Triggers.AddClickDetector(npc, DialogueSettings.ClickDetectorLocation);
+
         DialogueSettings.ClickDetectorLocation.MouseClick:Connect(function()
           ReadDialogue(npc, DialogueSettings);
         end);
-        
+
       else
         warn("[Dialogue Maker] The ClickDetectorLocation for "..npc.Name.." is not a ClickDetector.");
       end;
+
     end;
 
     if KEYBINDS.KEYBINDS_ENABLED then
       local CanPressButton = false;
       local ReadDialogueWithKeybind;
       ReadDialogueWithKeybind = function()
-        if CanPressButton and (UserInputService:IsKeyDown(KEYBINDS.DEFAULT_CHAT_TRIGGER_KEY) or UserInputService:IsKeyDown(KEYBINDS.DEFAULT_CHAT_TRIGGER_KEY_GAMEPAD)) then
+        if CanPressButton then
+          if not UserInputService:IsKeyDown(KEYBINDS.DEFAULT_CHAT_TRIGGER_KEY) and not UserInputService:IsKeyDown(KEYBINDS.DEFAULT_CHAT_TRIGGER_KEY_GAMEPAD) then
+            return;
+          end;
           ReadDialogue(npc, DialogueSettings);
         end;
       end;
-      ContextActionService:BindAction("ReadDialogueWithKeybind", ReadDialogueWithKeybind, false, KEYBINDS.DEFAULT_CHAT_TRIGGER_KEY, KEYBINDS.DEFAULT_CHAT_TRIGGER_KEY_GAMEPAD);
+      ContextActionService:BindAction("OpenDialogueWithKeybind", ReadDialogueWithKeybind, false, KEYBINDS.DEFAULT_CHAT_TRIGGER_KEY, KEYBINDS.DEFAULT_CHAT_TRIGGER_KEY_GAMEPAD);
 
       -- Check if the player is in range
       RunService.Heartbeat:Connect(function()
@@ -418,9 +521,8 @@ for _, npc in ipairs(NPCDialogue) do
 
 end;
 
+print("[Dialogue Maker] Finished preparing dialogue.");
+
 Player.CharacterRemoving:Connect(function()
   PlayerTalkingWithNPC = false;
 end);
-
-print("[Dialogue Maker] Finished preparing dialogue.");
-
