@@ -33,7 +33,7 @@ return {
 	AutomaticallyCreateProximityDetector = false;
 	ProximityDetectorLocation = nil;
 	ProximityDetectorActivationDistance = 40;
-	ProximityDetectorHoldTime = 0.5;
+	ProximityDetectorHoldDuration = 0.5;
 	ProximityDetectorDisappearsWhenDialogueActive = true;
 	ProximityDetectorRequiresLineOfSight = false;
 	
