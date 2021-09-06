@@ -33,7 +33,8 @@ local function ReadDialogue(npc, dialogueSettings)
   PlayerTalkingWithNPC = true;
 
   API.Triggers.DisableAllSpeechBubbles();
-  API.Triggers.DisableAllClickDetectors();
+	API.Triggers.DisableAllClickDetectors();
+	API.Triggers.DisableAllProximityDetectors();
   API.Player.SetPlayer(Player);
   if dialogueSettings.FreezePlayer then API.Player.FreezePlayer(); end;
 
@@ -166,9 +167,7 @@ local function ReadDialogue(npc, dialogueSettings)
 
         -- Make sure the player clicked the frame
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-
           ContinueDialogue();
-
         end;
 
       end);
@@ -274,6 +273,7 @@ local function ReadDialogue(npc, dialogueSettings)
             end;
             Message = Message .. " ";
           end;
+          local Extras = "";
           for _, letter in ipairs(word:split("")) do
 
             Adding = false;
@@ -283,25 +283,31 @@ local function ReadDialogue(npc, dialogueSettings)
             end;
 
             Position += 1;
-            local IP = ImportantPositions[Position];
+            local IP = ImportantPositions[Position];  
             if IP then
               local Replacement = letter;
               for _, tag in ipairs(IP) do
-                Replacement = "<" .. tag[1] .. ">" .. Replacement .. "</" .. tag[1]:match("%a+") .. ">";
+                if not tag.OriginalPosition then
+                  tag.OriginalPosition = Position;
+                  Replacement = "<" .. tag[1] .. ">" .. Replacement .. ((Position == tag[2] and "</" .. tag[1]:match("%a+") .. ">") or "");
+                end;
                 if Position < tag[2] then 
-                  local Amount = Position;
+                  Extras = Extras .. "</" .. tag[1]:match("%a+") .. ">";
                   if not ImportantPositions[Position + 1] then
                     ImportantPositions[Position + 1] = {};
                   end;
                   table.insert(ImportantPositions[Position + 1], tag);
                   Adding = true;
+                elseif tag.OriginalPosition ~= Position and Position == tag[2] then
+                  Replacement = Replacement .. "</" .. tag[1]:match("%a+") .. ">";
                 end;
               end;
               Message = Message .. Replacement;
             else 
               Message = Message .. letter;
             end;
-            TextContainer.Line.Text = Message;
+            TextContainer.Line.Text = Message .. Extras;
+            Extras = "";
             wait(dialogueSettings.LetterDelay);
 
           end;
@@ -417,7 +423,8 @@ local function ReadDialogue(npc, dialogueSettings)
   end;
 
   API.Triggers.EnableAllSpeechBubbles();
-  API.Triggers.EnableAllClickDetectors();
+	API.Triggers.EnableAllClickDetectors();
+	API.Triggers.EnableAllProximityDetectors();
   if dialogueSettings.FreezePlayer then API.Player.UnfreezePlayer(); end;
 
 end;
@@ -463,7 +470,33 @@ for _, npc in ipairs(NPCDialogue) do
       else
         warn("[Dialogue Maker] The PromptRegionPart for "..npc.Name.." is not a Part.");
       end;
-    end;
+		end;
+		
+		if DialogueSettings.ProximityDetectorEnabled and (DialogueSettings.ProximityDetectorLocation or DialogueSettings.AutomaticallyCreateProximityDetector) then
+			if (DialogueSettings.AutomaticallyCreateProximityDetector) then
+				local ProximityDetector = Instance.new("ProximityPrompt");
+				ProximityDetector.MaxActivationDistance = DialogueSettings.ProximityDetectorActivationDistance;
+				ProximityDetector.HoldDuration = DialogueSettings.ProximityDetectorHoldDuration;
+				ProximityDetector.RequiresLineOfSight = DialogueSettings.ProximityDetectorRequiresLineOfSight;
+				ProximityDetector.Parent = npc;
+				
+				DialogueSettings.ProximityDetectorLocation = ProximityDetector;
+				
+			end;
+			
+			if DialogueSettings.ProximityDetectorLocation:IsA("ProximityPrompt") then
+
+				API.Triggers.AddProximityDetector(npc, DialogueSettings.ProximityDetectorLocation);
+
+				DialogueSettings.ProximityDetectorLocation.Triggered:Connect(function()
+					ReadDialogue(npc, DialogueSettings);
+				end);
+
+			else
+				warn("[Dialogue Maker] The ClickDetectorLocation for "..npc.Name.." is not a ClickDetector.");
+			end;
+			
+		end
 
     if DialogueSettings.ClickDetectorEnabled and (DialogueSettings.ClickDetectorLocation or DialogueSettings.AutomaticallyCreateClickDetector) then
       if DialogueSettings.AutomaticallyCreateClickDetector then

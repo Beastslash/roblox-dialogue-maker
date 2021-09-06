@@ -1,7 +1,7 @@
 return {
 
 	-- [General] --
-	LetterDelay = 0.025; -- Change this to the amount of seconds you want to wait before the next letter in the NPC's message is shown. [accepts number >= 0]
+	LetterDelay = 0.05; -- Change this to the amount of seconds you want to wait before the next letter in the NPC's message is shown. [accepts number >= 0]
 	AllowPlayerToSkipDelay = true; -- If true, this allows the player to show all of the message without waiting for it to be pieced back together. [accepts boolean]
 	FreezePlayer = true; -- If true, the player will freeze when the dialogue starts and will be unfrozen when the dialogue ends. [accepts boolean]
 
@@ -28,6 +28,14 @@ return {
 	ClickDetectorLocation = nil; -- Replace this with the location of the ClickDetector. (Ex. workspace.Model.ClickDetector) This setting will be ignored if AutomaticallyCreateClickDetector is true. [accepts ClickDetector or nil]
 	DetectorActivationDistance = 32; -- Replace this with the distance you want the player to be able to activate the ClickDetector. This setting will be ignored if AutomaticallyCreateClickDetector is false. [accepts number]
 	CursorImage = ""; -- Replace this with an image of the cursor you want to appear when the player hovers over the NPC. If this is an empty string, the default mouse cursor will be used. This setting will be ignored if AutomaticallyCreateClickDetector is false. [accepts string or nil]
+	
+	ProximityDetectorEnabled = false;
+	AutomaticallyCreateProximityDetector = false;
+	ProximityDetectorLocation = nil;
+	ProximityDetectorActivationDistance = 40;
+	ProximityDetectorHoldTime = 0.5;
+	ProximityDetectorDisappearsWhenDialogueActive = true;
+	ProximityDetectorRequiresLineOfSight = false;
 	
 	-- [Theme] --
 	Theme = ""; -- Change this to a theme you've added to the Themes folder in order to override default theme settings. [accepts string]
