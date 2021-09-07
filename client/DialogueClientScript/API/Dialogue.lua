@@ -163,16 +163,28 @@ function DialogueModule.ReadDialogue(npc: Model)
     API.Player.FreezePlayer(); 
     
   end;
-
-  -- Show the dialogue GUI to the player
+  
+  -- Set the theme and prepare the response template
   local DialogueGui = API.GUI.CreateNewDialogueGui(DialogueSettings.Theme);
   local ResponseContainer = DialogueGui.DialogueContainer.ResponseContainer;
   local ResponseTemplate = ResponseContainer.ResponseTemplate:Clone();
+  API.GUI.CurrentTheme = DialogueGui;
   ResponseContainer.ResponseTemplate:Destroy();
-  local DialoguePriority = "1";
-  local RootDirectory = DialogueContainer["1"];
-  local CurrentDirectory = RootDirectory;
+  
+  -- Set NPC name
+  DialogueGui.DialogueContainer.NPCNameFrame.Visible = typeof(DialogueSettings.Name) == "string" and DialogueSettings.Name ~= "";
+  DialogueGui.DialogueContainer.NPCNameFrame.NPCName.Text = DialogueSettings.Name or "";
 
+  -- Listen to theme changes
+  API.GUI.ThemeChanged.Event:Connect(function(newTheme)
+    
+    DialogueGui:Destroy();
+    DialogueGui = newTheme;
+    ResponseContainer = DialogueGui.DialogueContainer.ResponseContainer;
+    ResponseTemplate = ResponseContainer.ResponseTemplate:Clone();
+
+  end);
+  
   -- Setup click sound
   local ClickSound = DialogueGui:FindFirstChild("ClickSound");
   local ClickSoundEnabled = false;
@@ -191,19 +203,10 @@ function DialogueModule.ReadDialogue(npc: Model)
     
   end;
 
-  -- Check if the NPC has a name
-  if typeof(DialogueSettings.Name) == "string" and DialogueSettings.Name ~= "" then
-    
-    DialogueGui.DialogueContainer.NPCNameFrame.Visible = true;
-    DialogueGui.DialogueContainer.NPCNameFrame.NPCName.Text = DialogueSettings.Name;
-    
-  else
-    
-    DialogueGui.DialogueContainer.NPCNameFrame.Visible = false;
-    
-  end;
-
   -- Show the dialouge to the player
+  local DialoguePriority = "1";
+  local RootDirectory = DialogueContainer["1"];
+  local CurrentDirectory = RootDirectory;
   while DialogueModule.PlayerTalkingWithNPC.Value and game:GetService("RunService").Heartbeat:Wait() do
 
     CurrentDirectory = API.Dialogue.GoToDirectory(RootDirectory, DialoguePriority:split("."));
@@ -221,7 +224,9 @@ function DialogueModule.ReadDialogue(npc: Model)
 
       -- Run the before action if there is one
       if CurrentDirectory.HasBeforeAction.Value then
+        
         RemoteConnections.ExecuteAction:InvokeServer(npc, CurrentDirectory, "Before");
+        
       end;
 
       -- Check if the message has any variables
@@ -608,6 +613,7 @@ function DialogueModule.ReadDialogue(npc: Model)
           
         else
           
+          API.GUI.CurrentTheme = nil;
           DialogueGui:Destroy();
           DialogueModule.PlayerTalkingWithNPC.Value = false;
           

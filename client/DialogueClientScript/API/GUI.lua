@@ -3,14 +3,33 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage");
 local RemoteConnections = ReplicatedStorage:WaitForChild("DialogueMakerRemoteConnections");
 
 -- Prepare these methods
-local GUIModule = {};
+local GUIModule = {
+  CurrentTheme = nil;
+  ThemeChanged = Instance.new("BindableEvent");
+};
+
+setmetatable(GUIModule, {
+  __newindex = function(self, index, value)
+    
+    if index == "CurrentTheme" then
+      
+      GUIModule.ThemeChanged:Fire(value);
+      
+    end;
+    
+    rawset(self, index, value);
+    
+  end;
+});
 
 local DefaultThemeName = nil;
 function GUIModule.GetDefaultThemeName(): string
 
   -- Check if the theme is in the cache
   if DefaultThemeName then
+    
     return DefaultThemeName;
+    
   end;
 
   -- Call up the server.
@@ -37,6 +56,13 @@ function GUIModule.CreateNewDialogueGui(theme: string?): ScreenGui
   -- Return the theme
   return DialogueGui:Clone();
 
+end;
+
+ReplicatedStorage:WaitForChild("DialogueMakerRemoteConnections").ChangeTheme.OnClientInvoke = function(themeName)
+  
+  GUIModule.CurrentTheme = nil;
+  GUIModule.CurrentTheme = GUIModule.CreateNewDialogueGui(themeName);
+  
 end;
 
 return GUIModule;
