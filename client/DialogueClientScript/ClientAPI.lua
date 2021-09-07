@@ -1,3 +1,4 @@
+-- Initialize API
 local API = {
 	Gui = {};
 	Dialogue = {};
