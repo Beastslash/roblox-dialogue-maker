@@ -61,7 +61,7 @@ function API.Triggers.CreateSpeechBubble(npc, properties)
 	SpeechBubbles[npc].LightInfluence = 0;
 	SpeechBubbles[npc].ResetOnSpawn = false;
 	SpeechBubbles[npc].Size = properties.SpeechBubbleSize;
-	SpeechBubbles[npc].StudsOffset = properties.StudsOffset;
+	SpeechBubbles[npc].StudsOffset = properties.SpeechBubbleStudsOffset;
 	SpeechBubbles[npc].Adornee = properties.SpeechBubblePart;
 	
 	local SpeechBubbleButton = Instance.new("ImageButton");
