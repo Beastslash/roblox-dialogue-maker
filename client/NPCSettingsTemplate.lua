@@ -29,6 +29,7 @@ return {
 	DetectorActivationDistance = 32; -- Replace this with the distance you want the player to be able to activate the ClickDetector. This setting will be ignored if AutomaticallyCreateClickDetector is false. [accepts number]
 	CursorImage = ""; -- Replace this with an image of the cursor you want to appear when the player hovers over the NPC. If this is an empty string, the default mouse cursor will be used. This setting will be ignored if AutomaticallyCreateClickDetector is false. [accepts string or nil]
 	
+	-- [Proximity Detection] --
 	ProximityDetectorEnabled = false;
 	AutomaticallyCreateProximityDetector = false;
 	ProximityDetectorLocation = nil;
