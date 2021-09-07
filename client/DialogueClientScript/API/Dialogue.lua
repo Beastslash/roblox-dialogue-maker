@@ -152,7 +152,7 @@ function DialogueModule.ReadDialogue(npc: Model)
   -- Make sure we can't talk to another NPC
   API.Triggers.DisableAllSpeechBubbles();
   API.Triggers.DisableAllClickDetectors();
-  API.Triggers.DisableAllProximityDetectors();
+  API.Triggers.DisableAllProximityPrompts();
   
   -- Freeze the player, if necessary
   local DialogueContainer = npc:FindFirstChild("DialogueContainer");
@@ -627,7 +627,7 @@ function DialogueModule.ReadDialogue(npc: Model)
 
   API.Triggers.EnableAllSpeechBubbles();
   API.Triggers.EnableAllClickDetectors();
-  API.Triggers.EnableAllProximityDetectors();
+  API.Triggers.EnableAllProximityPrompts();
   
   if DialogueSettings.FreezePlayer then 
     

@@ -44,7 +44,7 @@ for _, npc in ipairs(NPCDialogue) do
         
       else
         
-        warn("[Dialogue Maker]: The SpeechBubblePart for "..npc.Name.." is not a Part.");
+        warn("[Dialogue Maker]: The SpeechBubblePart for " .. npc.Name .. " is not a Part.");
         
       end;
     end;
@@ -67,31 +67,31 @@ for _, npc in ipairs(NPCDialogue) do
         
       else
         
-        warn("[Dialogue Maker]: The PromptRegionPart for "..npc.Name.." is not a Part.");
+        warn("[Dialogue Maker]: The PromptRegionPart for " .. npc.Name .. " is not a Part.");
         
       end;
       
     end;
 
-    if DialogueSettings.ProximityDetectorEnabled and (DialogueSettings.ProximityDetectorLocation or DialogueSettings.AutomaticallyCreateProximityDetector) then
+    if DialogueSettings.ProximityPromptEnabled and (DialogueSettings.ProximityPromptLocation or DialogueSettings.AutomaticallyCreateProximityPrompt) then
       
-      if (DialogueSettings.AutomaticallyCreateProximityDetector) then
+      if (DialogueSettings.AutomaticallyCreateProximityPrompt) then
         
-        local ProximityDetector = Instance.new("ProximityPrompt");
-        ProximityDetector.MaxActivationDistance = DialogueSettings.ProximityDetectorActivationDistance;
-        ProximityDetector.HoldDuration = DialogueSettings.ProximityDetectorHoldDuration;
-        ProximityDetector.RequiresLineOfSight = DialogueSettings.ProximityDetectorRequiresLineOfSight;
-        ProximityDetector.Parent = npc;
+        local ProximityPrompt = Instance.new("ProximityPrompt");
+        ProximityPrompt.MaxActivationDistance = DialogueSettings.ProximityPromptActivationDistance;
+        ProximityPrompt.HoldDuration = DialogueSettings.ProximityPromptHoldDuration;
+        ProximityPrompt.RequiresLineOfSight = DialogueSettings.ProximityPromptRequiresLineOfSight;
+        ProximityPrompt.Parent = npc;
 
-        DialogueSettings.ProximityDetectorLocation = ProximityDetector;
+        DialogueSettings.ProximityPromptLocation = ProximityPrompt;
 
       end;
 
-      if DialogueSettings.ProximityDetectorLocation:IsA("ProximityPrompt") then
+      if DialogueSettings.ProximityPromptLocation:IsA("ProximityPrompt") then
 
-        API.Triggers.AddProximityDetector(npc, DialogueSettings.ProximityDetectorLocation);
+        API.Triggers.AddProximityPrompt(npc, DialogueSettings.ProximityPromptLocation);
 
-        DialogueSettings.ProximityDetectorLocation.Triggered:Connect(function()
+        DialogueSettings.ProximityPromptLocation.Triggered:Connect(function()
           
           API.Dialogue.ReadDialogue(npc);
           
@@ -99,7 +99,7 @@ for _, npc in ipairs(NPCDialogue) do
 
       else
         
-        warn("[Dialogue Maker]: The ProximityDetectorLocation for " .. npc.Name .. " is not a ProximityDetector.");
+        warn("[Dialogue Maker]: The ProximityPromptLocation for " .. npc.Name .. " is not a ProximityPrompt.");
         
       end;
 
@@ -180,9 +180,9 @@ for _, npc in ipairs(NPCDialogue) do
 end;
 
 Player.CharacterRemoving:Connect(function()
-  
-  API.Dialogue.PlayerTalkingWithNPC = false;
-  
+
+  API.Dialogue.PlayerTalkingWithNPC.Value = false;
+
 end);
 
 print("[Dialogue Maker]: Finished preparing dialogue.");

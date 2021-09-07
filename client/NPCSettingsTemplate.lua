@@ -30,13 +30,13 @@ return {
 	CursorImage = ""; -- Replace this with an image of the cursor you want to appear when the player hovers over the NPC. If this is an empty string, the default mouse cursor will be used. This setting will be ignored if AutomaticallyCreateClickDetector is false. [accepts string or nil]
 	
 	-- [Proximity Detection] --
-	ProximityDetectorEnabled = false; -- If true, this causes the player to be able to trigger the dialogue by activating the ProximityPrompt. [accepts boolean]
-	AutomaticallyCreateProximityDetector = false; -- If true, this automatically creates a ProximityPrompt inside of the NPC's model. [accepts boolean]
-	ProximityDetectorLocation = nil; -- Replace this with the location of the ProximityPrompt. Ex. workspace.Model.ProximityPrompt) This setting will be ignored if AutomaticallyCreateProximityDetector is true. [accepts ProximityDetector or nil]
-	ProximityDetectorActivationDistance = 40; -- Replace this with the distance you want the player to be able to activate the ProximityPrompt. This setting will be ignored if AutomaticallyCreateProximityDetector is false. [accepts number]
-	ProximityDetectorHoldDuration = 0.5; -- Replace this with the amount of time in seconds that you want the player to press the action key before triggering the ProximityPrompt. [accepts number]
-	ProximityDetectorDisappearsWhenDialogueActive = true; -- If true, the ProximityDetector's parent will be nil until the dialogue is over. This hides the ProximityPrompt from the player. [accepts boolean]
-	ProximityDetectorRequiresLineOfSight = false; -- If true, the player will be presented with the ProximityPrompt even when the ProximityPrompt is obstructed from the player's line of sight. [accepts boolean]
+	ProximityPromptEnabled = false; -- If true, this causes the player to be able to trigger the dialogue by activating the ProximityPrompt. [accepts boolean]
+	AutomaticallyCreateProximityPrompt = false; -- If true, this automatically creates a ProximityPrompt inside of the NPC's model. [accepts boolean]
+	ProximityPromptLocation = nil; -- Replace this with the location of the ProximityPrompt. Ex. workspace.Model.ProximityPrompt) This setting will be ignored if AutomaticallyCreateProximityPrompt is true. [accepts ProximityPrompt or nil]
+	ProximityPromptActivationDistance = 40; -- Replace this with the distance you want the player to be able to activate the ProximityPrompt. This setting will be ignored if AutomaticallyCreateProximityPrompt is false. [accepts number]
+	ProximityPromptHoldDuration = 0.5; -- Replace this with the amount of time in seconds that you want the player to press the action key before triggering the ProximityPrompt. [accepts number]
+	ProximityPromptDisappearsWhenDialogueActive = true; -- If true, the ProximityPrompt's parent will be nil until the dialogue is over. This hides the ProximityPrompt from the player. [accepts boolean]
+	ProximityPromptRequiresLineOfSight = false; -- If true, the player will be presented with the ProximityPrompt even when the ProximityPrompt is obstructed from the player's line of sight. [accepts boolean]
 	
 	-- [Theme] --
 	Theme = ""; -- Change this to a theme you've added to the Themes folder in order to override default theme settings. [accepts string]
