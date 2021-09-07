@@ -1,39 +1,55 @@
+-- Get Roblox services
 local ReplicatedStorage = game:GetService("ReplicatedStorage");
 local UserInputService = game:GetService("UserInputService");
 local ContextActionService = game:GetService("ContextActionService");
 local RunService = game:GetService("RunService");
 local RemoteConnections = ReplicatedStorage:WaitForChild("DialogueMakerRemoteConnections");
+
+-- Ignore the API warning
 API = nil;
 
+-- Prepare these methods
 local DialogueModule = {
-  PlayerTalkingWithNPC = false;  
+  
+  PlayerTalkingWithNPC = script.PlayerTalkingWithNPC; 
+  
 };
 
-function DialogueModule.GoToDirectory(currentDirectory, targetPath)
-
+function DialogueModule.GoToDirectory(currentDirectory: Folder, targetPath: {string}): Folder
+  
+  local CurrentPath = "1";
   for index, directory in ipairs(targetPath) do
-    if currentDirectory.Dialogue:FindFirstChild(directory) then
-      currentDirectory = currentDirectory.Dialogue[directory];
-    elseif currentDirectory.Responses:FindFirstChild(directory) then
-      currentDirectory = currentDirectory.Responses[directory];
-    elseif currentDirectory.Redirects:FindFirstChild(directory) then
-      currentDirectory = currentDirectory.Redirects[directory];
-    elseif currentDirectory:FindFirstChild(directory) then
-      currentDirectory = currentDirectory[directory];
+    
+    CurrentPath = CurrentPath .. "." .. directory;
+    local Folders = {};
+    for _, folderName in ipairs({"Dialogue", "Responses", "Redirects"}) do
+
+      Folders[folderName] = currentDirectory:FindFirstChild(folderName);
+      assert(Folders[folderName], "[Dialogue Maker]: The " .. folderName .. " folder is missing from " .. CurrentPath);
+
     end;
+    
+    currentDirectory = (Folders.Dialogue:FindFirstChild(directory) and Folders.Dialogue[directory]) 
+      or (Folders.Responses:FindFirstChild(directory) and Folders.Responses[directory]) 
+      or (Folders.Redirects:FindFirstChild(directory) and Folders.Redirects[directory]) 
+      or currentDirectory:FindFirstChild(directory);
+    
   end;
 
   return currentDirectory;
+  
 end;
 
-function DialogueModule.ReplaceVariablesWithValues(npc, text)
+function DialogueModule.ReplaceVariablesWithValues(npc: Model, text: string): string
 
   for match in string.gmatch(text, "%[/variable=(.+)%]") do
 
     -- Get the match from the server
     local VariableValue = RemoteConnections.GetVariable:InvokeServer(npc, match);
     if VariableValue then
-      text = text:gsub("%[/variable=(.+)%]",VariableValue);
+      
+      text = text:gsub("%[/variable=(.+)%]", VariableValue);
+      
     end;
 
   end;
@@ -42,41 +58,56 @@ function DialogueModule.ReplaceVariablesWithValues(npc, text)
 
 end;
 
-function DialogueModule.ClearResponses(responseContainer)
+function DialogueModule.ClearResponses(responseContainer: Folder)
+  
   for _, response in ipairs(responseContainer:GetChildren()) do
+    
     if not response:IsA("UIListLayout") then
+      
       response:Destroy();
+      
     end;
+    
   end;
+  
 end;
 
-function DialogueModule.DivideTextToFitBox(text, textContainer)
-
-  local Line = textContainer.Line:Clone();
-  Line.Name = "LineTest"
+function DialogueModule.DivideTextToFitBox(text: string, textContainer: Frame): {{[number]: string}?}
+  
+  local Line = textContainer:FindFirstChild("Line"):Clone();
+  Line.Name = "LineTest";
   Line.Visible = false;
   Line.Parent = textContainer;
 
   local Divisions = {};
   local Page = 1;
-
   for index, word in ipairs(text:split(" ")) do
+    
     if index == 1 then
+      
       Line.Text = word;
+      
     else
-      Line.Text = Line.Text.." "..word
+      
+      Line.Text = Line.Text .. " " .. word;
+      
     end;
 
     if not Divisions[Page] then Divisions[Page] = {}; end;
 
     if Line.TextFits then
+      
       table.insert(Divisions[Page],word);
       Divisions[Page].FullText = Line.Text;
+      
     elseif not Divisions[Page][1] then
+      
       Line.Text = "";
       for _, letter in ipairs(word:split("")) do
+        
         Line.Text = Line.Text..letter;
         if not Line.TextFits then
+          
           -- Remove the letter from the text
           Line.Text = Line.Text:sub(1,string.len(Line.Text)-1);
           table.insert(Divisions[Page], Line.Text);
@@ -108,13 +139,15 @@ local Events = {};
 local DefaultClickSound = RemoteConnections.GetDefaultClickSound:InvokeServer();
 local Keybinds = RemoteConnections.GetKeybinds:InvokeServer();
 local DefaultMinDistance = RemoteConnections.GetMinimumDistanceFromCharacter:InvokeServer();
-function DialogueModule.ReadDialogue(npc, dialogueSettings)
+function DialogueModule.ReadDialogue(npc: Model)
   
   -- Make sure we aren't already talking to an NPC
-  if DialogueModule.PlayerTalkingWithNPC then
+  if DialogueModule.PlayerTalkingWithNPC.Value then
+    
     return;
+    
   end;
-  DialogueModule.PlayerTalkingWithNPC = true;
+  DialogueModule.PlayerTalkingWithNPC.Value = true;
   
   -- Make sure we can't talk to another NPC
   API.Triggers.DisableAllSpeechBubbles();
@@ -122,12 +155,17 @@ function DialogueModule.ReadDialogue(npc, dialogueSettings)
   API.Triggers.DisableAllProximityDetectors();
   
   -- Freeze the player, if necessary
-  API.Player.ReadyPlayerControls();
-  if dialogueSettings.FreezePlayer then API.Player.FreezePlayer(); end;
+  local DialogueContainer = npc:FindFirstChild("DialogueContainer");
+  local DialogueSettingsModule = DialogueContainer:FindFirstChild("Settings");
+  local DialogueSettings = require(DialogueSettingsModule);
+  if DialogueSettings.FreezePlayer then 
+    
+    API.Player.FreezePlayer(); 
+    
+  end;
 
   -- Show the dialogue GUI to the player
-  local DialogueContainer = npc.DialogueContainer;
-  local DialogueGui = API.GUI.CreateNewDialogueGui(dialogueSettings.Theme);
+  local DialogueGui = API.GUI.CreateNewDialogueGui(DialogueSettings.Theme);
   local ResponseContainer = DialogueGui.DialogueContainer.ResponseContainer;
   local ResponseTemplate = ResponseContainer.ResponseTemplate:Clone();
   ResponseContainer.ResponseTemplate:Destroy();
@@ -141,25 +179,32 @@ function DialogueModule.ReadDialogue(npc, dialogueSettings)
   if DefaultClickSound and DefaultClickSound ~= 0 then
 
     if not ClickSound then
+      
       ClickSound = Instance.new("Sound");
       ClickSound.Name = "ClickSound";
       ClickSound.Parent = DialogueGui;
+      
     end;
 
     ClickSoundEnabled = true;
     DialogueGui.ClickSound.SoundId = "rbxassetid://" .. DefaultClickSound;
+    
   end;
 
   -- Check if the NPC has a name
-  if typeof(dialogueSettings.Name) == "string" and dialogueSettings.Name ~= "" then
+  if typeof(DialogueSettings.Name) == "string" and DialogueSettings.Name ~= "" then
+    
     DialogueGui.DialogueContainer.NPCNameFrame.Visible = true;
-    DialogueGui.DialogueContainer.NPCNameFrame.NPCName.Text = dialogueSettings.Name;
+    DialogueGui.DialogueContainer.NPCNameFrame.NPCName.Text = DialogueSettings.Name;
+    
   else
+    
     DialogueGui.DialogueContainer.NPCNameFrame.Visible = false;
+    
   end;
 
   -- Show the dialouge to the player
-  while DialogueModule.PlayerTalkingWithNPC and game:GetService("RunService").Heartbeat:Wait() do
+  while DialogueModule.PlayerTalkingWithNPC.Value and game:GetService("RunService").Heartbeat:Wait() do
 
     CurrentDirectory = API.Dialogue.GoToDirectory(RootDirectory, DialoguePriority:split("."));
 
@@ -235,7 +280,7 @@ function DialogueModule.ReadDialogue(npc, dialogueSettings)
           end;
 
           -- Check settings set by the developer
-          if dialogueSettings.AllowPlayerToSkipDelay then
+          if DialogueSettings.AllowPlayerToSkipDelay then
 
             -- Replace the incomplete dialogue with the full text
             TextContainer.Line.Text = FullMessageText;
@@ -260,18 +305,28 @@ function DialogueModule.ReadDialogue(npc, dialogueSettings)
       end);
 
       if Keybinds.KEYBINDS_ENABLED then
+        
         local KEYS_PRESSED = UserInputService:GetKeysPressed();
         local KeybindPressed = false;
         if UserInputService:IsKeyDown(Keybinds.DEFAULT_CHAT_CONTINUE_KEY) or UserInputService:IsKeyDown(Keybinds.DEFAULT_CHAT_CONTINUE_KEY_GAMEPAD) then
+          
           coroutine.wrap(function()
+            
             while UserInputService:IsKeyDown(Keybinds.DEFAULT_CHAT_CONTINUE_KEY) or UserInputService:IsKeyDown(Keybinds.DEFAULT_CHAT_CONTINUE_KEY_GAMEPAD) do
+              
               RunService.Heartbeat:Wait();
+              
             end;
             ContextActionService:BindAction("ContinueDialogue", ContinueDialogue, false, Keybinds.DEFAULT_CHAT_CONTINUE_KEY, Keybinds.DEFAULT_CHAT_CONTINUE_KEY_GAMEPAD);
+            
           end)();
+          
         else
+          
           ContextActionService:BindAction("ContinueDialogue", ContinueDialogue, false, Keybinds.DEFAULT_CHAT_CONTINUE_KEY, Keybinds.DEFAULT_CHAT_CONTINUE_KEY_GAMEPAD);
+          
         end;
+        
       end;
 
       -- Put the letters of the message together for an animation effect
@@ -282,12 +337,15 @@ function DialogueModule.ReadDialogue(npc, dialogueSettings)
         local TagContentPattern = "<([^<>]-)>(.-)</";
         local TagStart, TagEnd, Tag, Content, Value, Attribute, NewPattern;
         local function UpdateTagData(str)
+          
           -- Find the tag
           local _TagStart, _, _Tag, _ = str:find(TagContentPattern);
 
           if _TagStart then
+            
             local _Attribute, _Value = nil, nil;
             if _Tag:find(" ") then
+              
               -- Get the real tag
               local Split1 = _Tag:split(" ");
               _Tag = Split1[1];
@@ -295,6 +353,7 @@ function DialogueModule.ReadDialogue(npc, dialogueSettings)
               -- Get the real attribute and value
               local Split2 = Split1[2]:split("=");
               _Attribute, _Value = Split2[1], Split2[2];
+              
             end
 
             -- Make a new pattern based on the tag we have
@@ -302,18 +361,23 @@ function DialogueModule.ReadDialogue(npc, dialogueSettings)
             local _, _TagEnd, _, _Content = str:find(_NewPattern);
 
             return _TagStart, _TagEnd, _Tag, _Content, _Attribute, _Value, _NewPattern;
+            
           end;
+          
         end;
 
         TagStart, TagEnd, Tag, Content, Attribute, Value, NewPattern = UpdateTagData(MessageText);
 
         while TagStart do
+          
           local TagGroup = MessageText:sub(TagStart, TagEnd);
           local ContentStart, ContentEnd = TagGroup:find(Content, 1, true);
 
           -- Get the sub-tags inside the first one
           if not ImportantPositions[TagStart] then
+            
             ImportantPositions[TagStart] = {};
+            
           end;
 
           local ETagStart, ETagEnd, ETag, EContent, EAttr, EVal, EPattern = UpdateTagData(Content);
@@ -332,7 +396,9 @@ function DialogueModule.ReadDialogue(npc, dialogueSettings)
           -- Change all the final content lengths
           local ContentLength = TagStart + Content:len() - 1;
           for i, _ in ipairs(ImportantPositions[TagStart]) do
+            
             ImportantPositions[TagStart][i][2] = ContentLength;
+            
           end;
 
           -- Add the main tag to the table
@@ -343,83 +409,115 @@ function DialogueModule.ReadDialogue(npc, dialogueSettings)
 
           -- Check if there's any more tags
           TagStart, TagEnd, Tag, Content, Attribute, Value, NewPattern = UpdateTagData(MessageText);
+          
         end;
+        
       end;
 
       local DividedText = API.Dialogue.DivideTextToFitBox(MessageText, TextContainer);
       local Position = 0;
       local Adding = false;
       for index, page in ipairs(DividedText) do
+        
         FullMessageText = page.FullText;
-        for wordIndex, word in ipairs(page) do    
+        for wordIndex, word in ipairs(page) do 
+          
           if wordIndex ~= 1 then 
+            
             Position += 1; 
             if Adding then
+              
               ImportantPositions[Position + 1] = ImportantPositions[Position];
               Adding = false;
+              
             end;
             Message = Message .. " ";
+            
           end;
           local Extras = "";
           for _, letter in ipairs(word:split("")) do
 
             Adding = false;
+            
             -- Check if the player wants to skip their dialogue
-            if Skipped or not NPCTalking or not DialogueModule.PlayerTalkingWithNPC then
+            if Skipped or not NPCTalking or not DialogueModule.PlayerTalkingWithNPC.Value then
+              
               break;
+              
             end;
 
             Position += 1;
             local IP = ImportantPositions[Position];  
             if IP then
+              
               local Replacement = letter;
               for _, tag in ipairs(IP) do
+                
                 if not tag.OriginalPosition then
+                  
                   tag.OriginalPosition = Position;
                   Replacement = "<" .. tag[1] .. ">" .. Replacement .. ((Position == tag[2] and "</" .. tag[1]:match("%a+") .. ">") or "");
+                  
                 end;
                 if Position < tag[2] then 
+                  
                   Extras = Extras .. "</" .. tag[1]:match("%a+") .. ">";
                   if not ImportantPositions[Position + 1] then
+                    
                     ImportantPositions[Position + 1] = {};
+                    
                   end;
                   table.insert(ImportantPositions[Position + 1], tag);
                   Adding = true;
+                  
                 elseif tag.OriginalPosition ~= Position and Position == tag[2] then
+                  
                   Replacement = Replacement .. "</" .. tag[1]:match("%a+") .. ">";
+                  
                 end;
+                
               end;
               Message = Message .. Replacement;
+              
             else 
+              
               Message = Message .. letter;
+              
             end;
             TextContainer.Line.Text = Message .. Extras;
             Extras = "";
-            wait(dialogueSettings.LetterDelay);
+            wait(DialogueSettings.LetterDelay);
 
           end;
+          
         end;
 
         if DividedText[index+1] and NPCTalking then
+          
           ThemeDialogueContainer.ClickToContinue.Visible = true;
           NPCPaused = true;
-
           while NPCPaused and NPCTalking do 
-            game:GetService("RunService").Heartbeat:Wait() 
+            
+            game:GetService("RunService").Heartbeat:Wait();
+            
           end;
           ThemeDialogueContainer.ClickToContinue.Visible = false;
           NPCPaused = false;
           Skipped = false;
+          
         end;
+        
       end;
       NPCTalking = false;
 
       local ResponseChosen;
-      if ResponsesEnabled and DialogueModule.PlayerTalkingWithNPC then
+      if ResponsesEnabled and DialogueModule.PlayerTalkingWithNPC.Value then
 
         -- Add response buttons
         for _, response in ipairs(CurrentDirectory.Responses:GetChildren()) do
+          
           if RemoteConnections.PlayerPassesCondition:InvokeServer(npc,response) then
+            
             local ResponseButton = ResponseTemplate:Clone();
             ResponseButton.Name = "Response";
             ResponseButton.Text = response.Message.Value;
@@ -427,7 +525,9 @@ function DialogueModule.ReadDialogue(npc, dialogueSettings)
             ResponseButton.MouseButton1Click:Connect(function()
 
               if ClickSoundEnabled then
+                
                 ClickSound:Play();
+                
               end;
 
               ResponseContainer.Visible = false;
@@ -435,12 +535,17 @@ function DialogueModule.ReadDialogue(npc, dialogueSettings)
               ResponseChosen = response;
 
               if response.HasAfterAction.Value then
-                RemoteConnections.ExecuteAction:InvokeServer(npc,response,"After");
+                
+                RemoteConnections.ExecuteAction:InvokeServer(npc, response, "After");
+                
               end;
 
               WaitingForResponse = false;
+              
             end);
+            
           end;
+          
         end;
 
         ResponseContainer.CanvasSize = UDim2.new(0,ResponseContainer.CanvasSize.X,0,ResponseContainer.UIListLayout.AbsoluteContentSize.Y);
@@ -451,55 +556,66 @@ function DialogueModule.ReadDialogue(npc, dialogueSettings)
       -- Run the timeout code in the background
       coroutine.wrap(function()
 
-        if dialogueSettings.TimeoutEnabled and dialogueSettings.ConversationTimeoutInSeconds then
+        if DialogueSettings.TimeoutEnabled and DialogueSettings.ConversationTimeoutInSeconds then
 
           -- Wait for the player if the developer wants to
-          if ResponsesEnabled and dialogueSettings.WaitForResponse then
+          if ResponsesEnabled and DialogueSettings.WaitForResponse then
+            
             return;
+            
           end;
 
           -- Wait the timeout set by the developer
-          wait(dialogueSettings.ConversationTimeoutInSeconds);
+          wait(DialogueSettings.ConversationTimeoutInSeconds);
           WaitingForResponse = false;
 
         end;
 
       end)();
 
-      while WaitingForResponse and DialogueModule.PlayerTalkingWithNPC do
+      while WaitingForResponse and DialogueModule.PlayerTalkingWithNPC.Value do
         game:GetService("RunService").Heartbeat:Wait();
       end;
 
       -- Run after action
-      if CurrentDirectory.HasAfterAction.Value and DialogueModule.PlayerTalkingWithNPC then
+      if CurrentDirectory.HasAfterAction.Value and DialogueModule.PlayerTalkingWithNPC.Value then
+        
         RemoteConnections.ExecuteAction:InvokeServer(npc, CurrentDirectory, "After");
+        
       end;
 
-      if ResponseChosen and DialogueModule.PlayerTalkingWithNPC then
+      if ResponseChosen and DialogueModule.PlayerTalkingWithNPC.Value then
 
         if (#ResponseChosen.Dialogue:GetChildren() ~= 0 or #ResponseChosen.Redirects:GetChildren() ~= 0) then
+          
           DialoguePriority = string.sub(ResponseChosen.Priority.Value..".1",3);
           CurrentDirectory = RootDirectory;
 
         else
+          
           DialogueGui:Destroy();
-          DialogueModule.PlayerTalkingWithNPC = false;
+          DialogueModule.PlayerTalkingWithNPC.Value = false;
+          
         end;
 
       else
 
         -- Check if there is more dialogue
-        if DialogueModule.PlayerTalkingWithNPC and (#CurrentDirectory.Dialogue:GetChildren() ~= 0 or #CurrentDirectory.Redirects:GetChildren() ~= 0) then
+        if DialogueModule.PlayerTalkingWithNPC.Value and (#CurrentDirectory.Dialogue:GetChildren() ~= 0 or #CurrentDirectory.Redirects:GetChildren() ~= 0) then
+          
           DialoguePriority = DialoguePriority..".1";
           CurrentDirectory = RootDirectory;
+          
         else
+          
           DialogueGui:Destroy();
-          DialogueModule.PlayerTalkingWithNPC = false;
+          DialogueModule.PlayerTalkingWithNPC.Value = false;
+          
         end;
 
       end;
 
-    elseif DialogueModule.PlayerTalkingWithNPC then
+    elseif DialogueModule.PlayerTalkingWithNPC.Value then
 
       local SplitPriority = DialoguePriority:split(".");
       SplitPriority[#SplitPriority] = SplitPriority[#SplitPriority] + 1;
@@ -512,7 +628,12 @@ function DialogueModule.ReadDialogue(npc, dialogueSettings)
   API.Triggers.EnableAllSpeechBubbles();
   API.Triggers.EnableAllClickDetectors();
   API.Triggers.EnableAllProximityDetectors();
-  if dialogueSettings.FreezePlayer then API.Player.UnfreezePlayer(); end;
+  
+  if DialogueSettings.FreezePlayer then 
+    
+    API.Player.UnfreezePlayer(); 
+    
+  end;
   
 end;
 

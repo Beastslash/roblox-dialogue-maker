@@ -1,16 +1,12 @@
 local PlayerModule = {};
-
-function PlayerModule.ReadyPlayerControls()
-  local Player = game:GetService("Players").LocalPlayer;
-  PlayerModule.PlayerControls = require(Player.PlayerScripts.PlayerModule):GetControls();
-end;
+local Player = game:GetService("Players").LocalPlayer;
 
 function PlayerModule.FreezePlayer()
-  PlayerModule.PlayerControls:Disable();
+  require(Player.PlayerScripts.PlayerModule):GetControls():Disable();
 end;
 
 function PlayerModule.UnfreezePlayer()
-  PlayerModule.PlayerControls:Enable();
+  require(Player.PlayerScripts.PlayerModule):GetControls():Enable();
 end;
 
 return PlayerModule;
