@@ -2,8 +2,8 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage");
 local Players = game:GetService("Players");
 
--- Get dialogue settings
-local SETTINGS = require(script.Settings);
+-- Get dialogue Settings
+local Settings = require(script.Settings);
 
 -- Make sure that we have a connection with the remote functions/events
 local RemoteConnections = ReplicatedStorage:WaitForChild("DialogueMakerRemoteConnections", 3);
@@ -27,7 +27,7 @@ RemoteConnections.GetNPCDialogue.OnServerInvoke = function(player)
 end;
 
 RemoteConnections.GetDefaultTheme.OnServerInvoke = function(player)
-	return SETTINGS.DEFAULT_THEME;
+	return Settings.DEFAULT_THEME;
 end;
 
 RemoteConnections.GetAllThemes.OnServerInvoke = function(player)
@@ -45,7 +45,7 @@ RemoteConnections.GetAllThemes.OnServerInvoke = function(player)
 
 end;
 
-RemoteConnections.PlayerPassesCondition.OnServerInvoke = function(player,npc,priority)
+RemoteConnections.PlayerPassesCondition.OnServerInvoke = function(player, npc, priority)
 
 	-- Ensure security
 	if not npc:IsA("Model") or not priority:IsA("Folder") then
@@ -151,7 +151,7 @@ RemoteConnections.ExecuteAction.OnServerInvoke = function(player, npc, priority,
 
 end;
 
-RemoteConnections.GetVariable.OnServerInvoke = function(player,npc,variable)
+RemoteConnections.GetVariable.OnServerInvoke = function(player, npc, variable)
 
 	-- Ensure security
 	if not npc:IsA("Model") or typeof(variable) ~= "string" then
@@ -192,19 +192,19 @@ RemoteConnections.GetVariable.OnServerInvoke = function(player,npc,variable)
 end;
 
 RemoteConnections.GetMinimumDistanceFromCharacter.OnServerInvoke = function()
-	return SETTINGS.MIN_DISTANCE_FROM_CHARACTER;
+	return Settings.MIN_DISTANCE_FROM_CHARACTER;
 end;
 
 RemoteConnections.GetKeybinds.OnServerInvoke = function()
 	return {
-		KEYBINDS_ENABLED = SETTINGS.KEYBINDS_ENABLED;
-		DEFAULT_CHAT_TRIGGER_KEY = SETTINGS.DEFAULT_CHAT_TRIGGER_KEY;
-		DEFAULT_CHAT_TRIGGER_KEY_GAMEPAD = SETTINGS.DEFAULT_CHAT_TRIGGER_KEY_GAMEPAD;
-		DEFAULT_CHAT_CONTINUE_KEY = SETTINGS.DEFAULT_CHAT_CONTINUE_KEY;
-		DEFAULT_CHAT_CONTINUE_KEY_GAMEPAD = SETTINGS.DEFAULT_CHAT_CONTINUE_KEY_GAMEPAD;
+		KEYBINDS_ENABLED = Settings.KEYBINDS_ENABLED;
+		DEFAULT_CHAT_TRIGGER_KEY = Settings.DEFAULT_CHAT_TRIGGER_KEY;
+		DEFAULT_CHAT_TRIGGER_KEY_GAMEPAD = Settings.DEFAULT_CHAT_TRIGGER_KEY_GAMEPAD;
+		DEFAULT_CHAT_CONTINUE_KEY = Settings.DEFAULT_CHAT_CONTINUE_KEY;
+		DEFAULT_CHAT_CONTINUE_KEY_GAMEPAD = Settings.DEFAULT_CHAT_CONTINUE_KEY_GAMEPAD;
 	}
 end;
 
 RemoteConnections.GetDefaultClickSound.OnServerInvoke = function()
-	return SETTINGS.DEFAULT_CLICK_SOUND;
+	return Settings.DEFAULT_CLICK_SOUND;
 end;
