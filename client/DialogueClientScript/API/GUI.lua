@@ -1,10 +1,11 @@
+-- Get Roblox services
 local ReplicatedStorage = game:GetService("ReplicatedStorage");
 local RemoteConnections = ReplicatedStorage:WaitForChild("DialogueMakerRemoteConnections");
 
-local DefaultThemeName = nil;
-
+-- Prepare these methods
 local GUIModule = {};
 
+local DefaultThemeName = nil;
 function GUIModule.GetDefaultThemeName(): string
 
   -- Check if the theme is in the cache
