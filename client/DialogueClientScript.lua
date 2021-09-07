@@ -22,7 +22,7 @@ local DEFAULT_CLICK_SOUND = RemoteConnections.GetDefaultClickSound:InvokeServer(
 
 local PlayerTalkingWithNPC = false;
 local Events = {};
-local API = require(script.ClientAPI);
+local API = require(script.API);
 
 local function ReadDialogue(npc, dialogueSettings)
 
@@ -33,14 +33,14 @@ local function ReadDialogue(npc, dialogueSettings)
   PlayerTalkingWithNPC = true;
 
   API.Triggers.DisableAllSpeechBubbles();
-	API.Triggers.DisableAllClickDetectors();
-	API.Triggers.DisableAllProximityDetectors();
+  API.Triggers.DisableAllClickDetectors();
+  API.Triggers.DisableAllProximityDetectors();
   API.Player.SetPlayer(Player);
   if dialogueSettings.FreezePlayer then API.Player.FreezePlayer(); end;
 
   -- Show the dialogue GUI to the player
   local DialogueContainer = npc.DialogueContainer;
-  local DialogueGui = API.Gui.CreateNewDialogueGui(dialogueSettings.Theme);
+  local DialogueGui = API.GUI.CreateNewDialogueGui(dialogueSettings.Theme);
   local ResponseContainer = DialogueGui.DialogueContainer.ResponseContainer;
   local ResponseTemplate = ResponseContainer.ResponseTemplate:Clone();
   ResponseContainer.ResponseTemplate:Destroy();
@@ -423,8 +423,8 @@ local function ReadDialogue(npc, dialogueSettings)
   end;
 
   API.Triggers.EnableAllSpeechBubbles();
-	API.Triggers.EnableAllClickDetectors();
-	API.Triggers.EnableAllProximityDetectors();
+  API.Triggers.EnableAllClickDetectors();
+  API.Triggers.EnableAllProximityDetectors();
   if dialogueSettings.FreezePlayer then API.Player.UnfreezePlayer(); end;
 
 end;
@@ -470,33 +470,33 @@ for _, npc in ipairs(NPCDialogue) do
       else
         warn("[Dialogue Maker] The PromptRegionPart for "..npc.Name.." is not a Part.");
       end;
-		end;
-		
-		if DialogueSettings.ProximityDetectorEnabled and (DialogueSettings.ProximityDetectorLocation or DialogueSettings.AutomaticallyCreateProximityDetector) then
-			if (DialogueSettings.AutomaticallyCreateProximityDetector) then
-				local ProximityDetector = Instance.new("ProximityPrompt");
-				ProximityDetector.MaxActivationDistance = DialogueSettings.ProximityDetectorActivationDistance;
-				ProximityDetector.HoldDuration = DialogueSettings.ProximityDetectorHoldDuration;
-				ProximityDetector.RequiresLineOfSight = DialogueSettings.ProximityDetectorRequiresLineOfSight;
-				ProximityDetector.Parent = npc;
-				
-				DialogueSettings.ProximityDetectorLocation = ProximityDetector;
-				
-			end;
-			
-			if DialogueSettings.ProximityDetectorLocation:IsA("ProximityPrompt") then
+    end;
 
-				API.Triggers.AddProximityDetector(npc, DialogueSettings.ProximityDetectorLocation);
+    if DialogueSettings.ProximityDetectorEnabled and (DialogueSettings.ProximityDetectorLocation or DialogueSettings.AutomaticallyCreateProximityDetector) then
+      if (DialogueSettings.AutomaticallyCreateProximityDetector) then
+        local ProximityDetector = Instance.new("ProximityPrompt");
+        ProximityDetector.MaxActivationDistance = DialogueSettings.ProximityDetectorActivationDistance;
+        ProximityDetector.HoldDuration = DialogueSettings.ProximityDetectorHoldDuration;
+        ProximityDetector.RequiresLineOfSight = DialogueSettings.ProximityDetectorRequiresLineOfSight;
+        ProximityDetector.Parent = npc;
 
-				DialogueSettings.ProximityDetectorLocation.Triggered:Connect(function()
-					ReadDialogue(npc, DialogueSettings);
-				end);
+        DialogueSettings.ProximityDetectorLocation = ProximityDetector;
 
-			else
-				warn("[Dialogue Maker] The ClickDetectorLocation for "..npc.Name.." is not a ClickDetector.");
-			end;
-			
-		end
+      end;
+
+      if DialogueSettings.ProximityDetectorLocation:IsA("ProximityPrompt") then
+
+        API.Triggers.AddProximityDetector(npc, DialogueSettings.ProximityDetectorLocation);
+
+        DialogueSettings.ProximityDetectorLocation.Triggered:Connect(function()
+          ReadDialogue(npc, DialogueSettings);
+        end);
+
+      else
+        warn("[Dialogue Maker] The ClickDetectorLocation for "..npc.Name.." is not a ClickDetector.");
+      end;
+
+    end
 
     if DialogueSettings.ClickDetectorEnabled and (DialogueSettings.ClickDetectorLocation or DialogueSettings.AutomaticallyCreateClickDetector) then
       if DialogueSettings.AutomaticallyCreateClickDetector then
