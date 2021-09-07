@@ -14,22 +14,26 @@ for _, module in pairs(API) do
     
     for funcName, funcCode in pairs(module) do
       
-      local OldEnvironment = getfenv(funcCode);
-      local NewEnvMT = setmetatable({
+      if typeof(funcCode) == "function" then
+      
+        local OldEnvironment = getfenv(funcCode);
+        local NewEnvMT = setmetatable({
+
+          script = script;
+          API = API;
+
+        }, {
+
+          __index = function(_, index)
+
+            return OldEnvironment[index]
+
+          end;
+
+        });
+        setfenv(funcCode, NewEnvMT);
         
-        script = script;
-        API = API;
-        
-      }, {
-        
-        __index = function(_, index)
-          
-          return OldEnvironment[index]
-          
-        end;
-        
-      });
-      setfenv(funcCode, NewEnvMT);
+      end;
       
     end;
     

@@ -1,8 +1,8 @@
 local PlayerModule = {};
 
-function PlayerModule.SetPlayer(player)
-  PlayerModule.Player = player;
-  PlayerModule.PlayerControls = require(player.PlayerScripts.PlayerModule):GetControls();
+function PlayerModule.ReadyPlayerControls()
+  local Player = game:GetService("Players").LocalPlayer;
+  PlayerModule.PlayerControls = require(Player.PlayerScripts.PlayerModule):GetControls();
 end;
 
 function PlayerModule.FreezePlayer()
