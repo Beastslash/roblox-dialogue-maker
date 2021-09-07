@@ -90,7 +90,7 @@ end;
 local ActionCache = {};
 local DialogueVariables = {};
 RemoteConnections.ExecuteAction.OnServerInvoke = function(player, npc, priority, beforeOrAfter)
-
+  
 	-- Ensure security
   if not npc:IsA("Model") or not priority:IsA("Folder") or typeof(beforeOrAfter) ~= "string" then
     
@@ -98,7 +98,7 @@ RemoteConnections.ExecuteAction.OnServerInvoke = function(player, npc, priority,
     error("[Dialogue Maker]: Invalid parameters given to check if " .. player.Name .. " passes a condition", 0);
     
 	end;
-
+  
 	-- Search for action
 	local Action;
   if ActionCache[npc] and ActionCache[npc][beforeOrAfter][priority] then
@@ -112,7 +112,7 @@ RemoteConnections.ExecuteAction.OnServerInvoke = function(player, npc, priority,
 			After = {};
     };
     
-	end;
+  end;
 
   if not Action then
     
@@ -126,7 +126,7 @@ RemoteConnections.ExecuteAction.OnServerInvoke = function(player, npc, priority,
         
       end;
       
-		end;
+    end;
 
     if not Action then
       
@@ -174,22 +174,25 @@ RemoteConnections.ExecuteAction.OnServerInvoke = function(player, npc, priority,
 			DialogueVariables[player][npc][variable] = value;
 
 		end;
+    
+    ActionCache[npc][beforeOrAfter][priority] = Action;
 
-
-		ActionCache[npc][beforeOrAfter][priority] = Action;
-
-		-- Check if the action is synchronous
+  end;
+  
+  if Action then
+    
+    -- Check if the action is synchronous
     if Action.Synchronous then
-      
-      Action.Execute();
-      
-    else
-      
-      coroutine.wrap(Action.Execute)();
-      
-		end;
 
-	end;
+      Action.Execute();
+
+    else
+
+      coroutine.wrap(Action.Execute)();
+
+    end;
+    
+  end;
 
 end;
 
