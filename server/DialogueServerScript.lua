@@ -30,7 +30,7 @@ end;
 
 RemoteConnections.GetDefaultTheme.OnServerInvoke = function(player)
   
-  return Settings.DEFAULT_THEME;
+  return Settings.DefaultTheme;
   
 end;
 
@@ -90,7 +90,7 @@ end;
 local ActionCache = {};
 local DialogueVariables = {};
 RemoteConnections.ExecuteAction.OnServerInvoke = function(player, npc, priority, beforeOrAfter)
-  
+
 	-- Ensure security
   if not npc:IsA("Model") or not priority:IsA("Folder") or typeof(beforeOrAfter) ~= "string" then
     
@@ -98,7 +98,7 @@ RemoteConnections.ExecuteAction.OnServerInvoke = function(player, npc, priority,
     error("[Dialogue Maker]: Invalid parameters given to check if " .. player.Name .. " passes a condition", 0);
     
 	end;
-  
+
 	-- Search for action
 	local Action;
   if ActionCache[npc] and ActionCache[npc][beforeOrAfter][priority] then
@@ -112,7 +112,7 @@ RemoteConnections.ExecuteAction.OnServerInvoke = function(player, npc, priority,
 			After = {};
     };
     
-  end;
+	end;
 
   if not Action then
     
@@ -126,7 +126,7 @@ RemoteConnections.ExecuteAction.OnServerInvoke = function(player, npc, priority,
         
       end;
       
-    end;
+		end;
 
     if not Action then
       
@@ -174,25 +174,22 @@ RemoteConnections.ExecuteAction.OnServerInvoke = function(player, npc, priority,
 			DialogueVariables[player][npc][variable] = value;
 
 		end;
-    
-    ActionCache[npc][beforeOrAfter][priority] = Action;
 
-  end;
-  
-  if Action then
-    
-    -- Check if the action is synchronous
+
+		ActionCache[npc][beforeOrAfter][priority] = Action;
+
+		-- Check if the action is synchronous
     if Action.Synchronous then
-
+      
       Action.Execute();
-
+      
     else
-
+      
       coroutine.wrap(Action.Execute)();
+      
+		end;
 
-    end;
-    
-  end;
+	end;
 
 end;
 
@@ -252,7 +249,7 @@ end;
 
 RemoteConnections.GetMinimumDistanceFromCharacter.OnServerInvoke = function()
   
-  return Settings.MIN_DISTANCE_FROM_CHARACTER;
+  return Settings.MinimumDistanceFromCharacter;
   
 end;
 
@@ -260,11 +257,11 @@ RemoteConnections.GetKeybinds.OnServerInvoke = function()
   
   return {
     
-		KEYBINDS_ENABLED = Settings.KEYBINDS_ENABLED;
-		DEFAULT_CHAT_TRIGGER_KEY = Settings.DEFAULT_CHAT_TRIGGER_KEY;
-		DEFAULT_CHAT_TRIGGER_KEY_GAMEPAD = Settings.DEFAULT_CHAT_TRIGGER_KEY_GAMEPAD;
-		DEFAULT_CHAT_CONTINUE_KEY = Settings.DEFAULT_CHAT_CONTINUE_KEY;
-    DEFAULT_CHAT_CONTINUE_KEY_GAMEPAD = Settings.DEFAULT_CHAT_CONTINUE_KEY_GAMEPAD;
+    KeybindsEnabled = Settings.KeybindsEnabled;
+    DefaultChatTriggerKey = Settings.DefaultChatTriggerKey;
+    DefaultChatTriggerKeyGamepad = Settings.DefaultChatTriggerKeyGamepad;
+    DefaultChatContinueKey = Settings.DefaultChatContinueKey;
+    DefaultChatContinueKeyGamepad = Settings.DefaultChatContinueKeyGamepad;
     
   };
   
@@ -272,6 +269,6 @@ end;
 
 RemoteConnections.GetDefaultClickSound.OnServerInvoke = function()
   
-  return Settings.DEFAULT_CLICK_SOUND;
+  return Settings.DefaultClickSound;
   
 end;

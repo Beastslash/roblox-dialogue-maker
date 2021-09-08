@@ -178,10 +178,7 @@ function DialogueModule.ReadDialogue(npc: Model)
   -- Listen to theme changes
   API.GUI.ThemeChanged.Event:Connect(function(newTheme)
     
-    DialogueGui:Destroy();
     DialogueGui = newTheme;
-    ResponseContainer = DialogueGui.DialogueContainer.ResponseContainer;
-    ResponseTemplate = ResponseContainer.ResponseTemplate:Clone();
 
   end);
   
@@ -224,9 +221,7 @@ function DialogueModule.ReadDialogue(npc: Model)
 
       -- Run the before action if there is one
       if CurrentDirectory.HasBeforeAction.Value then
-        
         RemoteConnections.ExecuteAction:InvokeServer(npc, CurrentDirectory, "Before");
-        
       end;
 
       -- Check if the message has any variables
@@ -270,18 +265,25 @@ function DialogueModule.ReadDialogue(npc: Model)
       ContinueDialogue = function(keybind)
 
         -- Make sure key is down
-        if keybind and not UserInputService:IsKeyDown(Keybinds.DEFAULT_CHAT_CONTINUE_KEY) and not UserInputService:IsKeyDown(Keybinds.DEFAULT_CHAT_CONTINUE_KEY_GAMEPAD) then
+        if keybind and not UserInputService:IsKeyDown(Keybinds.DefaultChatContinueKey) and not UserInputService:IsKeyDown(Keybinds.DefaultChatContinueKeyGamepad) then
+          
           return;
+          
         end;
 
         ContextActionService:UnbindAction("ContinueDialogue");
         if NPCTalking then
+          
           if ClickSoundEnabled then
+            
             ClickSound:Play();
+            
           end;
 
           if NPCPaused then
+            
             NPCPaused = false;
+            
           end;
 
           -- Check settings set by the developer
@@ -293,10 +295,12 @@ function DialogueModule.ReadDialogue(npc: Model)
 
           end;
 
-          ContextActionService:BindAction("ContinueDialogue", ContinueDialogue, false, Keybinds.DEFAULT_CHAT_CONTINUE_KEY, Keybinds.DEFAULT_CHAT_CONTINUE_KEY_GAMEPAD);
+          ContextActionService:BindAction("ContinueDialogue", ContinueDialogue, false, Keybinds.DefaultChatContinueKey, Keybinds.DefaultChatContinueKeyGamepad);
 
-        elseif #CurrentDirectory.Responses:GetChildren() == 0 then					
+        elseif #CurrentDirectory.Responses:GetChildren() == 0 then	
+          
           WaitingForResponse = false;
+          
         end;
       end;
 
@@ -309,26 +313,26 @@ function DialogueModule.ReadDialogue(npc: Model)
 
       end);
 
-      if Keybinds.KEYBINDS_ENABLED then
+      if Keybinds.KeybindsEnabled then
         
         local KEYS_PRESSED = UserInputService:GetKeysPressed();
         local KeybindPressed = false;
-        if UserInputService:IsKeyDown(Keybinds.DEFAULT_CHAT_CONTINUE_KEY) or UserInputService:IsKeyDown(Keybinds.DEFAULT_CHAT_CONTINUE_KEY_GAMEPAD) then
+        if UserInputService:IsKeyDown(Keybinds.DefaultChatContinueKey) or UserInputService:IsKeyDown(Keybinds.DefaultChatContinueKeyGamepad) then
           
           coroutine.wrap(function()
             
-            while UserInputService:IsKeyDown(Keybinds.DEFAULT_CHAT_CONTINUE_KEY) or UserInputService:IsKeyDown(Keybinds.DEFAULT_CHAT_CONTINUE_KEY_GAMEPAD) do
+            while UserInputService:IsKeyDown(Keybinds.DefaultChatContinueKey) or UserInputService:IsKeyDown(Keybinds.DefaultChatContinueKeyGamepad) do
               
               RunService.Heartbeat:Wait();
               
             end;
-            ContextActionService:BindAction("ContinueDialogue", ContinueDialogue, false, Keybinds.DEFAULT_CHAT_CONTINUE_KEY, Keybinds.DEFAULT_CHAT_CONTINUE_KEY_GAMEPAD);
+            ContextActionService:BindAction("ContinueDialogue", ContinueDialogue, false, Keybinds.DefaultChatContinueKey, Keybinds.DefaultChatContinueKeyGamepad);
             
           end)();
           
         else
           
-          ContextActionService:BindAction("ContinueDialogue", ContinueDialogue, false, Keybinds.DEFAULT_CHAT_CONTINUE_KEY, Keybinds.DEFAULT_CHAT_CONTINUE_KEY_GAMEPAD);
+          ContextActionService:BindAction("ContinueDialogue", ContinueDialogue, false, Keybinds.DefaultChatContinueKey, Keybinds.DefaultChatContinueKeyGamepad);
           
         end;
         
@@ -613,7 +617,6 @@ function DialogueModule.ReadDialogue(npc: Model)
           
         else
           
-          API.GUI.CurrentTheme = nil;
           DialogueGui:Destroy();
           DialogueModule.PlayerTalkingWithNPC.Value = false;
           

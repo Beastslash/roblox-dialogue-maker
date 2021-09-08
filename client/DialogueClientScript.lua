@@ -133,7 +133,7 @@ for _, npc in ipairs(NPCDialogue) do
 
     end;
 
-    if Keybinds.KEYBINDS_ENABLED then
+    if Keybinds.KeybindsEnabled then
       
       local CanPressButton = false;
       local ReadDialogueWithKeybind;
@@ -141,7 +141,7 @@ for _, npc in ipairs(NPCDialogue) do
         
         if CanPressButton then
           
-          if not UserInputService:IsKeyDown(Keybinds.DEFAULT_CHAT_TRIGGER_KEY) and not UserInputService:IsKeyDown(Keybinds.DEFAULT_CHAT_TRIGGER_KEY_GAMEPAD) then
+          if not UserInputService:IsKeyDown(Keybinds.DefaultChatTriggerKey) and not UserInputService:IsKeyDown(Keybinds.DefaultChatTriggerKeyGamepad) then
             return;
             
           end;
@@ -150,7 +150,7 @@ for _, npc in ipairs(NPCDialogue) do
         end;
         
       end;
-      ContextActionService:BindAction("OpenDialogueWithKeybind", ReadDialogueWithKeybind, false, Keybinds.DEFAULT_CHAT_TRIGGER_KEY, Keybinds.DEFAULT_CHAT_TRIGGER_KEY_GAMEPAD);
+      ContextActionService:BindAction("OpenDialogueWithKeybind", ReadDialogueWithKeybind, false, Keybinds.DefaultChatTriggerKey, Keybinds.DefaultChatTriggerKeyGamepad);
 
       -- Check if the player is in range
       RunService.Heartbeat:Connect(function()
