@@ -4,12 +4,11 @@ local RemoteConnections = ReplicatedStorage:WaitForChild("DialogueMakerRemoteCon
 
 -- Prepare these methods
 local GUIModule = {
-  CurrentTheme = nil;
   ThemeChanged = Instance.new("BindableEvent");
 };
 
 setmetatable(GUIModule, {
-  __newindex = function(self, index, value)
+  __newindex = function(t, index, value)
     
     if index == "CurrentTheme" then
       
@@ -17,7 +16,7 @@ setmetatable(GUIModule, {
       
     end;
     
-    rawset(self, index, value);
+    rawset(t, index, value);
     
   end;
 });
@@ -56,13 +55,6 @@ function GUIModule.CreateNewDialogueGui(theme: string?): ScreenGui
   -- Return the theme
   return DialogueGui:Clone();
 
-end;
-
-ReplicatedStorage:WaitForChild("DialogueMakerRemoteConnections").ChangeTheme.OnClientInvoke = function(themeName)
-  
-  GUIModule.CurrentTheme = nil;
-  GUIModule.CurrentTheme = GUIModule.CreateNewDialogueGui(themeName);
-  
 end;
 
 return GUIModule;
