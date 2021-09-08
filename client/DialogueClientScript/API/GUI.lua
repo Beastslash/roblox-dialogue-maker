@@ -4,22 +4,8 @@ local RemoteConnections = ReplicatedStorage:WaitForChild("DialogueMakerRemoteCon
 
 -- Prepare these methods
 local GUIModule = {
-  ThemeChanged = Instance.new("BindableEvent");
+  CurrentTheme = script.CurrentTheme;
 };
-
-setmetatable(GUIModule, {
-  __newindex = function(t, index, value)
-    
-    if index == "CurrentTheme" then
-      
-      GUIModule.ThemeChanged:Fire(value);
-      
-    end;
-    
-    rawset(t, index, value);
-    
-  end;
-});
 
 local DefaultThemeName = nil;
 function GUIModule.GetDefaultThemeName(): string

@@ -178,18 +178,22 @@ RemoteConnections.ExecuteAction.OnServerInvoke = function(player, npc, priority,
 
 		ActionCache[npc][beforeOrAfter][priority] = Action;
 
-		-- Check if the action is synchronous
+  end;
+  
+  -- Check if the action is synchronous
+  if Action then
+    
     if Action.Synchronous then
-      
-      Action.Execute();
-      
-    else
-      
-      coroutine.wrap(Action.Execute)();
-      
-		end;
 
-	end;
+      Action.Execute();
+
+    else
+
+      coroutine.wrap(Action.Execute)();
+
+    end;
+    
+  end;
 
 end;
 
