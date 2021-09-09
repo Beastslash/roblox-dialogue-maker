@@ -10,8 +10,8 @@ The Dialogue Maker is an open-source plugin for creating RPG-like dialogue boxes
 * Run synchronous and asynchronous functions before and after dialogue starts
 * Impose dialogue timeouts
 * Embed variables that are customizable throughout the conversation
-* Add responses for the player to make the conversation more interactive
-* Add dialogue redirects and make the conversation more efficient
+* Add responses for the player to add interactivity to the conversation
+* Add dialogue redirects and make the conversation flow efficient
 
 ## Where can I get it?
 You can either get [the version Beastslash updates at the Roblox Library](https://www.roblox.com/library/4930928141/Dialogue-Maker-Beta) or you can build your own version by using the scripts in this repository.
