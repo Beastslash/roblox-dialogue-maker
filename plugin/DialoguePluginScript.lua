@@ -932,11 +932,15 @@ ResetScriptsButton.Click:Connect(function()
 	
 	-- Make copies
 	local NewDialogueServerScript = script.DialogueServerScript:Clone();
-	local NewDialogueClientScript = script.DialogueClientScript:Clone();
-	local ClientAPI = NewDialogueClientScript.ClientAPI:Clone();
-	local NewThemes = NewDialogueClientScript.Themes:Clone();
+  local NewDialogueClientScript = script.DialogueClientScript:Clone();
+  local ClientAPI = NewDialogueClientScript.API:Clone();
+  local NewThemes = NewDialogueClientScript.Themes:Clone();
+  
+  -- Save the old copies
+  local OldDialogueServerScript = ServerScriptService:FindFirstChild("DialogueServerScript") or NewDialogueServerScript:Clone();
+  local OldDialogueClientScript = StarterPlayerScripts:FindFirstChild("DialogueClientScript") or NewDialogueClientScript:Clone();
 	
-	-- Remove the children from them both
+	-- Remove the children from the new copies
 	for _, dialogueScript in ipairs({NewDialogueServerScript, NewDialogueClientScript}) do
 		for _, child in ipairs(dialogueScript:GetChildren()) do
 			child:Destroy();
@@ -946,15 +950,12 @@ ResetScriptsButton.Click:Connect(function()
 		dialogueScript.Disabled = false;
 	end;
 	
-	-- Remove connections from RS
+	-- Remove connections from ReplicatedStorage
 	local NewDMRC = script.DialogueMakerRemoteConnections:Clone();
 	local OldDMRC = ReplicatedStorage:FindFirstChild("DialogueMakerRemoteConnections");
 	if OldDMRC then
 		OldDMRC:Destroy();
 	end;
-	
-	local OldDialogueServerScript = ServerScriptService:FindFirstChild("DialogueServerScript") or NewDialogueServerScript:Clone();
-	local OldDialogueClientScript = StarterPlayerScripts:FindFirstChild("DialogueClientScript") or NewDialogueClientScript:Clone();
 	
 	-- Check for themes
 	if not OldDialogueClientScript:FindFirstChild("Themes") then
