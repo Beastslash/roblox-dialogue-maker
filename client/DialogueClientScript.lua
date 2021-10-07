@@ -155,7 +155,7 @@ for _, npc in ipairs(NPCDialogue) do
       -- Check if the player is in range
       RunService.Heartbeat:Connect(function()
         
-        if Player:DistanceFromCharacter(npc.HumanoidRootPart.Position) <= DefaultMinDistance then
+        if Player:DistanceFromCharacter(npc:GetPivot().Position) < DefaultMinDistance then
           
           CanPressButton = true;
           
