@@ -176,7 +176,6 @@ function DialogueModule.ReadDialogue(npc: Model)
     -- Set up responses
     ResponseContainer = DialogueGui.DialogueContainer.ResponseContainer;
     ResponseTemplate = ResponseContainer.ResponseTemplate:Clone();
-    ResponseContainer.ResponseTemplate:Destroy();
     
     -- Set NPC name
     DialogueGui.DialogueContainer.NPCNameFrame.Visible = typeof(DialogueSettings.Name) == "string" and DialogueSettings.Name ~= "";
