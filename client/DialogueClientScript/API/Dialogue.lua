@@ -529,6 +529,11 @@ function DialogueModule.ReadDialogue(npc: Model)
             game:GetService("RunService").Heartbeat:Wait();
 
           end;
+          
+          -- Don't carry the old text in the next message
+          Message = "";
+          
+          -- Let the NPC speak again
           ThemeDialogueContainer.ClickToContinue.Visible = false;
           NPCPaused = false;
           Skipped = false;
