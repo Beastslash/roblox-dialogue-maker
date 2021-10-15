@@ -961,6 +961,12 @@ ResetScriptsButton.Click:Connect(function()
 	if not OldDialogueClientScript:FindFirstChild("Themes") then
 		NewThemes.Parent = OldDialogueClientScript;
 	end;
+  
+  -- Check for API
+  local OldAPI = OldDialogueClientScript:FindFirstChild("API");
+  if OldAPI then
+    OldAPI:Destroy();
+  end
 	
 	-- Take the children from the old scripts
 	for _, dialogueScript in ipairs({OldDialogueServerScript, OldDialogueClientScript}) do
@@ -974,11 +980,6 @@ ResetScriptsButton.Click:Connect(function()
 		
 		-- Delete the old scripts
 		dialogueScript:Destroy();
-	end;
-	
-	local OldCAPI = NewDialogueClientScript:FindFirstChild("ClientAPI");
-	if OldCAPI then
-		OldCAPI:Destroy();
 	end;
 	
 	-- Put the new instances in their places
