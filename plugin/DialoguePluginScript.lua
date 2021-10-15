@@ -957,7 +957,7 @@ ResetScriptsButton.Click:Connect(function()
 		OldDMRC:Destroy();
 	end;
 	
-	-- Check for themes
+  -- Check for themes
   local OldThemes = OldDialogueClientScript:FindFirstChild("Themes");
 	if not OldThemes then
     NewThemes.Parent = OldDialogueClientScript;
