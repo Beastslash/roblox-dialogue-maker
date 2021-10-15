@@ -25,7 +25,7 @@ Sure! If you feel like that the Dialogue Maker can be improved for everyone, jus
 ## Acknowledgements
 * **[Christian "Sudobeast" Toney](https://github.com/Sudobeast)** - Project Lead
 * **[BHickey94](https://github.com/BHickey94)** - Code Contributor
-* **[GAVsi115](https://devforum.roblox.com/u/gavsi115/summary)** - Code Contributor
+* **[GAVsi115](https://devforum.roblox.com/u/gavsi115/summary)** - Code Contributor and Bug Reporter
 * **[joshuajon](https://github.com/joshuajon)** - Bug Reporter
 * **[ruax2891](https://twitter.com/ruax2891)** - QA Tester
 * **[InkyTheBlue](https://twitter.com/InkyTheBlueDerg)** - QA Tester
