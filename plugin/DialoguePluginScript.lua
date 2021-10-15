@@ -958,9 +958,10 @@ ResetScriptsButton.Click:Connect(function()
 	end;
 	
 	-- Check for themes
-	if not OldDialogueClientScript:FindFirstChild("Themes") then
-		NewThemes.Parent = OldDialogueClientScript;
-	end;
+  local OldThemes = OldDialogueClientScript:FindFirstChild("Themes");
+	if not OldThemes then
+    NewThemes.Parent = OldDialogueClientScript;
+  end;
   
   -- Check for API
   local OldAPI = OldDialogueClientScript:FindFirstChild("API");
