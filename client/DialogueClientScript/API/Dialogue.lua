@@ -445,6 +445,7 @@ function DialogueModule.ReadDialogue(npc: Model)
       local Adding = false;
       for index, page in ipairs(DividedText) do
 
+        -- Now we can get the new text
         FullMessageText = page.FullText;
         for wordIndex, word in ipairs(page) do 
 
@@ -520,6 +521,7 @@ function DialogueModule.ReadDialogue(npc: Model)
 
         if DividedText[index+1] and NPCTalking then
 
+          -- Wait for the player to click
           ThemeDialogueContainer.ClickToContinue.Visible = true;
           NPCPaused = true;
           while NPCPaused and NPCTalking do 
