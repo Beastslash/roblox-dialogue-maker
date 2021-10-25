@@ -4,6 +4,8 @@ local UserInputService = game:GetService("UserInputService");
 local ContextActionService = game:GetService("ContextActionService");
 local RunService = game:GetService("RunService");
 local RemoteConnections = ReplicatedStorage:WaitForChild("DialogueMakerRemoteConnections");
+local Players = game:GetService("Players");
+local Player = Players.LocalPlayer;
 
 -- Ignore the API warning
 API = nil;
@@ -119,18 +121,18 @@ function DialogueModule.DivideTextToFitBox(text: string, textContainer: Frame): 
           Line.Text = letter;
 
         end;
-        
+
       end;
 
       table.insert(Divisions[Page], Line.Text);
       Divisions[Page].FullText = Line.Text;
 
     else
-      
+
       Page = Page + 1;
-      
+
     end;
-    
+
   end;
 
   Line:Destroy();
@@ -158,7 +160,7 @@ function DialogueModule.ReadDialogue(npc: Model)
   API.Triggers.DisableAllClickDetectors();
   API.Triggers.DisableAllProximityPrompts();
 
-  -- Freeze the player, if necessary
+  -- If necessary, freeze the player
   local DialogueContainer = npc:FindFirstChild("DialogueContainer");
   local DialogueSettingsModule = DialogueContainer:FindFirstChild("Settings");
   local DialogueSettings = require(DialogueSettingsModule);
@@ -168,19 +170,41 @@ function DialogueModule.ReadDialogue(npc: Model)
 
   end;
 
+  -- If necessary, end conversation if player or NPC goes out of distance
+  local NPCPrimaryPart = npc.PrimaryPart;
+  local MaxConversationDistance = DialogueSettings.MaximumConversationDistance;
+  if DialogueSettings.EndConversationIfOutOfDistance and MaxConversationDistance and NPCPrimaryPart then
+
+    coroutine.wrap(function() 
+
+      while RunService.Heartbeat:Wait() and DialogueModule.PlayerTalkingWithNPC.Value do
+
+        if math.abs(NPCPrimaryPart.Position.Magnitude - Player.Character.PrimaryPart.Position.Magnitude) > MaxConversationDistance then
+
+          DialogueModule.PlayerTalkingWithNPC.Value = false;
+          break;
+
+        end;
+
+      end;
+
+    end)();
+
+  end;
+
   -- Set the theme and prepare the response template
   local DialogueGui = API.GUI.CreateNewDialogueGui(DialogueSettings.Theme);
   local ResponseContainer, ResponseTemplate, ClickSound, ClickSoundEnabled;
   local function SetupDialogueGui()
-    
+
     -- Set up responses
     ResponseContainer = DialogueGui.DialogueContainer.ResponseContainer;
     ResponseTemplate = ResponseContainer.ResponseTemplate:Clone();
-    
+
     -- Set NPC name
     DialogueGui.DialogueContainer.NPCNameFrame.Visible = typeof(DialogueSettings.Name) == "string" and DialogueSettings.Name ~= "";
     DialogueGui.DialogueContainer.NPCNameFrame.NPCName.Text = DialogueSettings.Name or "";
-    
+
     -- Setup click sound
     ClickSound = DialogueGui:FindFirstChild("ClickSound");
     ClickSoundEnabled = false;
@@ -198,16 +222,16 @@ function DialogueModule.ReadDialogue(npc: Model)
       DialogueGui.ClickSound.SoundId = "rbxassetid://" .. DefaultClickSound;
 
     end;
-    
+
   end;
-  
+
   SetupDialogueGui();
   API.GUI.CurrentTheme.Value = DialogueGui;
 
   -- Listen to theme changes
   local OldDialogueGui;
   API.GUI.CurrentTheme.Changed:Connect(function(newTheme)
-    
+
     OldDialogueGui = DialogueGui;
     DialogueGui = newTheme;
     SetupDialogueGui();
@@ -264,12 +288,12 @@ function DialogueModule.ReadDialogue(npc: Model)
         ThemeDialogueContainer.ResponseContainer.Visible = false;
 
       end;
-      
-      DialogueGui.Parent = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui");
+
+      DialogueGui.Parent = Player:WaitForChild("PlayerGui");
       if OldDialogueGui then
         OldDialogueGui:Destroy();
       end;
-      
+
       local NPCTalking = true;
       local WaitingForResponse = true;
       local Skipped = false;
@@ -524,15 +548,15 @@ function DialogueModule.ReadDialogue(npc: Model)
           -- Wait for the player to click
           ThemeDialogueContainer.ClickToContinue.Visible = true;
           NPCPaused = true;
-          while NPCPaused and NPCTalking do 
+          while NPCPaused and NPCTalking and DialogueModule.PlayerTalkingWithNPC.Value do 
 
             game:GetService("RunService").Heartbeat:Wait();
 
           end;
-          
+
           -- Don't carry the old text in the next message
           Message = "";
-          
+
           -- Let the NPC speak again
           ThemeDialogueContainer.ClickToContinue.Visible = false;
           NPCPaused = false;
