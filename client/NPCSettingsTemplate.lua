@@ -37,6 +37,8 @@ return {
   ProximityPromptHoldDuration = 0.5; -- Replace this with the amount of time in seconds that you want the player to press the action key before triggering the ProximityPrompt. [accepts number]
   ProximityPromptDisappearsWhenDialogueActive = true; -- If true, the ProximityPrompt's parent will be nil until the dialogue is over. This hides the ProximityPrompt from the player. [accepts boolean]
   ProximityPromptRequiresLineOfSight = false; -- If true, the player will be presented with the ProximityPrompt even when the ProximityPrompt is obstructed from the player's line of sight. [accepts boolean]
+  EndConversationIfOutOfDistance = false; -- If true, the conversation will end if the PrimaryParts of the NPC and the player exceed the MaximumConversationDistance.
+  MaximumConversationDistance = 10; -- Maximum magnitude between the NPC's HumanoidRootPart and the player's PrimaryPart before the conversation ends. Requires EndConversationIfOutOfDistance to be true. [accepts number]
 
   -- [Theme] --
   Theme = ""; -- Change this to a theme you've added to the Themes folder in order to override default theme settings. [accepts string]
