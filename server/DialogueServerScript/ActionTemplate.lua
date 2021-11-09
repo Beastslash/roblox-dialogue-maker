@@ -1,5 +1,4 @@
 local Action = {};
-Player = nil;	-- Silences global warnings.
 
 Action.Synchronous = false;	-- Stops the player from proceeding to the next dialogue/leaving
 							-- the conversation until the action is complete.
@@ -7,7 +6,7 @@ Action.Synchronous = false;	-- Stops the player from proceeding to the next dial
 							-- this causes the dialogue box to be *blank*
 							-- until the action is complete.
 		
-Action.Variables = function()
+Action.Variables = function(player)
 	
 	-- This function is ran prior to the Execute function.
 	-- It's meant for setting conversation variables.
@@ -20,7 +19,7 @@ Action.Variables = function()
 	
 end 	
 					
-Action.Execute = function()
+Action.Execute = function(player)
 	
 	-- This is the code that's ran when the action is called.
 	
