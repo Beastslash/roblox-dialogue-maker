@@ -569,9 +569,15 @@ function DialogueModule.ReadDialogue(npc: Model)
 
       local ResponseChosen;
       if ResponsesEnabled and DialogueModule.PlayerTalkingWithNPC.Value then
-
+        
+        -- Sort response folders, because :GetChildren() doesn't guarantee it
+        local ResponseFolders = CurrentDirectory.Responses:GetChildren();
+        table.sort(ResponseFolders, function(folder1, folder2)
+          return folder1.Name < folder2.Name;
+        end);
+        
         -- Add response buttons
-        for _, response in ipairs(CurrentDirectory.Responses:GetChildren()) do
+        for _, response in ipairs(ResponseFolders) do
 
           if RemoteConnections.PlayerPassesCondition:InvokeServer(npc,response) then
 
@@ -588,7 +594,6 @@ function DialogueModule.ReadDialogue(npc: Model)
               end;
 
               ResponseContainer.Visible = false;
-
               ResponseChosen = response;
 
               if response.HasAfterAction.Value then
