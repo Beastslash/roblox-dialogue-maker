@@ -14,7 +14,7 @@ local DialogueLocations = {};
 local DialogueLocationsFolder = script.DialogueLocations;
 for _, value in ipairs(DialogueLocationsFolder:GetChildren()) do
 
-  if value.Value:FindFirstChild("DialogueContainer") then
+  if value.Value and value.Value:FindFirstChild("DialogueContainer") then
 
     table.insert(DialogueLocations, value.Value);
 
