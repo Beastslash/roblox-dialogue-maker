@@ -224,14 +224,14 @@ function DialogueModule.ReadDialogue(npc: Model)
     end;
 
   end;
-
+  
   SetupDialogueGui();
   API.GUI.CurrentTheme.Value = DialogueGui;
 
   -- Listen to theme changes
   local OldDialogueGui;
-  API.GUI.CurrentTheme.Changed:Connect(function(newTheme)
-
+  local ThemeChangedEvent = API.GUI.CurrentTheme.Changed:Connect(function(newTheme)
+    
     OldDialogueGui = DialogueGui;
     DialogueGui = newTheme;
     SetupDialogueGui();
@@ -569,13 +569,13 @@ function DialogueModule.ReadDialogue(npc: Model)
 
       local ResponseChosen;
       if ResponsesEnabled and DialogueModule.PlayerTalkingWithNPC.Value then
-        
+
         -- Sort response folders, because :GetChildren() doesn't guarantee it
         local ResponseFolders = CurrentDirectory.Responses:GetChildren();
         table.sort(ResponseFolders, function(folder1, folder2)
           return folder1.Name < folder2.Name;
         end);
-        
+
         -- Add response buttons
         for _, response in ipairs(ResponseFolders) do
 
@@ -686,7 +686,8 @@ function DialogueModule.ReadDialogue(npc: Model)
     end;
 
   end;
-
+  
+  ThemeChangedEvent:Disconnect();
   API.Triggers.EnableAllSpeechBubbles();
   API.Triggers.EnableAllClickDetectors();
   API.Triggers.EnableAllProximityPrompts();
