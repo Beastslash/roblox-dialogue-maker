@@ -5,11 +5,13 @@ local StarterPlayerScripts = StarterPlayer.StarterPlayerScripts;
 local ReplicatedStorage = game:GetService("ReplicatedStorage");
 local ServerScriptService = game:GetService("ServerScriptService");
 local UserInputService = game:GetService("UserInputService");
+local ChangeHistoryService = game:GetService("ChangeHistoryService");
 
 -- Toolbar configuration
 local Toolbar = plugin:CreateToolbar("Dialogue Maker by Beastslash");
 local EditDialogueButton = Toolbar:CreateButton("Edit Dialogue", "Edit dialogue of a selected NPC. The selected object must be a singular model.", "rbxassetid://332218617");
 local ResetScriptsButton = Toolbar:CreateButton("Fix Scripts", "Reset DialogueMakerRemoteConnections, DialogueServerScript, and DialogueClientScript back to the a stable version.", "rbxassetid://61995002");
+local RemoveUnusedInstancesButton = Toolbar:CreateButton("Remove Unused Instances", "Deletes unused actions, conditions, and dialogue locations.", "rbxassetid://61995002")
 local PluginGui;
 local DialogueMakerFrame = script.DialogueMakerGUI.MainFrame:Clone();
 local DialogueMessageList = DialogueMakerFrame.DialogueContainer.DialogueMessageList;
@@ -774,7 +776,8 @@ local function OpenDialogueEditor()
 		if not DefaultVariablesScript then
 			DefaultVariablesScript = script.DefaultVariablesTemplate:Clone();
 			DefaultVariablesScript.Name = "DefaultVariables";
-			DefaultVariablesScript.NPC.Value = Model;
+      DefaultVariablesScript.NPC.Value = Model;
+      DefaultVariablesScript.Parent = DefaultVariablesFolder;
 		end;
 		
 		-- Open the script
@@ -923,12 +926,15 @@ EditDialogueButton.Click:Connect(function()
 	
 end);
 
-local FixingScripts = false;
+local Busy = false;
 ResetScriptsButton.Click:Connect(function()
 	
 	-- Debounce
-	assert(not FixingScripts, "[Dialogue Maker] Already fixing the scripts! Please wait.");
-	FixingScripts = true;
+  assert(not Busy, "[Dialogue Maker] One moment please...");
+  Busy = true;
+  
+  -- Set an undo point
+  ChangeHistoryService:SetWaypoint("Resetting Dialogue Maker scripts");
 	
 	-- Make copies
 	local NewDialogueServerScript = script.DialogueServerScript:Clone();
@@ -943,7 +949,7 @@ ResetScriptsButton.Click:Connect(function()
 	-- Remove the children from the new copies
 	for _, dialogueScript in ipairs({NewDialogueServerScript, NewDialogueClientScript}) do
 		for _, child in ipairs(dialogueScript:GetChildren()) do
-			child:Destroy();
+			child.Parent = nil;
 		end;
 		
 		-- Enable the scripts
@@ -954,7 +960,7 @@ ResetScriptsButton.Click:Connect(function()
 	local NewDMRC = script.DialogueMakerRemoteConnections:Clone();
 	local OldDMRC = ReplicatedStorage:FindFirstChild("DialogueMakerRemoteConnections");
 	if OldDMRC then
-		OldDMRC:Destroy();
+		OldDMRC.Parent = nil;
 	end;
 	
   -- Check for themes
@@ -966,7 +972,7 @@ ResetScriptsButton.Click:Connect(function()
   -- Check for API
   local OldAPI = OldDialogueClientScript:FindFirstChild("API");
   if OldAPI then
-    OldAPI:Destroy();
+    OldAPI.Parent = nil;
   end
 	
 	-- Take the children from the old scripts
@@ -980,17 +986,92 @@ ResetScriptsButton.Click:Connect(function()
 		end;
 		
 		-- Delete the old scripts
-		dialogueScript:Destroy();
+		dialogueScript.Parent = nil;
 	end;
 	
 	-- Put the new instances in their places
 	NewDialogueServerScript.Parent = ServerScriptService;
 	NewDialogueClientScript.Parent = StarterPlayerScripts;
 	ClientAPI.Parent = NewDialogueClientScript;
-	NewDMRC.Parent = ReplicatedStorage;
+  NewDMRC.Parent = ReplicatedStorage;
+  
+  -- Finalize the undo point
+  ChangeHistoryService:SetWaypoint("Reset Dialogue Maker scripts");
 	
 	-- Done!
-	FixingScripts = false;
+	Busy = false;
 	print("[Dialogue Maker] Fixed Dialogue Maker scripts!");
 	
+end);
+
+RemoveUnusedInstancesButton.Click:Connect(function()
+  
+  assert(not Busy, "[Dialogue Maker] One moment please...");
+  Busy = true;
+  
+  local DSS = ServerScriptService:FindFirstChild("DialogueServerScript");
+  if not DSS then
+    warn("[Dialogue Maker] There isn't a DialogueServerScript in the ServerScriptService!");
+    Busy = false;
+    return;
+  end;
+  
+  -- Set an undo point
+  ChangeHistoryService:SetWaypoint("Removing unused Dialogue Maker instances");
+  
+  -- Remove the unused instances
+  local Count = 0;
+  for _, folder in ipairs(DSS:GetChildren()) do
+    
+    if not folder:IsA("Folder") then
+      
+      continue;
+      
+    end
+    
+    for _, child in ipairs(folder:GetChildren()) do
+      
+      if folder.Name == "Actions" then
+        
+        for _, module in ipairs(child:GetChildren()) do
+          
+          local NPC = module:FindFirstChild("NPC");
+          if not NPC or not NPC.Value or not NPC.Value.Parent then
+            
+            Count += 1;
+            module.Parent = nil;
+            
+          end
+          
+        end
+        
+      elseif folder.Name ~= "DialogueLocations" then
+        
+        local NPC = child:FindFirstChild("NPC");
+        if not NPC or not NPC.Value or not NPC.Value.Parent then
+
+          Count += 1;
+          child.Parent = nil;
+
+        end
+        
+      elseif not child.Value or not child.Value.Parent then
+        
+        Count += 1;
+        child.Parent = nil;
+        
+      end;
+      
+    end;
+    
+  end;
+  
+  -- Finalize the undo point
+  ChangeHistoryService:SetWaypoint("Removed unused Dialogue Maker instances");
+  
+  -- Done!
+  Busy = false;
+  local Plural = (Count ~= 1 and "s") or "";
+  print("[Dialogue Maker] Removed unused " .. Count .. " Dialogue Maker instance" .. Plural .. "!")
+  
 end);
