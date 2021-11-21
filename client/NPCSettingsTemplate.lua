@@ -71,8 +71,7 @@ return {
 
   ProximityPrompt = {
     
-    Enabled = true; -- If true, this causes the player to be able to trigger the dialogue by activating the ProximityPrompt. [accepts boolean]
-    
+    Enabled = true; -- If true, this causes the player to be able to trigger the dialogue by activating the ProximityPrompt. You must set a PrimaryPart in your NPC model for this to work. [accepts boolean]
     AutoCreate = true; -- If true, this automatically creates a ProximityPrompt inside of the NPC's model. [accepts boolean]
     
     Location = nil; -- The location of the ProximityPrompt. (Ex. workspace.Model.ProximityPrompt) This setting will be ignored if AutoCreate is true. [accepts ProximityPrompt or nil]
