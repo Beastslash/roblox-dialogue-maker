@@ -4,7 +4,8 @@ local ProximityPrompts = {};
 local SpeechBubbles = {};
 local ClickDetectors = {};
 
-function TriggerModule.AddSpeechBubble(npc: Model, speechBubble)
+-- TODO: Remove .AddSpeechBubble() in v4.0.0
+function TriggerModule.AddSpeechBubble(npc: Model, speechBubble: BillboardGui)
   
   SpeechBubbles[npc] = speechBubble;
   
@@ -17,16 +18,16 @@ function TriggerModule.CreateSpeechBubble(npc: Model, properties: {[string]: any
   SpeechBubbles[npc].Active = true;
   SpeechBubbles[npc].LightInfluence = 0;
   SpeechBubbles[npc].ResetOnSpawn = false;
-  SpeechBubbles[npc].Size = properties.SpeechBubbleSize;
-  SpeechBubbles[npc].StudsOffset = properties.SpeechBubbleStudsOffset;
-  SpeechBubbles[npc].Adornee = properties.SpeechBubblePart;
+  SpeechBubbles[npc].Size = properties.SpeechBubbleSize or properties.SpeechBubble.Size;
+  SpeechBubbles[npc].StudsOffset = properties.SpeechBubbleStudsOffset or properties.SpeechBubble.StudsOffset;
+  SpeechBubbles[npc].Adornee = properties.SpeechBubblePart or properties.SpeechBubble.Part;
 
   local SpeechBubbleButton = Instance.new("ImageButton");
   SpeechBubbleButton.BackgroundTransparency = 1;
   SpeechBubbleButton.BorderSizePixel = 0;
   SpeechBubbleButton.Name = "SpeechBubbleButton";
   SpeechBubbleButton.Size = UDim2.new(1,0,1,0);
-  SpeechBubbleButton.Image = properties.SpeechBubbleImage;
+  SpeechBubbleButton.Image = properties.SpeechBubbleImage or properties.SpeechBubble.Image;
   SpeechBubbleButton.Parent = SpeechBubbles[npc];
 
   return SpeechBubbles[npc];
