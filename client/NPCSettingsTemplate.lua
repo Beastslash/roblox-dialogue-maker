@@ -77,8 +77,7 @@ return {
     
     Location = nil; -- The location of the ProximityPrompt. (Ex. workspace.Model.ProximityPrompt) This setting will be ignored if AutoCreate is true. [accepts ProximityPrompt or nil]
     
-    MaxActivationDistance = 40; -- The distance you want the player to be able to activate the ProximityPrompt. This setting will be ignored if AutoCreate is false. [accepts number]
-    
+    MaxActivationDistance = 15; -- The distance you want the player to be able to activate the ProximityPrompt. This setting will be ignored if AutoCreate is false. [accepts number]
     GamepadKeyCode = Enum.KeyCode.ButtonX; -- The gamepad keycode you want the player to press to activate the ProximityPrompt. This setting will be ignored if AutoCreate is false. [accepts Enum.KeyCode]
     
     KeyboardKeyCode = Enum.KeyCode.E; -- The keyboard keycode you want the player to press to activate the ProximityPrompt. This setting will be ignored if AutoCreate is false. [accepts Enum.KeyCode]
