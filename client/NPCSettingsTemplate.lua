@@ -75,7 +75,7 @@ return {
     
     AutoCreate = true; -- If true, this automatically creates a ProximityPrompt inside of the NPC's model. [accepts boolean]
     
-    Location = nil; -- The location of the ProximityPrompt. For example, workspace.Model.ProximityPrompt. This setting will be ignored if AutoCreate is true. [accepts ProximityPrompt or nil]
+    Location = nil; -- The location of the ProximityPrompt. (Ex. workspace.Model.ProximityPrompt) This setting will be ignored if AutoCreate is true. [accepts ProximityPrompt or nil]
     
     MaxActivationDistance = 40; -- The distance you want the player to be able to activate the ProximityPrompt. This setting will be ignored if AutoCreate is false. [accepts number]
     
