@@ -5,7 +5,11 @@ return {
     NPCName = ""; -- Change this to a theme you've added to the Themes folder in order to override default theme settings. [accepts string]
 
     ShowName = false; -- When true, the NPC's name will be shown when the player talks to them. [accepts boolean]
-
+    
+    FitName = true; -- When true, the NPCNameFrame will be automatically resized to fit NPC names.
+    
+    TextBoundsOffset = 30; -- If General.FitName is true, this value will be added to the TextBounds offset of the NPC's name.
+    
     ThemeName = ""; -- Change this to the NPC's name. [accepts string]
 
     LetterDelay = 0.025; -- Change this to the amount of seconds you want to wait before the next letter in the NPC's message is shown. [accepts number >= 0]

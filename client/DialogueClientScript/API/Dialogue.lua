@@ -165,13 +165,14 @@ function DialogueModule.ReadDialogue(npc: Model)
     local MaxConversationDistance = DialogueSettings.MaximumConversationDistance or (DialogueSettings.General and DialogueSettings.General.MaxConversationDistance);
     local EndConversationIfOutOfDistance = DialogueSettings.EndConversationIfOutOfDistance or (DialogueSettings.General and DialogueSettings.General.EndConversationIfOutOfDistance);
     local NPCName = DialogueSettings.Name or (DialogueSettings.General and DialogueSettings.General.NPCName);
+    local TextBoundsOffset = (DialogueSettings.General and DialogueSettings.General.TextBoundsOffset) or 30;
     local AllowPlayerToSkipDelay = DialogueSettings.AllowPlayerToSkipDelay or (DialogueSettings.General and DialogueSettings.General.AllowPlayerToSkipDelay);
     local LetterDelay = DialogueSettings.LetterDelay or (DialogueSettings.General and DialogueSettings.General.LetterDelay);
     local TimeoutEnabled = DialogueSettings.TimeoutEnabled or (DialogueSettings.General and DialogueSettings.General.TimeoutEnabled);
     local ConversationTimeoutInSeconds = DialogueSettings.ConversationTimeoutInSeconds or (DialogueSettings.General and DialogueSettings.General.ConversationTimeoutInSeconds);
     local WaitForResponse = DialogueSettings.WaitForResponse or (DialogueSettings.General and DialogueSettings.General.WaitForResponse);
     local ResponseContainer, ResponseTemplate, ClickSound, ClickSoundEnabled, OldDialogueGui;
-
+    
     -- If necessary, freeze the player
     if FreezePlayer then 
 
@@ -181,14 +182,18 @@ function DialogueModule.ReadDialogue(npc: Model)
 
     -- Set the theme and prepare the response template
     local function SetupDialogueGui()
-
+      
+      local NPCNF = DialogueGui.DialogueContainer.NPCNameFrame;
+      
       -- Set up responses
+      DialogueGui.Parent = Player:WaitForChild("PlayerGui");
       ResponseContainer = DialogueGui.DialogueContainer.ResponseContainer;
       ResponseTemplate = ResponseContainer.ResponseTemplate:Clone();
 
       -- Set NPC name
-      DialogueGui.DialogueContainer.NPCNameFrame.Visible = typeof(NPCName) == "string" and NPCName ~= "";
-      DialogueGui.DialogueContainer.NPCNameFrame.NPCName.Text = NPCName or "";
+      NPCNF.Visible = typeof(NPCName) == "string" and NPCName ~= "";
+      NPCNF.NPCName.Text = NPCName or "";
+      NPCNF.Size = UDim2.new(NPCNF.Size.X.Scale, NPCNF.NPCName.TextBounds.X + TextBoundsOffset, NPCNF.Size.Y.Scale, NPCNF.Size.Y.Offset);
 
       -- Setup click sound
       ClickSound = DialogueGui:FindFirstChild("ClickSound");
@@ -215,8 +220,8 @@ function DialogueModule.ReadDialogue(npc: Model)
 
     -- Listen to theme changes
     local ThemeChangedEvent = API.GUI.CurrentTheme.Changed:Connect(function(newTheme)
-
-      OldDialogueGui = DialogueGui;
+      
+      DialogueGui:Destroy();
       DialogueGui = newTheme;
       SetupDialogueGui();
 
@@ -256,25 +261,29 @@ function DialogueModule.ReadDialogue(npc: Model)
         table.remove(DialoguePriorityPath, 1);
         DialoguePriority = table.concat(DialoguePriorityPath, ".");
         RemoteConnections.ExecuteAction:InvokeServer(npc, CurrentDirectory, "After");
-
         CurrentDirectory = RootDirectory;
 
       elseif RemoteConnections.PlayerPassesCondition:InvokeServer(npc, CurrentDirectory) then
-
+        
+        local MessageText = API.Dialogue.ReplaceVariablesWithValues(npc, CurrentDirectory.Message.Value);
+        local ThemeDialogueContainer = DialogueGui.DialogueContainer;
+        local ResponsesEnabled = false;
+        local NPCTalking = true;
+        local WaitingForResponse = true;
+        local Skipped = false;
+        local FullMessageText = "";
+        local Message = "";
+        local NPCPaused = false;
+        local ImportantPositions = {};
+        local Position = 0;
+        local Adding = false;
+        local TextContainer, ContinueDialogue, ResponseChosen, DividedText;
+        
         -- Run the before action if there is one
         if CurrentDirectory.HasBeforeAction.Value then
           RemoteConnections.ExecuteAction:InvokeServer(npc, CurrentDirectory, "Before");
         end;
 
-        -- Check if the message has any variables
-        local MessageText = API.Dialogue.ReplaceVariablesWithValues(npc, CurrentDirectory.Message.Value);
-
-        -- Show the message to the player
-        local ThemeDialogueContainer = DialogueGui.DialogueContainer;
-
-        -- Check if there are any response options
-        local TextContainer;
-        local ResponsesEnabled = false;
         if #CurrentDirectory.Responses:GetChildren() > 0 then
 
           API.Dialogue.ClearResponses(ResponseContainer);
@@ -292,21 +301,9 @@ function DialogueModule.ReadDialogue(npc: Model)
           ThemeDialogueContainer.ResponseContainer.Visible = false;
 
         end;
-
-        DialogueGui.Parent = Player:WaitForChild("PlayerGui");
-        if OldDialogueGui then
-          OldDialogueGui:Destroy();
-        end;
-
-        local NPCTalking = true;
-        local WaitingForResponse = true;
-        local Skipped = false;
-        local FullMessageText = "";
-        local Message = "";
+        DividedText = API.Dialogue.DivideTextToFitBox(MessageText, TextContainer);
 
         -- Make the NPC stop talking if the player clicks the frame
-        local NPCPaused = false;
-        local ContinueDialogue;
         ContinueDialogue = function(keybind)
 
           -- Make sure key is down
@@ -384,7 +381,6 @@ function DialogueModule.ReadDialogue(npc: Model)
         end;
 
         -- Put the letters of the message together for an animation effect
-        local ImportantPositions = {};
         if TextContainer.Line.RichText then
 
           -- TODO: find a way to mix rich text syntax with fonts
@@ -467,16 +463,16 @@ function DialogueModule.ReadDialogue(npc: Model)
           end;
 
         end;
-
-        local DividedText = API.Dialogue.DivideTextToFitBox(MessageText, TextContainer);
-        local Position = 0;
-        local Adding = false;
+        
+        DialogueGui.Enabled = true;
         for index, page in ipairs(DividedText) do
 
           -- Now we can get the new text
           FullMessageText = page.FullText;
           for wordIndex, word in ipairs(page) do 
 
+            local Extras = "";
+            
             if wordIndex ~= 1 then 
 
               Position += 1; 
@@ -489,7 +485,7 @@ function DialogueModule.ReadDialogue(npc: Model)
               Message = Message .. " ";
 
             end;
-            local Extras = "";
+            
             for _, letter in ipairs(word:split("")) do
 
               Adding = false;
@@ -506,6 +502,7 @@ function DialogueModule.ReadDialogue(npc: Model)
               if IP then
 
                 local Replacement = letter;
+                
                 for _, tag in ipairs(IP) do
 
                   if not tag.OriginalPosition then
@@ -571,7 +568,6 @@ function DialogueModule.ReadDialogue(npc: Model)
         end;
         NPCTalking = false;
 
-        local ResponseChosen;
         if ResponsesEnabled and DialogueModule.PlayerTalkingWithNPC.Value then
 
           -- Sort response folders, because :GetChildren() doesn't guarantee it
