@@ -165,6 +165,7 @@ function DialogueModule.ReadDialogue(npc: Model)
     local MaxConversationDistance = DialogueSettings.MaximumConversationDistance or (DialogueSettings.General and DialogueSettings.General.MaxConversationDistance);
     local EndConversationIfOutOfDistance = DialogueSettings.EndConversationIfOutOfDistance or (DialogueSettings.General and DialogueSettings.General.EndConversationIfOutOfDistance);
     local NPCName = DialogueSettings.Name or (DialogueSettings.General and DialogueSettings.General.NPCName);
+    local FitName = DialogueSettings.General and DialogueSettings.General.FitName;
     local TextBoundsOffset = (DialogueSettings.General and DialogueSettings.General.TextBoundsOffset) or 30;
     local AllowPlayerToSkipDelay = DialogueSettings.AllowPlayerToSkipDelay or (DialogueSettings.General and DialogueSettings.General.AllowPlayerToSkipDelay);
     local LetterDelay = DialogueSettings.LetterDelay or (DialogueSettings.General and DialogueSettings.General.LetterDelay);
@@ -193,7 +194,9 @@ function DialogueModule.ReadDialogue(npc: Model)
       -- Set NPC name
       NPCNF.Visible = typeof(NPCName) == "string" and NPCName ~= "";
       NPCNF.NPCName.Text = NPCName or "";
-      NPCNF.Size = UDim2.new(NPCNF.Size.X.Scale, NPCNF.NPCName.TextBounds.X + TextBoundsOffset, NPCNF.Size.Y.Scale, NPCNF.Size.Y.Offset);
+      if FitName then
+        NPCNF.Size = UDim2.new(NPCNF.Size.X.Scale, NPCNF.NPCName.TextBounds.X + TextBoundsOffset, NPCNF.Size.Y.Scale, NPCNF.Size.Y.Offset);
+      end;
 
       -- Setup click sound
       ClickSound = DialogueGui:FindFirstChild("ClickSound");
