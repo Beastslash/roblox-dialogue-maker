@@ -58,7 +58,6 @@ return {
 
   ClickDetector = {
 
-
     Enabled = false; -- If true, this causes the player to be able to trigger the dialogue by activating a ClickDetector. [accepts boolean]
 
     AutoCreate = true; -- If true, this automatically creates a ClickDetector inside of the NPC's model. [accepts boolean]
