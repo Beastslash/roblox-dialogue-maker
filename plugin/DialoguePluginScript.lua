@@ -785,7 +785,7 @@ local function OpenDialogueEditor()
 		
 	end);
 	
-	Events.AddDialogue = Tools.AddDialogue.MouseButton1Click:Connect(function()
+  Events.AddMessage = Tools.AddMessage.MouseButton1Click:Connect(function()
 		
 		local Path = ViewingPriority:split(".");
 		local CurrentDirectory = CurrentDialogueContainer;
