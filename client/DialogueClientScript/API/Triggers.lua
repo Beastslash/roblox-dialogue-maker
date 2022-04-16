@@ -1,5 +1,4 @@
 local TriggerModule = {};
-
 local ProximityPrompts = {};
 local SpeechBubbles = {};
 local ClickDetectors = {};
@@ -20,7 +19,7 @@ function TriggerModule.CreateSpeechBubble(npc: Model, properties: {[string]: any
   SpeechBubbles[npc].ResetOnSpawn = false;
   SpeechBubbles[npc].Size = properties.SpeechBubbleSize or properties.SpeechBubble.Size;
   SpeechBubbles[npc].StudsOffset = properties.SpeechBubbleStudsOffset or properties.SpeechBubble.StudsOffset;
-  SpeechBubbles[npc].Adornee = properties.SpeechBubblePart or properties.SpeechBubble.Part;
+  SpeechBubbles[npc].Adornee = properties.SpeechBubblePart or properties.SpeechBubble.BasePart;
 
   local SpeechBubbleButton = Instance.new("ImageButton");
   SpeechBubbleButton.BackgroundTransparency = 1;

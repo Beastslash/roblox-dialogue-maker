@@ -27,8 +27,9 @@ for _, npc in ipairs(NPCDialogue) do
   local success, msg = pcall(function()
 
     local DialogueSettings = require(npc.DialogueContainer.Settings);
-    local SpeechBubbleEnabled = DialogueSettings.SpeechBubbleEnabled or (typeof(DialogueSettings.SpeechBubble) == "table" and DialogueSettings.SpeechBubble.Enabled);
-    local SpeechBubblePart = DialogueSettings.SpeechBubblePart or (typeof(DialogueSettings.SpeechBubble) == "table" and DialogueSettings.SpeechBubble.Part);
+    local SpeechBubbleSettingsIsTable = typeof(DialogueSettings.SpeechBubble) == "table";
+    local SpeechBubbleEnabled = DialogueSettings.SpeechBubbleEnabled or (SpeechBubbleSettingsIsTable and DialogueSettings.SpeechBubble.Enabled);
+    local SpeechBubblePart = DialogueSettings.SpeechBubblePart or (SpeechBubbleSettingsIsTable and DialogueSettings.SpeechBubble.BasePart);
     local PromptRegionEnabled = DialogueSettings.PromptRegionEnabled or (typeof(DialogueSettings.PromptRegion) == "table" and DialogueSettings.PromptRegion.Enabled);
     local PromptRegionPart = DialogueSettings.PromptRegionPart or (typeof(DialogueSettings.PromptRegion) == "table" and DialogueSettings.PromptRegion.Part);
     local ProximityPromptEnabled = DialogueSettings.ProximityPromptEnabled or (typeof(DialogueSettings.ProximityPrompt) == "table" and DialogueSettings.ProximityPrompt.Enabled);
