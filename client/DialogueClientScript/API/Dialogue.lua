@@ -7,15 +7,19 @@ local RemoteConnections = ReplicatedStorage:WaitForChild("DialogueMakerRemoteCon
 local Players = game:GetService("Players");
 local Player = Players.LocalPlayer;
 
--- Ignore the API warning
-API = nil;
-
 -- Prepare these methods
 local DialogueModule = {
 
   PlayerTalkingWithNPC = script.PlayerTalkingWithNPC; 
 
 };
+
+local API;
+function DialogueModule._setAPI(api)
+  
+  API = api;
+  
+end
 
 function DialogueModule.GoToDirectory(currentDirectory: Folder, targetPath: {string}): Folder
 
@@ -149,13 +153,13 @@ function DialogueModule.ReadDialogue(npc: Model)
 
   -- Make sure we aren't already talking to an NPC
   if not DialogueModule.PlayerTalkingWithNPC.Value then
-    
+
     -- Make sure we can't talk to another NPC
     DialogueModule.PlayerTalkingWithNPC.Value = true;
     API.Triggers.DisableAllSpeechBubbles();
     API.Triggers.DisableAllClickDetectors();
     API.Triggers.DisableAllProximityPrompts();
-    
+
     -- Set up variables we're gonna use
     local NPCPrimaryPart = npc.PrimaryPart;
     local DialogueContainer = npc:FindFirstChild("DialogueContainer");
@@ -173,7 +177,7 @@ function DialogueModule.ReadDialogue(npc: Model)
     local ConversationTimeoutInSeconds = DialogueSettings.ConversationTimeoutInSeconds or (DialogueSettings.General and DialogueSettings.General.ConversationTimeoutInSeconds);
     local WaitForResponse = DialogueSettings.WaitForResponse or (DialogueSettings.General and DialogueSettings.General.WaitForResponse);
     local ResponseContainer, ResponseTemplate, ClickSound, ClickSoundEnabled, OldDialogueGui;
-    
+
     -- If necessary, freeze the player
     if FreezePlayer then 
 
@@ -183,9 +187,9 @@ function DialogueModule.ReadDialogue(npc: Model)
 
     -- Set the theme and prepare the response template
     local function SetupDialogueGui()
-      
+
       local NPCNF = DialogueGui.DialogueContainer.NPCNameFrame;
-      
+
       -- Set up responses
       DialogueGui.Parent = Player:WaitForChild("PlayerGui");
       ResponseContainer = DialogueGui.DialogueContainer.ResponseContainer;
@@ -223,7 +227,7 @@ function DialogueModule.ReadDialogue(npc: Model)
 
     -- Listen to theme changes
     local ThemeChangedEvent = API.GUI.CurrentTheme.Changed:Connect(function(newTheme)
-      
+
       DialogueGui:Destroy();
       DialogueGui = newTheme;
       SetupDialogueGui();
@@ -267,7 +271,7 @@ function DialogueModule.ReadDialogue(npc: Model)
         CurrentDirectory = RootDirectory;
 
       elseif RemoteConnections.PlayerPassesCondition:InvokeServer(npc, CurrentDirectory) then
-        
+
         local MessageText = API.Dialogue.ReplaceVariablesWithValues(npc, CurrentDirectory.Message.Value);
         local ThemeDialogueContainer = DialogueGui.DialogueContainer;
         local ResponsesEnabled = false;
@@ -281,7 +285,7 @@ function DialogueModule.ReadDialogue(npc: Model)
         local Position = 0;
         local Adding = false;
         local TextContainer, ContinueDialogue, ResponseChosen, DividedText;
-        
+
         -- Run the before action if there is one
         if CurrentDirectory.HasBeforeAction.Value then
           RemoteConnections.ExecuteAction:InvokeServer(npc, CurrentDirectory, "Before");
@@ -466,7 +470,7 @@ function DialogueModule.ReadDialogue(npc: Model)
           end;
 
         end;
-        
+
         DialogueGui.Enabled = true;
         for index, page in ipairs(DividedText) do
 
@@ -475,7 +479,7 @@ function DialogueModule.ReadDialogue(npc: Model)
           for wordIndex, word in ipairs(page) do 
 
             local Extras = "";
-            
+
             if wordIndex ~= 1 then 
 
               Position += 1; 
@@ -488,7 +492,7 @@ function DialogueModule.ReadDialogue(npc: Model)
               Message = Message .. " ";
 
             end;
-            
+
             for _, letter in ipairs(word:split("")) do
 
               Adding = false;
@@ -505,7 +509,7 @@ function DialogueModule.ReadDialogue(npc: Model)
               if IP then
 
                 local Replacement = letter;
-                
+
                 for _, tag in ipairs(IP) do
 
                   if not tag.OriginalPosition then
@@ -689,7 +693,7 @@ function DialogueModule.ReadDialogue(npc: Model)
       end;
 
     end;
-    
+
     -- Free the player :)
     ThemeChangedEvent:Disconnect();
     API.Triggers.EnableAllSpeechBubbles();
