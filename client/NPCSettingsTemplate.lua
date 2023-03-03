@@ -10,7 +10,7 @@ return {
     
     TextBoundsOffset = 30; -- If General.FitName is true, this value will be added to the TextBounds offset of the NPC's name.
     
-    ThemeName = ""; -- Change this to the NPC's name. [accepts string]
+    ThemeName = ""; -- Change this to the theme's name. [accepts string]
 
     LetterDelay = 0.025; -- Change this to the amount of seconds you want to wait before the next letter in the NPC's message is shown. [accepts number >= 0]
 
