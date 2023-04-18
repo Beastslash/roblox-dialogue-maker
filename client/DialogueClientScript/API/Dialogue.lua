@@ -343,7 +343,7 @@ function DialogueModule.ReadDialogue(npc: Model)
             if AllowPlayerToSkipDelay then
 
               -- Replace the incomplete dialogue with the full text
-              TextContainer.Line.Text = FullMessageText;
+              TextContainer.Line.MaxVisibleGraphemes = -1;
               Skipped = true;
 
             end;
@@ -393,175 +393,23 @@ function DialogueModule.ReadDialogue(npc: Model)
           end;
 
         end;
-
-        -- Set up the dialogue for rich text.
-        local ImportantPositions = {};
-        local MessageText = API.Dialogue.ReplaceVariablesWithValues(npc, CurrentDirectory.Message.Value);
-        if TextContainer.Line.RichText then
-
-          -- TODO: find a way to mix rich text syntax with fonts
-          local TagContentPattern = "<([^<>]-)>(.-)</";
-          local TagStart, TagEnd, Tag, Content, Value, Attribute, NewPattern;
-          local function UpdateTagData(str)
-
-            -- Find the tag
-            local _TagStart, _, _Tag, _ = str:find(TagContentPattern);
-
-            if _TagStart then
-
-              local _Attribute, _Value = nil, nil;
-              if _Tag:find(" ") then
-
-                -- Get the real tag
-                local Split1 = _Tag:split(" ");
-                _Tag = Split1[1];
-
-                -- Get the real attribute and value
-                local Split2 = Split1[2]:split("=");
-                _Attribute, _Value = Split2[1], Split2[2];
-
-              end
-
-              -- Make a new pattern based on the tag we have
-              local _NewPattern = TagContentPattern .. _Tag .. ">";
-              local _, _TagEnd, _, _Content = str:find(_NewPattern);
-
-              return _TagStart, _TagEnd, _Tag, _Content, _Attribute, _Value, _NewPattern;
-
-            end;
-
-          end;
-
-          TagStart, TagEnd, Tag, Content, Attribute, Value, NewPattern = UpdateTagData(MessageText);
-
-          while TagStart do
-
-            local TagGroup = MessageText:sub(TagStart, TagEnd);
-            local ContentStart, ContentEnd = TagGroup:find(Content, 1, true);
-
-            -- Get the sub-tags inside the first one
-            if not ImportantPositions[TagStart] then
-
-              ImportantPositions[TagStart] = {};
-
-            end;
-
-            local ETagStart, ETagEnd, ETag, EContent, EAttr, EVal, EPattern = UpdateTagData(Content);
-            while ETagStart do
-
-              -- Add the sub tag to the table
-              table.insert(ImportantPositions[TagStart], {ETag .. (EVal and (" " .. EAttr .. '=' .. EVal) or "")});
-
-              -- Scrub the tag from the content + length
-              Content = Content:gsub(Content:sub(ETagStart, ETagEnd), EContent);
-
-              ETagStart, ETagEnd, ETag, EContent, EAttr, EVal, EPattern = UpdateTagData(Content);
-
-            end;
-
-            -- Change all the final content lengths
-            local ContentLength = TagStart + Content:len() - 1;
-            for i, _ in ipairs(ImportantPositions[TagStart]) do
-
-              ImportantPositions[TagStart][i][2] = ContentLength;
-
-            end;
-
-            -- Add the main tag to the table
-            table.insert(ImportantPositions[TagStart], {Tag .. (Value and (" " .. Attribute .. '=' .. Value) or ""), ContentLength});
-
-            -- Scrub the tags from the original text
-            MessageText = MessageText:gsub(TagGroup, Content, 1);
-
-            -- Check if there's any more tags
-            TagStart, TagEnd, Tag, Content, Attribute, Value, NewPattern = UpdateTagData(MessageText);
-
-          end;
-
-        end;
         
         -- Put the letters of the message together for an animation effect
         DialogueGui.Enabled = true;
         local Message = "";
         local Position = 0;
         local Adding = false;
+        local MessageText = API.Dialogue.ReplaceVariablesWithValues(npc, CurrentDirectory.Message.Value);
         local DividedText = API.Dialogue.DivideTextToFitBox(MessageText, TextContainer);
         for index, page in ipairs(DividedText) do
 
           -- Now we can get the new text
           FullMessageText = page.FullText;
-          for wordIndex, word in ipairs(page) do 
-
-            local Extras = "";
-
-            if wordIndex ~= 1 then 
-
-              Position += 1; 
-              if Adding then
-
-                ImportantPositions[Position + 1] = ImportantPositions[Position];
-                Adding = false;
-
-              end;
-              Message = Message .. " ";
-
-            end;
-
-            for _, letter in ipairs(word:split("")) do
-
-              Adding = false;
-
-              -- Check if the player wants to skip their dialogue
-              if Skipped or not NPCTalking or not DialogueModule.PlayerTalkingWithNPC.Value then
-
-                break;
-
-              end;
-
-              Position += 1;
-              local IP = ImportantPositions[Position];  
-              if IP then
-
-                local Replacement = letter;
-
-                for _, tag in ipairs(IP) do
-
-                  if not tag.OriginalPosition then
-
-                    tag.OriginalPosition = Position;
-                    Replacement = "<" .. tag[1] .. ">" .. Replacement .. ((Position == tag[2] and "</" .. tag[1]:match("%a+") .. ">") or "");
-
-                  end;
-                  if Position < tag[2] then 
-
-                    Extras = Extras .. "</" .. tag[1]:match("%a+") .. ">";
-                    if not ImportantPositions[Position + 1] then
-
-                      ImportantPositions[Position + 1] = {};
-
-                    end;
-                    table.insert(ImportantPositions[Position + 1], tag);
-                    Adding = true;
-
-                  elseif tag.OriginalPosition ~= Position and Position == tag[2] then
-
-                    Replacement = Replacement .. "</" .. tag[1]:match("%a+") .. ">";
-
-                  end;
-
-                end;
-                Message = Message .. Replacement;
-
-              else 
-
-                Message = Message .. letter;
-
-              end;
-              TextContainer.Line.Text = Message .. Extras;
-              Extras = "";
-              wait(LetterDelay);
-
-            end;
+          TextContainer.Line.Text = FullMessageText;
+          for count = 0, TextContainer.Line.Text:len() do
+            
+            TextContainer.Line.MaxVisibleGraphemes = count;
+            wait(LetterDelay);
 
           end;
 
