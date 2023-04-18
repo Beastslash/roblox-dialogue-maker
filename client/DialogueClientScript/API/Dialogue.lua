@@ -408,6 +408,12 @@ function DialogueModule.ReadDialogue(npc: Model)
           TextContainer.Line.Text = FullMessageText;
           for count = 0, TextContainer.Line.Text:len() do
             
+            if (Skipped) then 
+              
+              break;
+              
+            end
+            
             TextContainer.Line.MaxVisibleGraphemes = count;
             wait(LetterDelay);
 
