@@ -344,7 +344,6 @@ function DialogueModule.ReadDialogue(npc: Model)
 
               -- Replace the incomplete dialogue with the full text
               TextContainer.Line.MaxVisibleGraphemes = -1;
-              Skipped = true;
 
             end;
 
@@ -396,7 +395,6 @@ function DialogueModule.ReadDialogue(npc: Model)
         
         -- Put the letters of the message together for an animation effect
         DialogueGui.Enabled = true;
-        local Message = "";
         local Position = 0;
         local Adding = false;
         local MessageText = API.Dialogue.ReplaceVariablesWithValues(npc, CurrentDirectory.Message.Value);
@@ -408,14 +406,14 @@ function DialogueModule.ReadDialogue(npc: Model)
           TextContainer.Line.Text = FullMessageText;
           for count = 0, TextContainer.Line.Text:len() do
             
-            if (Skipped) then 
-              
-              break;
-              
-            end
-            
             TextContainer.Line.MaxVisibleGraphemes = count;
-            wait(LetterDelay);
+            task.wait(LetterDelay);
+            
+            if (TextContainer.Line.MaxVisibleGraphemes == -1) then 
+
+              break;
+
+            end
 
           end;
 
@@ -430,13 +428,9 @@ function DialogueModule.ReadDialogue(npc: Model)
 
             end;
 
-            -- Don't carry the old text in the next message
-            Message = "";
-
             -- Let the NPC speak again
             ThemeDialogueContainer.ClickToContinue.Visible = false;
             NPCPaused = false;
-            Skipped = false;
 
           end;
 
@@ -506,7 +500,7 @@ function DialogueModule.ReadDialogue(npc: Model)
             end;
 
             -- Wait the timeout set by the developer
-            wait(ConversationTimeoutInSeconds);
+            task.wait(ConversationTimeoutInSeconds);
             WaitingForResponse = false;
 
           end;
