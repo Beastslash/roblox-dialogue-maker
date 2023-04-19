@@ -16,9 +16,9 @@ local DialogueModule = {
 
 local API;
 function DialogueModule._setAPI(api)
-  
+
   API = api;
-  
+
 end
 
 function DialogueModule.GoToDirectory(currentDirectory: Folder, targetPath: {string}): Folder
@@ -84,20 +84,13 @@ function DialogueModule.DivideTextToFitBox(text: string, textContainer: Frame): 
   Line.Name = "LineTest";
   Line.Visible = false;
   Line.Parent = textContainer;
+  Line.Text = "";
 
   local Divisions = {};
   local Page = 1;
   for index, word in ipairs(text:split(" ")) do
 
-    if index == 1 then
-
-      Line.Text = word;
-
-    else
-
-      Line.Text = Line.Text .. " " .. word;
-
-    end;
+    Line.Text = Line.Text .. " " .. word;
 
     if not Divisions[Page] then Divisions[Page] = {}; end;
 
@@ -259,38 +252,38 @@ function DialogueModule.ReadDialogue(npc: Model)
     local RootDirectory = DialogueContainer["1"];
     local CurrentDirectory = RootDirectory;
     while DialogueModule.PlayerTalkingWithNPC.Value and game:GetService("RunService").Heartbeat:Wait() do
-      
+
       -- Get the current directory.
       CurrentDirectory = API.Dialogue.GoToDirectory(RootDirectory, DialoguePriority:split("."));
-      
+
       if CurrentDirectory.Redirect.Value and RemoteConnections.PlayerPassesCondition:InvokeServer(npc, CurrentDirectory) then
-        
+
         -- A redirect is available, so let's switch priorities.
         local DialoguePriorityPath = CurrentDirectory.RedirectPriority.Value:split(".");
         table.remove(DialoguePriorityPath, 1);
         DialoguePriority = table.concat(DialoguePriorityPath, ".");
         RemoteConnections.ExecuteAction:InvokeServer(npc, CurrentDirectory, "After");
         CurrentDirectory = RootDirectory;
-       
+
       elseif RemoteConnections.PlayerPassesCondition:InvokeServer(npc, CurrentDirectory) then
-        
+
         -- A message is available, so let's display it.
         -- If there's a before action, run it.
         if CurrentDirectory.HasBeforeAction.Value then
-          
+
           RemoteConnections.ExecuteAction:InvokeServer(npc, CurrentDirectory, "Before");
-          
+
         end;
-        
+
         -- Determine which text container we should use.
         local ThemeDialogueContainer = DialogueGui.DialogueContainer;
         local ResponsesEnabled = false;
         local TextContainer;
         if #CurrentDirectory.Responses:GetChildren() > 0 then
-          
+
           -- Clear the text container just in case there was some responses left behind.
           API.Dialogue.ClearResponses(ResponseContainer);
-          
+
           -- Use the text container with responses.
           TextContainer = ThemeDialogueContainer.NPCTextContainerWithResponses;
           ThemeDialogueContainer.NPCTextContainerWithResponses.Visible = true;
@@ -298,7 +291,7 @@ function DialogueModule.ReadDialogue(npc: Model)
           ResponsesEnabled = true;
 
         else
-          
+
           -- Use the text container without responses.
           TextContainer = ThemeDialogueContainer.NPCTextContainerWithoutResponses;
           ThemeDialogueContainer.NPCTextContainerWithoutResponses.Visible = true;
@@ -322,10 +315,10 @@ function DialogueModule.ReadDialogue(npc: Model)
             return;
 
           end;
-          
+
           -- Temporarily remove the keybind so that the player doesn't skip the next message.
           ContextActionService:UnbindAction("ContinueDialogue");
-          
+
           if NPCTalking then
 
             if ClickSoundEnabled then
@@ -354,16 +347,16 @@ function DialogueModule.ReadDialogue(npc: Model)
             WaitingForResponse = false;
 
           end;
-          
+
         end;
 
         Events.DialogueClicked = ThemeDialogueContainer.InputBegan:Connect(function(input)
 
           -- Make sure the player clicked the frame
           if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            
+
             ContinueDialogue();
-            
+
           end;
 
         end);
@@ -392,7 +385,7 @@ function DialogueModule.ReadDialogue(npc: Model)
           end;
 
         end;
-        
+
         -- Put the letters of the message together for an animation effect
         DialogueGui.Enabled = true;
         local Position = 0;
@@ -405,10 +398,10 @@ function DialogueModule.ReadDialogue(npc: Model)
           FullMessageText = page.FullText;
           TextContainer.Line.Text = FullMessageText;
           for count = 0, TextContainer.Line.Text:len() do
-            
+
             TextContainer.Line.MaxVisibleGraphemes = count;
             task.wait(LetterDelay);
-            
+
             if (TextContainer.Line.MaxVisibleGraphemes == -1) then 
 
               break;
@@ -436,16 +429,16 @@ function DialogueModule.ReadDialogue(npc: Model)
 
         end;
         NPCTalking = false;
-        
+
         local ResponseChosen;
         if ResponsesEnabled and DialogueModule.PlayerTalkingWithNPC.Value then
 
           -- Sort response folders, because :GetChildren() doesn't guarantee it
           local ResponseFolders = CurrentDirectory.Responses:GetChildren();
           table.sort(ResponseFolders, function(folder1, folder2)
-            
+
             return folder1.Name < folder2.Name;
-            
+
           end);
 
           -- Add response buttons
@@ -508,9 +501,9 @@ function DialogueModule.ReadDialogue(npc: Model)
         end)();
 
         while WaitingForResponse and DialogueModule.PlayerTalkingWithNPC.Value do
-          
+
           game:GetService("RunService").Heartbeat:Wait();
-          
+
         end;
 
         -- Run after action
@@ -552,7 +545,7 @@ function DialogueModule.ReadDialogue(npc: Model)
         end;
 
       elseif DialogueModule.PlayerTalkingWithNPC.Value then
-        
+
         -- There is a message; however, the player failed the condition.
         -- Let's check if there's something else available.
         local SplitPriority = DialoguePriority:split(".");
