@@ -16,9 +16,9 @@ local DialogueModule = {
 
 local API;
 function DialogueModule._setAPI(api)
-  
+
   API = api;
-  
+
 end
 
 function DialogueModule.GoToDirectory(currentDirectory: Folder, targetPath: {string}): Folder
@@ -84,20 +84,13 @@ function DialogueModule.DivideTextToFitBox(text: string, textContainer: Frame): 
   Line.Name = "LineTest";
   Line.Visible = false;
   Line.Parent = textContainer;
+  Line.Text = "";
 
   local Divisions = {};
   local Page = 1;
   for index, word in ipairs(text:split(" ")) do
 
-    if index == 1 then
-
-      Line.Text = word;
-
-    else
-
-      Line.Text = Line.Text .. " " .. word;
-
-    end;
+    Line.Text = Line.Text .. " " .. word;
 
     if not Divisions[Page] then Divisions[Page] = {}; end;
 
@@ -260,10 +253,12 @@ function DialogueModule.ReadDialogue(npc: Model)
     local CurrentDirectory = RootDirectory;
     while DialogueModule.PlayerTalkingWithNPC.Value and game:GetService("RunService").Heartbeat:Wait() do
 
+      -- Get the current directory.
       CurrentDirectory = API.Dialogue.GoToDirectory(RootDirectory, DialoguePriority:split("."));
 
       if CurrentDirectory.Redirect.Value and RemoteConnections.PlayerPassesCondition:InvokeServer(npc, CurrentDirectory) then
 
+        -- A redirect is available, so let's switch priorities.
         local DialoguePriorityPath = CurrentDirectory.RedirectPriority.Value:split(".");
         table.remove(DialoguePriorityPath, 1);
         DialoguePriority = table.concat(DialoguePriorityPath, ".");
@@ -272,29 +267,24 @@ function DialogueModule.ReadDialogue(npc: Model)
 
       elseif RemoteConnections.PlayerPassesCondition:InvokeServer(npc, CurrentDirectory) then
 
-        local MessageText = API.Dialogue.ReplaceVariablesWithValues(npc, CurrentDirectory.Message.Value);
-        local ThemeDialogueContainer = DialogueGui.DialogueContainer;
-        local ResponsesEnabled = false;
-        local NPCTalking = true;
-        local WaitingForResponse = true;
-        local Skipped = false;
-        local FullMessageText = "";
-        local Message = "";
-        local NPCPaused = false;
-        local ImportantPositions = {};
-        local Position = 0;
-        local Adding = false;
-        local TextContainer, ContinueDialogue, ResponseChosen, DividedText;
-
-        -- Run the before action if there is one
+        -- A message is available, so let's display it.
+        -- If there's a before action, run it.
         if CurrentDirectory.HasBeforeAction.Value then
+
           RemoteConnections.ExecuteAction:InvokeServer(npc, CurrentDirectory, "Before");
+
         end;
 
+        -- Determine which text container we should use.
+        local ThemeDialogueContainer = DialogueGui.DialogueContainer;
+        local ResponsesEnabled = false;
+        local TextContainer;
         if #CurrentDirectory.Responses:GetChildren() > 0 then
 
+          -- Clear the text container just in case there was some responses left behind.
           API.Dialogue.ClearResponses(ResponseContainer);
 
+          -- Use the text container with responses.
           TextContainer = ThemeDialogueContainer.NPCTextContainerWithResponses;
           ThemeDialogueContainer.NPCTextContainerWithResponses.Visible = true;
           ThemeDialogueContainer.NPCTextContainerWithoutResponses.Visible = false;
@@ -302,25 +292,33 @@ function DialogueModule.ReadDialogue(npc: Model)
 
         else
 
+          -- Use the text container without responses.
           TextContainer = ThemeDialogueContainer.NPCTextContainerWithoutResponses;
           ThemeDialogueContainer.NPCTextContainerWithoutResponses.Visible = true;
           ThemeDialogueContainer.NPCTextContainerWithResponses.Visible = false;
           ThemeDialogueContainer.ResponseContainer.Visible = false;
 
         end;
-        DividedText = API.Dialogue.DivideTextToFitBox(MessageText, TextContainer);
 
         -- Make the NPC stop talking if the player clicks the frame
+        local NPCTalking = true;
+        local WaitingForResponse = true;
+        local Skipped = false;
+        local FullMessageText = "";
+        local NPCPaused = false;
+        local ContinueDialogue;
         ContinueDialogue = function(keybind)
 
-          -- Make sure key is down
+          -- Ensure the player is holding the key.
           if keybind and not UserInputService:IsKeyDown(Keybinds.DefaultChatContinueKey) and not UserInputService:IsKeyDown(Keybinds.DefaultChatContinueKeyGamepad) then
 
             return;
 
           end;
 
+          -- Temporarily remove the keybind so that the player doesn't skip the next message.
           ContextActionService:UnbindAction("ContinueDialogue");
+
           if NPCTalking then
 
             if ClickSoundEnabled then
@@ -335,12 +333,10 @@ function DialogueModule.ReadDialogue(npc: Model)
 
             end;
 
-            -- Check settings set by the developer
             if AllowPlayerToSkipDelay then
 
               -- Replace the incomplete dialogue with the full text
-              TextContainer.Line.Text = FullMessageText;
-              Skipped = true;
+              TextContainer.Line.MaxVisibleGraphemes = -1;
 
             end;
 
@@ -351,13 +347,16 @@ function DialogueModule.ReadDialogue(npc: Model)
             WaitingForResponse = false;
 
           end;
+
         end;
 
         Events.DialogueClicked = ThemeDialogueContainer.InputBegan:Connect(function(input)
 
           -- Make sure the player clicked the frame
           if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+
             ContinueDialogue();
+
           end;
 
         end);
@@ -388,166 +387,26 @@ function DialogueModule.ReadDialogue(npc: Model)
         end;
 
         -- Put the letters of the message together for an animation effect
-        if TextContainer.Line.RichText then
-
-          -- TODO: find a way to mix rich text syntax with fonts
-          local TagContentPattern = "<([^<>]-)>(.-)</";
-          local TagStart, TagEnd, Tag, Content, Value, Attribute, NewPattern;
-          local function UpdateTagData(str)
-
-            -- Find the tag
-            local _TagStart, _, _Tag, _ = str:find(TagContentPattern);
-
-            if _TagStart then
-
-              local _Attribute, _Value = nil, nil;
-              if _Tag:find(" ") then
-
-                -- Get the real tag
-                local Split1 = _Tag:split(" ");
-                _Tag = Split1[1];
-
-                -- Get the real attribute and value
-                local Split2 = Split1[2]:split("=");
-                _Attribute, _Value = Split2[1], Split2[2];
-
-              end
-
-              -- Make a new pattern based on the tag we have
-              local _NewPattern = TagContentPattern .. _Tag .. ">";
-              local _, _TagEnd, _, _Content = str:find(_NewPattern);
-
-              return _TagStart, _TagEnd, _Tag, _Content, _Attribute, _Value, _NewPattern;
-
-            end;
-
-          end;
-
-          TagStart, TagEnd, Tag, Content, Attribute, Value, NewPattern = UpdateTagData(MessageText);
-
-          while TagStart do
-
-            local TagGroup = MessageText:sub(TagStart, TagEnd);
-            local ContentStart, ContentEnd = TagGroup:find(Content, 1, true);
-
-            -- Get the sub-tags inside the first one
-            if not ImportantPositions[TagStart] then
-
-              ImportantPositions[TagStart] = {};
-
-            end;
-
-            local ETagStart, ETagEnd, ETag, EContent, EAttr, EVal, EPattern = UpdateTagData(Content);
-            while ETagStart do
-
-              -- Add the sub tag to the table
-              table.insert(ImportantPositions[TagStart], {ETag .. (EVal and (" " .. EAttr .. '=' .. EVal) or "")});
-
-              -- Scrub the tag from the content + length
-              Content = Content:gsub(Content:sub(ETagStart, ETagEnd), EContent);
-
-              ETagStart, ETagEnd, ETag, EContent, EAttr, EVal, EPattern = UpdateTagData(Content);
-
-            end;
-
-            -- Change all the final content lengths
-            local ContentLength = TagStart + Content:len() - 1;
-            for i, _ in ipairs(ImportantPositions[TagStart]) do
-
-              ImportantPositions[TagStart][i][2] = ContentLength;
-
-            end;
-
-            -- Add the main tag to the table
-            table.insert(ImportantPositions[TagStart], {Tag .. (Value and (" " .. Attribute .. '=' .. Value) or ""), ContentLength});
-
-            -- Scrub the tags from the original text
-            MessageText = MessageText:gsub(TagGroup, Content, 1);
-
-            -- Check if there's any more tags
-            TagStart, TagEnd, Tag, Content, Attribute, Value, NewPattern = UpdateTagData(MessageText);
-
-          end;
-
-        end;
-
         DialogueGui.Enabled = true;
+        local Position = 0;
+        local Adding = false;
+        local MessageText = API.Dialogue.ReplaceVariablesWithValues(npc, CurrentDirectory.Message.Value);
+        local DividedText = API.Dialogue.DivideTextToFitBox(MessageText, TextContainer);
         for index, page in ipairs(DividedText) do
 
           -- Now we can get the new text
           FullMessageText = page.FullText;
-          for wordIndex, word in ipairs(page) do 
+          TextContainer.Line.Text = FullMessageText;
+          for count = 0, TextContainer.Line.Text:len() do
 
-            local Extras = "";
+            TextContainer.Line.MaxVisibleGraphemes = count;
+            task.wait(LetterDelay);
 
-            if wordIndex ~= 1 then 
+            if (TextContainer.Line.MaxVisibleGraphemes == -1) then 
 
-              Position += 1; 
-              if Adding then
+              break;
 
-                ImportantPositions[Position + 1] = ImportantPositions[Position];
-                Adding = false;
-
-              end;
-              Message = Message .. " ";
-
-            end;
-
-            for _, letter in ipairs(word:split("")) do
-
-              Adding = false;
-
-              -- Check if the player wants to skip their dialogue
-              if Skipped or not NPCTalking or not DialogueModule.PlayerTalkingWithNPC.Value then
-
-                break;
-
-              end;
-
-              Position += 1;
-              local IP = ImportantPositions[Position];  
-              if IP then
-
-                local Replacement = letter;
-
-                for _, tag in ipairs(IP) do
-
-                  if not tag.OriginalPosition then
-
-                    tag.OriginalPosition = Position;
-                    Replacement = "<" .. tag[1] .. ">" .. Replacement .. ((Position == tag[2] and "</" .. tag[1]:match("%a+") .. ">") or "");
-
-                  end;
-                  if Position < tag[2] then 
-
-                    Extras = Extras .. "</" .. tag[1]:match("%a+") .. ">";
-                    if not ImportantPositions[Position + 1] then
-
-                      ImportantPositions[Position + 1] = {};
-
-                    end;
-                    table.insert(ImportantPositions[Position + 1], tag);
-                    Adding = true;
-
-                  elseif tag.OriginalPosition ~= Position and Position == tag[2] then
-
-                    Replacement = Replacement .. "</" .. tag[1]:match("%a+") .. ">";
-
-                  end;
-
-                end;
-                Message = Message .. Replacement;
-
-              else 
-
-                Message = Message .. letter;
-
-              end;
-              TextContainer.Line.Text = Message .. Extras;
-              Extras = "";
-              wait(LetterDelay);
-
-            end;
+            end
 
           end;
 
@@ -562,31 +421,30 @@ function DialogueModule.ReadDialogue(npc: Model)
 
             end;
 
-            -- Don't carry the old text in the next message
-            Message = "";
-
             -- Let the NPC speak again
             ThemeDialogueContainer.ClickToContinue.Visible = false;
             NPCPaused = false;
-            Skipped = false;
 
           end;
 
         end;
         NPCTalking = false;
 
+        local ResponseChosen;
         if ResponsesEnabled and DialogueModule.PlayerTalkingWithNPC.Value then
 
           -- Sort response folders, because :GetChildren() doesn't guarantee it
           local ResponseFolders = CurrentDirectory.Responses:GetChildren();
           table.sort(ResponseFolders, function(folder1, folder2)
+
             return folder1.Name < folder2.Name;
+
           end);
 
           -- Add response buttons
           for _, response in ipairs(ResponseFolders) do
 
-            if RemoteConnections.PlayerPassesCondition:InvokeServer(npc,response) then
+            if RemoteConnections.PlayerPassesCondition:InvokeServer(npc, response) then
 
               local ResponseButton = ResponseTemplate:Clone();
               ResponseButton.Name = "Response";
@@ -635,7 +493,7 @@ function DialogueModule.ReadDialogue(npc: Model)
             end;
 
             -- Wait the timeout set by the developer
-            wait(ConversationTimeoutInSeconds);
+            task.wait(ConversationTimeoutInSeconds);
             WaitingForResponse = false;
 
           end;
@@ -643,7 +501,9 @@ function DialogueModule.ReadDialogue(npc: Model)
         end)();
 
         while WaitingForResponse and DialogueModule.PlayerTalkingWithNPC.Value do
+
           game:GetService("RunService").Heartbeat:Wait();
+
         end;
 
         -- Run after action
@@ -686,6 +546,8 @@ function DialogueModule.ReadDialogue(npc: Model)
 
       elseif DialogueModule.PlayerTalkingWithNPC.Value then
 
+        -- There is a message; however, the player failed the condition.
+        -- Let's check if there's something else available.
         local SplitPriority = DialoguePriority:split(".");
         SplitPriority[#SplitPriority] = SplitPriority[#SplitPriority] + 1;
         DialoguePriority = table.concat(SplitPriority,".");

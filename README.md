@@ -32,3 +32,4 @@ Sure! If you feel like that the Dialogue Maker can be improved for everyone, jus
 * [**joshuajon**](https://github.com/joshuajon) - Bug Reporter
 * [**LordMerc**](https://devforum.roblox.com/u/lordmerc/summary) - Bug Reporter
 * [**thomkok13**](https://devforum.roblox.com/u/thomkok13/summary) - Bug Reporter
+* [**extravent3**](https://devforum.roblox.com/u/extravent3/summary) - Bug Reporter
