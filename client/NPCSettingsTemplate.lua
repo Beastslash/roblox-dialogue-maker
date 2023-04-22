@@ -5,11 +5,11 @@ return {
     NPCName = ""; -- Change this to a theme you've added to the Themes folder in order to override default theme settings. [accepts string]
 
     ShowName = false; -- When true, the NPC's name will be shown when the player talks to them. [accepts boolean]
-    
+
     FitName = true; -- When true, the NPCNameFrame will be automatically resized to fit NPC names.
-    
+
     TextBoundsOffset = 30; -- If General.FitName is true, this value will be added to the TextBounds offset of the NPC's name.
-    
+
     ThemeName = ""; -- Change this to the theme's name. [accepts string]
 
     LetterDelay = 0.025; -- Change this to the amount of seconds you want to wait before the next letter in the NPC's message is shown. [accepts number >= 0]
@@ -21,6 +21,14 @@ return {
     EndConversationIfOutOfDistance = false; -- If true, the conversation will end if the PrimaryParts of the NPC and the player exceed the MaximumConversationDistance. [accepts boolean]
 
     MaxConversationDistance = 10; -- Maximum magnitude between the NPC's HumanoidRootPart and the player's PrimaryPart before the conversation ends. Requires EndConversationIfOutOfDistance to be true. [accepts number]
+
+    NPCLooksAtPlayerDuringDialogue = false; -- If true, the NPC will look at the player character during dialogue. Requires the NPC character and the player character to be Humanoids. [accepts boolean]
+
+    NPCNeckRotationMaxX = 0.8726; -- The maximum angle of the NPC's neck on the X axis. Requires NPCLooksAtPlayerDuringDialogue to be true. [accepts number] 
+
+    NPCNeckRotationMaxY = 1.0472; -- The maximum angle of the NPC's neck on the Y axis. Requires NPCLooksAtPlayerDuringDialogue to be true. [accepts number] 
+
+    NPCNeckRotationMaxZ = 0.8726; -- The maximum angle of the NPC's neck on the Z axis. Requires NPCLooksAtPlayerDuringDialogue to be true. [accepts number] 
 
   };
 
