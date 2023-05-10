@@ -111,14 +111,6 @@ for _, npc in ipairs(NPCDialogue) do
         ProximityPrompt.MaxActivationDistance = ProximityPromptActivationDistance;
         ProximityPrompt.HoldDuration = ProximityPromptHoldDuration;
         ProximityPrompt.RequiresLineOfSight = ProximityPromptRequiresLineOfSight;
-
-        -- TODO: Remove in v4.0.0
-        if typeof(DialogueSettings.ProximityPrompt) == "table" then
-          ProximityPrompt.GamepadKeyCode = DialogueSettings.ProximityPrompt.GamepadKeyCode;
-          ProximityPrompt.KeyboardKeyCode = DialogueSettings.ProximityPrompt.KeyboardKeyCode;
-          ProximityPrompt.ObjectText = DialogueSettings.ProximityPrompt.ObjectText;
-        end;
-
         ProximityPrompt.Parent = npc;
         ProximityPromptLocation = ProximityPrompt;
 
