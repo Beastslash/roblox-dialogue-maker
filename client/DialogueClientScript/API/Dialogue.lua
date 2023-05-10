@@ -611,7 +611,7 @@ function DialogueModule.ReadDialogue(npc: Model)
 
           end;
 
-          ResponseContainer.CanvasSize = UDim2.new(0, ResponseContainer.CanvasSize.X, 0, ResponseContainer.UIListLayout.AbsoluteContentSize.Y);
+          ResponseContainer.CanvasSize = UDim2.new(0, ResponseContainer.CanvasSize.X.Offset, 0, ResponseContainer.UIListLayout.AbsoluteContentSize.Y);
           ThemeDialogueContainer.ResponseContainer.Visible = true;
 
         end;
