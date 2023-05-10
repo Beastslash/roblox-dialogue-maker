@@ -28,7 +28,7 @@ RemoteConnections.GetNPCDialogue.OnServerInvoke = function(player)
 
 end;
 
-RemoteConnections.GetDefaultTheme.OnServerInvoke = function(player)
+RemoteConnections.GetDefaultThemes.OnServerInvoke = function(player)
 
   return Settings.DefaultTheme;
 
