@@ -79,63 +79,146 @@ function DialogueModule.ClearResponses(responseContainer: Folder)
 
 end;
 
-function DialogueModule.DivideTextToFitBox(text: string, textContainer: Frame): {{[number]: string}?}
+function DialogueModule.DivideTextToFitBox(text: string, textContainer: Frame): {[number]: string}
 
-  local Line = textContainer:FindFirstChild("Line"):Clone();
+  -- Make sure we have a TextLabel named "Line".
+  local OriginalLine: TextLabel? = textContainer:FindFirstChild("Line") :: TextLabel;
+  assert(OriginalLine, "Line not found in NPCTextContainer.");
+  
+  -- Clone the TextLabel.
+  local Line: TextLabel = OriginalLine:Clone();
   Line.Name = "LineTest";
   Line.Visible = false;
   Line.Parent = textContainer;
-  Line.Text = "";
+  
+  -- Determine rich text indices.
+  local RichTextTagIndices: {
+    [number]: {
+      Name: string;
+      Attributes: string?;
+      StartOffset: number;
+      EndOffset: number?;
+    }
+  } = {};
+  local OpenTagIndices: {[number]: number} = {};
+  local textCopy = text;
+  local tagPattern = "<[^<>]->";
+  local Pointer = 1;
+  for tag in textCopy:gmatch(tagPattern) do
+    
+    -- Get the tag name and attributes.
+    local TagText = tag:match("<([^<>]-)>");
+    local FirstSpaceIndex = TagText:find(" ");
+    local TagTextLength = TagText:len();
+    local Name = TagText:sub(1, (FirstSpaceIndex and FirstSpaceIndex - 1) or TagTextLength);
+    if Name:sub(1, 1) == "/" then
 
-  local Divisions = {};
-  local Page = 1;
-  for index, word in ipairs(text:split(" ")) do
+      for _, index in ipairs(OpenTagIndices) do
+        
+        if RichTextTagIndices[index].Name == Name:sub(2) then
+          
+          -- Add a tag end offset.
+          local _, EndOffset = textCopy:find(tagPattern);
+          RichTextTagIndices[index].EndOffset = Pointer + EndOffset;
+          
+          -- Remove the tag from the open tag table.
+          table.remove(OpenTagIndices, index);
+          break;
+          
+        end
+        
+      end
+      
+    else
+      
+      -- Get the tag start offset.
+      local StartOffset = Pointer;
+      local Attributes = FirstSpaceIndex and TagText:sub(FirstSpaceIndex + 1) or "";
+      table.insert(RichTextTagIndices, {
+        Name = Name;
+        Attributes = Attributes;
+        StartOffset = Pointer
+      });
+      table.insert(OpenTagIndices, #RichTextTagIndices);
+      
+    end
+    
+    -- Remove the tag from our copy.
+    local _, PointerUpdate = textCopy:find(tagPattern);
+    Pointer += PointerUpdate - 1;
+    textCopy = textCopy:sub(PointerUpdate);
+    
+  end
+  
+  -- 
+  Pointer = 1;
+  local MessageParts = {};
+  repeat
+    
+    -- Check if there's rich text missing.
+    Line.Text = text;
+    local RichTextAdditions = 0;
+    for i = #RichTextTagIndices, 1, -1 do
+      
+      local TagInfo = RichTextTagIndices[i];
+      if TagInfo.StartOffset < Pointer and TagInfo.EndOffset >= Pointer then
 
-    Line.Text = Line.Text .. " " .. word;
-
-    if not Divisions[Page] then Divisions[Page] = {}; end;
-
-    if Line.TextFits then
-
-      table.insert(Divisions[Page],word);
-      Divisions[Page].FullText = Line.Text;
-
-    elseif not Divisions[Page][1] then
-
-      Line.Text = "";
-      for _, letter in ipairs(word:split("")) do
-
-        Line.Text = Line.Text .. letter;
-        if not Line.TextFits then
-
-          -- Remove the letter from the text
-          Line.Text = Line.Text:sub(1,string.len(Line.Text)-1);
-          table.insert(Divisions[Page], Line.Text);
-          Divisions[Page].FullText = Line.Text;
-
-          -- Take it from the top
-          Page = Page + 1;
-          Divisions[Page] = {};
-          Line.Text = letter;
-
-        end;
+        Line.Text = "<" .. TagInfo.Name .. ((TagInfo.Attributes ~= "" and (" " .. TagInfo.Attributes)) or "") .. ">" .. Line.Text;
 
       end;
 
-      table.insert(Divisions[Page], Line.Text);
-      Divisions[Page].FullText = Line.Text;
-
-    else
-
-      Page = Page + 1;
+    end
+    
+    -- Check if the message fits without us having to do anything.
+    if not Line.TextFits then
+      
+      -- Check if the message fits without the last word of the message.
+      while not Line.TextFits do
+        
+        -- Get the space that is the closest to the end of the message.
+        local LastSpaceIndex = Line.Text:match("^.*() ");
+        if not LastSpaceIndex then
+          
+          break;
+          
+        end;
+        
+        -- Reform the message without that word.
+        Line.Text = Line.Text:sub(1, LastSpaceIndex - 1);
+        
+      end;
+      
+      -- Check if there are any rich text tags we need to add.
+      Pointer += Line.Text:len();
+      for i = #RichTextTagIndices, 1, -1 do
+        
+        if RichTextTagIndices[i].StartOffset < Pointer and RichTextTagIndices[i].EndOffset >= Pointer then
+          
+          local EndTag = "</" .. RichTextTagIndices[i].Name .. ">";
+          Line.Text = Line.Text .. EndTag;
+          RichTextAdditions += EndTag:len();
+          
+        elseif RichTextTagIndices[i].StartOffset > Pointer then
+          
+          break;
+          
+        end;
+        
+      end
 
     end;
+    
+    -- Add the words to the table.
+    table.insert(MessageParts, Line.Text);
+    
+    -- Subtract what we added to the table.
+    text = text:sub(Line.Text:len() - RichTextAdditions + 1);
 
-  end;
+  until text == "";
 
   Line:Destroy();
 
-  return Divisions;
+  return MessageParts;
 
 end;
 
@@ -448,7 +531,7 @@ function DialogueModule.ReadDialogue(npc: Model)
         for index, page in ipairs(DividedText) do
 
           -- Now we can get the new text
-          FullMessageText = page.FullText;
+          FullMessageText = page;
           TextContainer.Line.Text = FullMessageText;
           for count = 0, TextContainer.Line.Text:len() do
 
@@ -463,7 +546,7 @@ function DialogueModule.ReadDialogue(npc: Model)
 
           end;
 
-          if DividedText[index+1] and NPCTalking then
+          if DividedText[index + 1] and NPCTalking then
 
             -- Wait for the player to click
             ThemeDialogueContainer.ClickToContinue.Visible = true;
@@ -528,7 +611,7 @@ function DialogueModule.ReadDialogue(npc: Model)
 
           end;
 
-          ResponseContainer.CanvasSize = UDim2.new(0, ResponseContainer.CanvasSize.X, 0, ResponseContainer.UIListLayout.AbsoluteContentSize.Y);
+          ResponseContainer.CanvasSize = UDim2.new(0, ResponseContainer.CanvasSize.X.Offset, 0, ResponseContainer.UIListLayout.AbsoluteContentSize.Y);
           ThemeDialogueContainer.ResponseContainer.Visible = true;
 
         end;
