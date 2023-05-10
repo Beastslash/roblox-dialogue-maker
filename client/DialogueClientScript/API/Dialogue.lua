@@ -270,18 +270,18 @@ function DialogueModule.ReadDialogue(npc: Model)
     local NPCPrimaryPart = npc.PrimaryPart;
     local DialogueContainer = npc:FindFirstChild("DialogueContainer");
     local DialogueSettings = require(DialogueContainer.Settings);
-    local DialogueGui = API.GUI.CreateNewDialogueGui(DialogueSettings.Theme or (DialogueSettings.General and DialogueSettings.General.ThemeName));
-    local FreezePlayer = DialogueSettings.FreezePlayer or (DialogueSettings.General and DialogueSettings.General.FreezePlayer);
-    local MaxConversationDistance = DialogueSettings.MaximumConversationDistance or (DialogueSettings.General and DialogueSettings.General.MaxConversationDistance);
-    local EndConversationIfOutOfDistance = DialogueSettings.EndConversationIfOutOfDistance or (DialogueSettings.General and DialogueSettings.General.EndConversationIfOutOfDistance);
-    local NPCName = DialogueSettings.Name or (DialogueSettings.General and DialogueSettings.General.NPCName);
-    local FitName = DialogueSettings.General and DialogueSettings.General.FitName;
-    local TextBoundsOffset = (DialogueSettings.General and DialogueSettings.General.TextBoundsOffset) or 30;
-    local AllowPlayerToSkipDelay = DialogueSettings.AllowPlayerToSkipDelay or (DialogueSettings.General and DialogueSettings.General.AllowPlayerToSkipDelay);
-    local LetterDelay = DialogueSettings.LetterDelay or (DialogueSettings.General and DialogueSettings.General.LetterDelay);
-    local TimeoutEnabled = DialogueSettings.TimeoutEnabled or (DialogueSettings.General and DialogueSettings.General.TimeoutEnabled);
-    local ConversationTimeoutInSeconds = DialogueSettings.ConversationTimeoutInSeconds or (DialogueSettings.General and DialogueSettings.General.ConversationTimeoutInSeconds);
-    local WaitForResponse = DialogueSettings.WaitForResponse or (DialogueSettings.General and DialogueSettings.General.WaitForResponse);
+    local DialogueGui = API.GUI.CreateNewDialogueGui(DialogueSettings.General.ThemeName);
+    local FreezePlayer = DialogueSettings.General.FreezePlayer;
+    local MaxConversationDistance = DialogueSettings.General.MaxConversationDistance;
+    local EndConversationIfOutOfDistance = DialogueSettings.General.EndConversationIfOutOfDistance;
+    local NPCName = DialogueSettings.General.NPCName;
+    local FitName = DialogueSettings.General.FitName;
+    local TextBoundsOffset = DialogueSettings.General.TextBoundsOffset or 30;
+    local AllowPlayerToSkipDelay = DialogueSettings.General.AllowPlayerToSkipDelay;
+    local LetterDelay = DialogueSettings.General.LetterDelay;
+    local TimeoutEnabled = DialogueSettings.General.TimeoutEnabled;
+    local ConversationTimeoutInSeconds = DialogueSettings.General.ConversationTimeoutInSeconds;
+    local WaitForResponse = DialogueSettings.General.WaitForResponse;
     local ResponseContainer, ResponseTemplate, ClickSound, ClickSoundEnabled, OldDialogueGui;
 
     -- If necessary, freeze the player
