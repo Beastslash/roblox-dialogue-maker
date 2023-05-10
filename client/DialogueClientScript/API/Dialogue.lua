@@ -80,11 +80,12 @@ function DialogueModule.ClearResponses(responseContainer: Folder)
 end;
 
 function DialogueModule.DivideTextToFitBox(text: string, textContainer: Frame): {[number]: string}
-
+  
+  
   -- Make sure we have a TextLabel named "Line".
   local OriginalLine: TextLabel? = textContainer:FindFirstChild("Line") :: TextLabel;
   assert(OriginalLine, "Line not found in NPCTextContainer.");
-  
+
   -- Clone the TextLabel.
   local Line: TextLabel = OriginalLine:Clone();
   Line.Name = "LineTest";
@@ -157,26 +158,55 @@ function DialogueModule.DivideTextToFitBox(text: string, textContainer: Frame): 
     
     -- Check if there's rich text missing.
     Line.Text = text;
-    local RichTextAdditions = 0;
+    local RichTextTags = "";
     for i = #RichTextTagIndices, 1, -1 do
       
       local TagInfo = RichTextTagIndices[i];
       if TagInfo.StartOffset < Pointer and TagInfo.EndOffset >= Pointer then
-
-        Line.Text = "<" .. TagInfo.Name .. ((TagInfo.Attributes ~= "" and (" " .. TagInfo.Attributes)) or "") .. ">" .. Line.Text;
+        
+        RichTextTags = "<" .. TagInfo.Name .. ((TagInfo.Attributes ~= "" and (" " .. TagInfo.Attributes)) or "") .. ">" .. RichTextTags;
 
       end;
 
     end
+
+    local RichTextStart = RichTextTags:len() + 1;
+    Line.Text = RichTextTags .. Line.Text;
     
     -- Check if the message fits without us having to do anything.
-    if not Line.TextFits then
+    local RichTextAdditions = 0;
+    while not Line.TextFits do
       
-      -- Check if the message fits without the last word of the message.
-      while not Line.TextFits do
+      -- Add rich text endings to see if that changes anything.
+      local TempRichTextEndTags = "";
+      local OriginalText = Line.Text;
+      local TempPointer = Pointer + OriginalText:sub(RichTextStart):len();
+      local function RefreshTempRichTextEndTags() 
         
+        for i = #RichTextTagIndices, 1, -1 do
+
+          if RichTextTagIndices[i].StartOffset < TempPointer and RichTextTagIndices[i].EndOffset >= TempPointer then
+
+            TempRichTextEndTags = TempRichTextEndTags .. "</" .. RichTextTagIndices[i].Name .. ">";
+
+          elseif RichTextTagIndices[i].StartOffset > TempPointer then
+
+            break;
+
+          end;
+
+        end
+        
+      end;
+      
+      Line.Text = OriginalText .. TempRichTextEndTags;
+      RichTextAdditions = TempRichTextEndTags:len();
+      
+      -- Check if popping off a word helps.
+      if not Line.TextFits then
+      
         -- Get the space that is the closest to the end of the message.
-        local LastSpaceIndex = Line.Text:match("^.*() ");
+        local LastSpaceIndex = OriginalText:match("^.*() ");
         if not LastSpaceIndex then
           
           break;
@@ -184,35 +214,34 @@ function DialogueModule.DivideTextToFitBox(text: string, textContainer: Frame): 
         end;
         
         -- Reform the message without that word.
-        Line.Text = Line.Text:sub(1, LastSpaceIndex - 1);
+        OriginalText = OriginalText:sub(1, LastSpaceIndex - 1);
+        TempPointer = Pointer + OriginalText:sub(RichTextStart):len();
+        RefreshTempRichTextEndTags();
+        RichTextAdditions = TempRichTextEndTags:len();
+        Line.Text = OriginalText .. TempRichTextEndTags;
+        
+        -- 
+        if not Line.TextFits then
+          
+          RichTextAdditions = 0;
+          Line.Text = OriginalText;
+          
+        end
         
       end;
       
-      -- Check if there are any rich text tags we need to add.
-      Pointer += Line.Text:len();
-      for i = #RichTextTagIndices, 1, -1 do
-        
-        if RichTextTagIndices[i].StartOffset < Pointer and RichTextTagIndices[i].EndOffset >= Pointer then
-          
-          local EndTag = "</" .. RichTextTagIndices[i].Name .. ">";
-          Line.Text = Line.Text .. EndTag;
-          RichTextAdditions += EndTag:len();
-          
-        elseif RichTextTagIndices[i].StartOffset > Pointer then
-          
-          break;
-          
-        end;
-        
-      end
-
+      RunService.Heartbeat:Wait();
+      
     end;
-    
+
     -- Add the words to the table.
     table.insert(MessageParts, Line.Text);
+
+    -- Update the pointer.
+    Pointer += Line.Text:sub(RichTextStart):len() - RichTextAdditions;
     
     -- Subtract what we added to the table.
-    text = text:sub(Line.Text:len() - RichTextAdditions + 1);
+    text = text:sub(Line.Text:sub(RichTextStart):len() - RichTextAdditions + 2);
 
   until text == "";
 
