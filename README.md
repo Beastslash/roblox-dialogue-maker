@@ -7,11 +7,13 @@ The Dialogue Maker is an open-source plugin for creating RPG-like dialogue boxes
 * Responsive dialogue editor
 * Trigger dialogue with proximity regions and ClickDetectors
 * Prioritize your dialogue with conditions and message stacking
-* Run synchronous and asynchronous functions before and after dialogue starts
+* Run functions before and after a message
 * Impose dialogue timeouts
 * Embed variables that are customizable throughout the conversation
 * Add responses for the player to add interactivity to the conversation
-* Add dialogue redirects and make the conversation flow efficient
+* Add dialogue redirects
+* Customize themes per NPC and per screen size
+* Add message pauses
 
 ## Where can I get it?
 You can either get [the version Beastslash updates at the Roblox Library](https://www.roblox.com/library/4930928141/Dialogue-Maker-Beta) or you can build your own version by using the scripts in this repository.
@@ -26,10 +28,10 @@ Sure! If you feel like that the Dialogue Maker can be improved for everyone, jus
 * [**Christian "Sudobeast" Toney**](https://twitter.com/Sudobeast) - Project Manager and Lead Programmer
 * [**BHickey94**](https://github.com/BHickey94) - Code Contributor
 * [**GAVsi115**](https://devforum.roblox.com/u/gavsi115/summary) - Code Contributor and Bug Reporter
+* [**extravent3**](https://devforum.roblox.com/u/extravent3/summary) - Issue Sponsor and Bug Reporter
 * [**ruax2891**](https://twitter.com/ruax2891) - QA Tester
 * [**InkyTheBlue**](https://twitter.com/InkyTheBlueDerg) - QA Tester
 * [**BeatArcade**](https://www.roblox.com/users/2893686241/profile) - Bug Reporter
 * [**joshuajon**](https://github.com/joshuajon) - Bug Reporter
 * [**LordMerc**](https://devforum.roblox.com/u/lordmerc/summary) - Bug Reporter
 * [**thomkok13**](https://devforum.roblox.com/u/thomkok13/summary) - Bug Reporter
-* [**extravent3**](https://devforum.roblox.com/u/extravent3/summary) - Bug Reporter

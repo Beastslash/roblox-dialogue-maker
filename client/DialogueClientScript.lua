@@ -28,30 +28,26 @@ for _, npc in ipairs(NPCDialogue) do
     
     -- Get speech bubble settings.
     local DialogueSettings = require(npc.DialogueContainer.Settings);
-    local SpeechBubbleSettingsIsTable = typeof(DialogueSettings.SpeechBubble) == "table";
-    local SpeechBubbleEnabled = DialogueSettings.SpeechBubbleEnabled or (SpeechBubbleSettingsIsTable and DialogueSettings.SpeechBubble.Enabled);
-    local SpeechBubblePart = DialogueSettings.SpeechBubblePart or (SpeechBubbleSettingsIsTable and DialogueSettings.SpeechBubble.BasePart);
+    local SpeechBubbleEnabled = DialogueSettings.SpeechBubble.Enabled;
+    local SpeechBubblePart = DialogueSettings.SpeechBubble.BasePart;
     
     -- Get prompt region settings.
-    local PromptRegionSettingsIsTable = typeof(DialogueSettings.PromptRegion) == "table";
-    local PromptRegionEnabled = DialogueSettings.PromptRegionEnabled or (PromptRegionSettingsIsTable and DialogueSettings.PromptRegion.Enabled);
-    local PromptRegionPart = DialogueSettings.PromptRegionPart or (PromptRegionSettingsIsTable and DialogueSettings.PromptRegion.Part);
+    local PromptRegionEnabled = DialogueSettings.PromptRegion.Enabled;
+    local PromptRegionPart = DialogueSettings.PromptRegion.Part;
     
     -- Get proximity prompt settings.
-    local ProximityPromptSettingsIsTable = typeof(DialogueSettings.ProximityPrompt) == "table";
-    local ProximityPromptEnabled = DialogueSettings.ProximityPromptEnabled or (ProximityPromptSettingsIsTable and DialogueSettings.ProximityPrompt.Enabled);
-    local ProximityPromptLocation = DialogueSettings.ProximityPromptLocation or (ProximityPromptSettingsIsTable and DialogueSettings.ProximityPrompt.Location);
-    local ProximityPromptAutoCreate = DialogueSettings.AutomaticallyCreateProximityPrompt or (ProximityPromptSettingsIsTable and DialogueSettings.ProximityPrompt.AutoCreate);
-    local ProximityPromptActivationDistance = DialogueSettings.ProximityPromptActivationDistance or (ProximityPromptSettingsIsTable and DialogueSettings.ProximityPrompt.MaxActivationDistance);
-    local ProximityPromptHoldDuration = DialogueSettings.ProximityPromptHoldDuration or (ProximityPromptSettingsIsTable and DialogueSettings.ProximityPrompt.HoldDuration);
-    local ProximityPromptRequiresLineOfSight = DialogueSettings.ProximityPromptRequiresLineOfSight or (ProximityPromptSettingsIsTable and DialogueSettings.ProximityPrompt.RequiresLineOfSight);
+    local ProximityPromptEnabled = DialogueSettings.ProximityPrompt.Enabled;
+    local ProximityPromptLocation = DialogueSettings.ProximityPrompt.Location;
+    local ProximityPromptAutoCreate = DialogueSettings.ProximityPrompt.AutoCreate;
+    local ProximityPromptActivationDistance = DialogueSettings.ProximityPrompt.MaxActivationDistance;
+    local ProximityPromptHoldDuration = DialogueSettings.ProximityPrompt.HoldDuration;
+    local ProximityPromptRequiresLineOfSight = DialogueSettings.ProximityPrompt.RequiresLineOfSight;
     
     -- Get click detector settings.
-    local ClickDetectorSettingsIsTable = typeof(DialogueSettings.ClickDetector) == "table";
-    local ClickDetectorEnabled = DialogueSettings.ClickDetectorEnabled or (ClickDetectorSettingsIsTable and DialogueSettings.ClickDetector.Enabled);
-    local ClickDetectorLocation = DialogueSettings.ClickDetectorLocation or (ClickDetectorSettingsIsTable and DialogueSettings.ClickDetector.Location);
-    local ClickDetectorAutoCreate = DialogueSettings.AutomaticallyCreateClickDetector or (ClickDetectorSettingsIsTable and DialogueSettings.ClickDetector.AutoCreate);
-    local ClickDetectorActivationDistance = DialogueSettings.DetectorActivationDistance or (ClickDetectorSettingsIsTable and DialogueSettings.ClickDetector.ActivationDistance);
+    local ClickDetectorEnabled = DialogueSettings.ClickDetector.Enabled;
+    local ClickDetectorLocation = DialogueSettings.ClickDetector.Location;
+    local ClickDetectorAutoCreate = DialogueSettings.ClickDetector.AutoCreate;
+    local ClickDetectorActivationDistance = DialogueSettings.ClickDetector.ActivationDistance;
     
     -- Now it's time to set up speech bubbles.
     if SpeechBubbleEnabled and SpeechBubblePart then
@@ -111,14 +107,6 @@ for _, npc in ipairs(NPCDialogue) do
         ProximityPrompt.MaxActivationDistance = ProximityPromptActivationDistance;
         ProximityPrompt.HoldDuration = ProximityPromptHoldDuration;
         ProximityPrompt.RequiresLineOfSight = ProximityPromptRequiresLineOfSight;
-
-        -- TODO: Remove in v4.0.0
-        if typeof(DialogueSettings.ProximityPrompt) == "table" then
-          ProximityPrompt.GamepadKeyCode = DialogueSettings.ProximityPrompt.GamepadKeyCode;
-          ProximityPrompt.KeyboardKeyCode = DialogueSettings.ProximityPrompt.KeyboardKeyCode;
-          ProximityPrompt.ObjectText = DialogueSettings.ProximityPrompt.ObjectText;
-        end;
-
         ProximityPrompt.Parent = npc;
         ProximityPromptLocation = ProximityPrompt;
 

@@ -65,6 +65,36 @@ function DialogueModule.ReplaceVariablesWithValues(npc: Model, text: string): st
 
 end;
 
+function DialogueModule.RetrievePausePoints(text: string, tempLine: TextLabel): (string, {[number]: number})
+
+  local PausePoints: {
+    [number]: number
+  } = {};
+
+  local Pattern = "%[/wait time=(.+)%]";
+  tempLine.Text = text;
+  for pauseTime in string.gmatch(tempLine.ContentText, Pattern) do
+
+    -- Get the index.
+    local Index = tempLine.ContentText:find(Pattern);
+
+    -- Add the data to the table.
+    local Time = tonumber(pauseTime);
+    if Time then
+
+      PausePoints[Index] = Time;
+
+      -- Remove the string.
+      tempLine.Text = text:gsub(Pattern, "");
+
+    end;
+
+  end;
+
+  return tempLine.Text, PausePoints;
+
+end;
+
 function DialogueModule.ClearResponses(responseContainer: Folder)
 
   for _, response in ipairs(responseContainer:GetChildren()) do
@@ -79,63 +109,162 @@ function DialogueModule.ClearResponses(responseContainer: Folder)
 
 end;
 
-function DialogueModule.DivideTextToFitBox(text: string, textContainer: Frame): {{[number]: string}?}
+function DialogueModule.DivideTextToFitBox(text: string, tempLine: TextLabel): {[number]: string}
 
-  local Line = textContainer:FindFirstChild("Line"):Clone();
-  Line.Name = "LineTest";
-  Line.Visible = false;
-  Line.Parent = textContainer;
-  Line.Text = "";
+  -- Determine rich text indices.
+  local RichTextTagIndices: {
+    [number]: {
+      Name: string;
+      Attributes: string?;
+      StartOffset: number;
+      EndOffset: number?;
+    }
+  } = {};
+  local OpenTagIndices: {[number]: number} = {};
+  local textCopy = text;
+  local tagPattern = "<[^<>]->";
+  local Pointer = 1;
+  for tag in textCopy:gmatch(tagPattern) do
 
-  local Divisions = {};
-  local Page = 1;
-  for index, word in ipairs(text:split(" ")) do
+    -- Get the tag name and attributes.
+    local TagText = tag:match("<([^<>]-)>");
+    local FirstSpaceIndex = TagText:find(" ");
+    local TagTextLength = TagText:len();
+    local Name = TagText:sub(1, (FirstSpaceIndex and FirstSpaceIndex - 1) or TagTextLength);
+    if Name:sub(1, 1) == "/" then
 
-    Line.Text = Line.Text .. " " .. word;
+      for _, index in ipairs(OpenTagIndices) do
 
-    if not Divisions[Page] then Divisions[Page] = {}; end;
+        if RichTextTagIndices[index].Name == Name:sub(2) then
 
-    if Line.TextFits then
+          -- Add a tag end offset.
+          local _, EndOffset = textCopy:find(tagPattern);
+          RichTextTagIndices[index].EndOffset = Pointer + EndOffset;
 
-      table.insert(Divisions[Page],word);
-      Divisions[Page].FullText = Line.Text;
+          -- Remove the tag from the open tag table.
+          table.remove(OpenTagIndices, index);
+          break;
 
-    elseif not Divisions[Page][1] then
+        end
 
-      Line.Text = "";
-      for _, letter in ipairs(word:split("")) do
-
-        Line.Text = Line.Text .. letter;
-        if not Line.TextFits then
-
-          -- Remove the letter from the text
-          Line.Text = Line.Text:sub(1,string.len(Line.Text)-1);
-          table.insert(Divisions[Page], Line.Text);
-          Divisions[Page].FullText = Line.Text;
-
-          -- Take it from the top
-          Page = Page + 1;
-          Divisions[Page] = {};
-          Line.Text = letter;
-
-        end;
-
-      end;
-
-      table.insert(Divisions[Page], Line.Text);
-      Divisions[Page].FullText = Line.Text;
+      end
 
     else
 
-      Page = Page + 1;
+      -- Get the tag start offset.
+      local StartOffset = Pointer;
+      local Attributes = FirstSpaceIndex and TagText:sub(FirstSpaceIndex + 1) or "";
+      table.insert(RichTextTagIndices, {
+        Name = Name;
+        Attributes = Attributes;
+        StartOffset = Pointer
+      });
+      table.insert(OpenTagIndices, #RichTextTagIndices);
+
+    end
+
+    -- Remove the tag from our copy.
+    local _, PointerUpdate = textCopy:find(tagPattern);
+    Pointer += PointerUpdate - 1;
+    textCopy = textCopy:sub(PointerUpdate);
+
+  end
+
+  -- 
+  Pointer = 1;
+  local MessageParts = {};
+  repeat
+
+    -- Check if there's rich text missing.
+    tempLine.Text = text;
+    local RichTextTags = "";
+    for i = #RichTextTagIndices, 1, -1 do
+
+      local TagInfo = RichTextTagIndices[i];
+      if TagInfo.StartOffset < Pointer and TagInfo.EndOffset >= Pointer then
+
+        RichTextTags = "<" .. TagInfo.Name .. ((TagInfo.Attributes ~= "" and (" " .. TagInfo.Attributes)) or "") .. ">" .. RichTextTags;
+
+      end;
+
+    end
+
+    local RichTextStart = RichTextTags:len() + 1;
+    tempLine.Text = RichTextTags .. tempLine.Text;
+
+    -- Check if the message fits without us having to do anything.
+    local RichTextAdditions = 0;
+    while not tempLine.TextFits do
+
+      -- Add rich text endings to see if that changes anything.
+      local TempRichTextEndTags = "";
+      local OriginalText = tempLine.Text;
+      local TempPointer = Pointer + OriginalText:sub(RichTextStart):len();
+      local function RefreshTempRichTextEndTags() 
+
+        for i = #RichTextTagIndices, 1, -1 do
+
+          if RichTextTagIndices[i].StartOffset < TempPointer and RichTextTagIndices[i].EndOffset >= TempPointer then
+
+            TempRichTextEndTags = TempRichTextEndTags .. "</" .. RichTextTagIndices[i].Name .. ">";
+
+          elseif RichTextTagIndices[i].StartOffset > TempPointer then
+
+            break;
+
+          end;
+
+        end
+
+      end;
+
+      tempLine.Text = OriginalText .. TempRichTextEndTags;
+      RichTextAdditions = TempRichTextEndTags:len();
+
+      -- Check if popping off a word helps.
+      if not tempLine.TextFits then
+
+        -- Get the space that is the closest to the end of the message.
+        local LastSpaceIndex = OriginalText:match("^.*() ");
+        if not LastSpaceIndex then
+
+          break;
+
+        end;
+
+        -- Reform the message without that word.
+        OriginalText = OriginalText:sub(1, LastSpaceIndex - 1);
+        TempPointer = Pointer + OriginalText:sub(RichTextStart):len();
+        RefreshTempRichTextEndTags();
+        RichTextAdditions = TempRichTextEndTags:len();
+        tempLine.Text = OriginalText .. TempRichTextEndTags;
+
+        -- 
+        if not tempLine.TextFits then
+
+          RichTextAdditions = 0;
+          tempLine.Text = OriginalText;
+
+        end
+
+      end;
+
+      RunService.Heartbeat:Wait();
 
     end;
 
-  end;
+    -- Add the words to the table.
+    table.insert(MessageParts, tempLine.Text);
 
-  Line:Destroy();
+    -- Update the pointer.
+    Pointer += tempLine.Text:sub(RichTextStart):len() - RichTextAdditions;
 
-  return Divisions;
+    -- Subtract what we added to the table.
+    text = text:sub(tempLine.Text:sub(RichTextStart):len() - RichTextAdditions + 2);
+
+  until text == "";
+
+  return MessageParts;
 
 end;
 
@@ -360,6 +489,8 @@ function DialogueModule.ReadDialogue(npc: Model)
         local FullMessageText = "";
         local NPCPaused = false;
         local ContinueDialogue;
+        local Pointer = 1;
+        local PointerBefore = 1;
         ContinueDialogue = function(keybind)
 
           -- Ensure the player is holding the key.
@@ -390,6 +521,7 @@ function DialogueModule.ReadDialogue(npc: Model)
 
               -- Replace the incomplete dialogue with the full text
               TextContainer.Line.MaxVisibleGraphemes = -1;
+              Pointer = PointerBefore + TextContainer.Line.ContentText:len();
 
             end;
 
@@ -443,17 +575,28 @@ function DialogueModule.ReadDialogue(npc: Model)
         DialogueGui.Enabled = true;
         local Position = 0;
         local Adding = false;
-        local MessageText = API.Dialogue.ReplaceVariablesWithValues(npc, CurrentDirectory.Message.Value);
-        local DividedText = API.Dialogue.DivideTextToFitBox(MessageText, TextContainer);
+        local MessageTextWithPauses = API.Dialogue.ReplaceVariablesWithValues(npc, CurrentDirectory.Message.Value);
+
+        -- Clone the TextLabel.
+        local TempLine: TextLabel = TextContainer.Line:Clone();
+        TempLine.Name = "LineTest";
+        TempLine.Visible = false;
+        TempLine.Parent = TextContainer;
+
+        local MessageText, PausePoints = API.Dialogue.RetrievePausePoints(MessageTextWithPauses, TempLine);
+        local DividedText = API.Dialogue.DivideTextToFitBox(MessageText, TempLine);
+        TempLine:Destroy();
+
         for index, page in ipairs(DividedText) do
 
           -- Now we can get the new text
-          FullMessageText = page.FullText;
+          PointerBefore = Pointer;
+          FullMessageText = page;
           TextContainer.Line.Text = FullMessageText;
           for count = 0, TextContainer.Line.Text:len() do
 
             TextContainer.Line.MaxVisibleGraphemes = count;
-            task.wait(LetterDelay);
+            task.wait(PausePoints[Pointer] or LetterDelay);
 
             if (TextContainer.Line.MaxVisibleGraphemes == -1) then 
 
@@ -461,9 +604,11 @@ function DialogueModule.ReadDialogue(npc: Model)
 
             end
 
+            Pointer += 1;
+
           end;
 
-          if DividedText[index+1] and NPCTalking then
+          if DividedText[index + 1] and NPCTalking then
 
             -- Wait for the player to click
             ThemeDialogueContainer.ClickToContinue.Visible = true;
@@ -528,7 +673,7 @@ function DialogueModule.ReadDialogue(npc: Model)
 
           end;
 
-          ResponseContainer.CanvasSize = UDim2.new(0, ResponseContainer.CanvasSize.X, 0, ResponseContainer.UIListLayout.AbsoluteContentSize.Y);
+          ResponseContainer.CanvasSize = UDim2.new(0, ResponseContainer.CanvasSize.X.Offset, 0, ResponseContainer.UIListLayout.AbsoluteContentSize.Y);
           ThemeDialogueContainer.ResponseContainer.Visible = true;
 
         end;
