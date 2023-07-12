@@ -71,21 +71,21 @@ function DialogueModule.RetrievePausePoints(text: string, tempLine: TextLabel): 
     [number]: number
   } = {};
 
-  local Pattern = "%[/wait time=(.+)%]";
+  local Pattern: string = "%[/wait time=(%d+%.?%d+)%]";
   tempLine.Text = text;
-  for pauseTime in string.gmatch(tempLine.ContentText, Pattern) do
+  for pauseTime: string in string.gmatch(tempLine.ContentText, Pattern) do
 
     -- Get the index.
-    local Index = tempLine.ContentText:find(Pattern);
+    local Index: number? = tempLine.ContentText:find(Pattern);
 
     -- Add the data to the table.
-    local Time = tonumber(pauseTime);
-    if Time then
-
+    local Time: number? = tonumber(pauseTime);
+    if Time and Index then
+      
       PausePoints[Index] = Time;
 
       -- Remove the string.
-      tempLine.Text = text:gsub(Pattern, "");
+      tempLine.Text = tempLine.Text:gsub(Pattern, "", 1);
 
     end;
 
