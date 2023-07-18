@@ -121,7 +121,7 @@ local Events: EventTypes = {
 };
 
 local Toolbar = plugin:CreateToolbar("Dialogue Maker by Beastslash");
-local EditDialogueButton = Toolbar:CreateButton("Edit Dialogue", "Edit dialogue of a selected NPC. The selected object must be a singular model.", "rbxassetid://332218617");
+local EditDialogueButton = Toolbar:CreateButton("Edit Dialogue", "Edit dialogue of a selected NPC. The selected object must be a singular model.", "rbxassetid://14109181603");
 local DeleteModeEnabled = false;
 local DeletePromptShown = false;
 local isDialogueEditorOpen = false;
@@ -204,6 +204,7 @@ local function syncDialogueGUI(DirectoryContentScript: DialogueContainerClass): 
   end);
   
   local isDirectoryRoot = viewingPriority == "";
+  local WHITE = Color3.fromRGB(255, 255, 255);
   if isDirectoryRoot then
     
     DialogueLocationStatus.Text = "Viewing the beginning of the conversation";
@@ -230,7 +231,6 @@ local function syncDialogueGUI(DirectoryContentScript: DialogueContainerClass): 
       
     end);
     
-    local WHITE = Color3.fromRGB(255, 255, 255);
     ViewParentTextLabel.TextColor3 = WHITE;
     ViewParentImageLabel.ImageColor3 = WHITE;
     ViewParentButton.BackgroundTransparency = 0;
@@ -238,6 +238,8 @@ local function syncDialogueGUI(DirectoryContentScript: DialogueContainerClass): 
   end;
   
   local DeleteModeButton = Tools:FindFirstChild("DeleteMode") :: TextButton;
+  local DeleteModeImageLabel = DeleteModeButton:FindFirstChild("ImageLabel") :: ImageLabel;
+  local DeleteModeTextLabel = DeleteModeButton:FindFirstChild("TextLabel") :: TextLabel;
   Events.DeleteMode = DeleteModeButton.MouseButton1Click:Connect(function()
 
     if DeleteModeEnabled then
@@ -245,8 +247,8 @@ local function syncDialogueGUI(DirectoryContentScript: DialogueContainerClass): 
       -- Disable delete mode
       DeleteModeEnabled = false;
 
-      -- Turn the button white again
-      DeleteModeButton.BackgroundColor3 = Color3.fromRGB(255,255,255);
+      -- Turn the button match the header background.
+      DeleteModeButton.BackgroundColor3 = Color3.fromRGB(74, 74, 74);
 
       -- Tell the user that we're no longer in delete mode
       print("[Dialogue Maker] Whew. Delete Mode has been disabled.");
@@ -257,7 +259,7 @@ local function syncDialogueGUI(DirectoryContentScript: DialogueContainerClass): 
       DeleteModeEnabled = true;
 
       -- Turn the button red
-      DeleteModeButton.BackgroundColor3 = Color3.fromRGB(255,46,46);
+      DeleteModeButton.BackgroundColor3 = Color3.fromRGB(217, 39, 39);
 
       -- Tell the user that we're in delete mode
       print("[Dialogue Maker] Warning: Delete Mode has been enabled!");
@@ -718,7 +720,7 @@ EditDialogueButton.Click:Connect(function()
 end);
 
 local isBusy = false;
-local ResetScriptsButton = Toolbar:CreateButton("Fix Scripts", "Reset DialogueMakerRemoteConnections, DialogueServerScript, and DialogueClientScript back to the a stable version.", "rbxassetid://61995002");
+local ResetScriptsButton = Toolbar:CreateButton("Fix Scripts", "Reset DialogueMakerRemoteConnections, DialogueServerScript, and DialogueClientScript back to the a stable version.", "rbxassetid://14109193905");
 ResetScriptsButton.Click:Connect(function()
 
   -- Debounce
@@ -799,7 +801,7 @@ ResetScriptsButton.Click:Connect(function()
 
 end);
 
-local RemoveUnusedInstancesButton = Toolbar:CreateButton("Remove Unused Instances", "Deletes unused actions, conditions, and dialogue locations.", "rbxassetid://61995002")
+local RemoveUnusedInstancesButton = Toolbar:CreateButton("Remove Unused Instances", "Deletes unused actions, conditions, and dialogue locations.", "rbxassetid://14109207161")
 RemoveUnusedInstancesButton.Click:Connect(function()
 
   assert(not isBusy, "[Dialogue Maker] One moment please...");
