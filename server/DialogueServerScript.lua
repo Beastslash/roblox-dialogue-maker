@@ -22,42 +22,42 @@ for _, value in ipairs(DialogueLocationsFolder:GetChildren()) do
 
 end;
 
-RemoteConnections.GetNPCDialogue.OnServerInvoke = function(player)
+RemoteConnections.GetNPCDialogue.OnServerInvoke = function(player): any
 
   return DialogueLocations;
 
 end;
 
-RemoteConnections.GetDefaultThemes.OnServerInvoke = function(player)
+RemoteConnections.GetDefaultThemes.OnServerInvoke = function(player): any
 
   return Settings.DefaultTheme;
 
 end;
 
-RemoteConnections.GetAllThemes.OnServerInvoke = function(player)
+RemoteConnections.GetAllThemes.OnServerInvoke = function(player): {[string]: GuiObject}
 
+  local Themes = {};
   local ThemeFolder = script:FindFirstChild("Themes");
+  
   if ThemeFolder then
-
-    local Themes = {};
 
     for _, theme in ipairs(ThemeFolder:GetChildren()) do
       Themes[theme.Name] = theme:Clone();
     end;
 
-    return Themes;
-
   end;
+  
+  return Themes;
 
 end;
 
-RemoteConnections.PlayerPassesCondition.OnServerInvoke = function(player, npc, priority)
+RemoteConnections.PlayerPassesCondition.OnServerInvoke = function(Player: Player, NPC: Model, ContentScript: ModuleScript): boolean
 
   -- Ensure security
-  if not npc:IsA("Model") or not priority:IsA("Folder") then
+  if not NPC:IsA("Model") or not ContentScript:IsA("ModuleScript") then
 
-    warn("[Dialogue Maker]: " .. player.Name .. " failed a security check");
-    error("[Dialogue Maker]: Invalid parameters given to check if " .. player.Name .. " passes a condition", 0);
+    warn("[Dialogue Maker]: " .. Player.Name .. " failed a security check");
+    error("[Dialogue Maker]: Invalid parameters given to check if " .. Player.Name .. " passes a condition", 0);
 
   end;
 
@@ -65,7 +65,7 @@ RemoteConnections.PlayerPassesCondition.OnServerInvoke = function(player, npc, p
   local Condition;
   for _, condition in ipairs(script.Conditions:GetChildren()) do
 
-    if condition.NPC.Value == npc and condition.Priority.Value == priority then
+    if condition.NPC.Value == NPC and condition.Priority.Value == ContentScript then
 
       Condition = condition;
       break;
@@ -75,7 +75,7 @@ RemoteConnections.PlayerPassesCondition.OnServerInvoke = function(player, npc, p
   end;
 
   -- Check if there is no condition or the condition passed
-  if not Condition or require(Condition)(player) then
+  if not Condition or (require(Condition) :: (Player) -> boolean)(Player) then
 
     return true;
 
@@ -89,25 +89,25 @@ end;
 
 local ActionCache = {};
 local DialogueVariables = {};
-RemoteConnections.ExecuteAction.OnServerInvoke = function(player, npc, priority, beforeOrAfter)
+RemoteConnections.ExecuteAction.OnServerInvoke = function(Player: Player, NPC: Model, ContentScript: ModuleScript, beforeOrAfter: "Preceding" | "Succeeding"): ()
 
   -- Ensure security
-  if not npc:IsA("Model") or not priority:IsA("Folder") or typeof(beforeOrAfter) ~= "string" then
+  if not NPC:IsA("Model") or not ContentScript:IsA("ModuleScript") or typeof(beforeOrAfter) ~= "string" then
 
-    warn("[Dialogue Maker]: " .. player.Name .. " failed a security check");
-    error("[Dialogue Maker]: Invalid parameters given to check if " .. player.Name .. " passes a condition", 0);
+    warn("[Dialogue Maker]: " .. Player.Name .. " failed a security check");
+    error("[Dialogue Maker]: Invalid parameters given to check if " .. Player.Name .. " passes a condition", 0);
 
   end;
 
   -- Search for action
   local Action;
-  if ActionCache[npc] and ActionCache[npc][beforeOrAfter][priority] then
+  if ActionCache[NPC] and ActionCache[NPC][beforeOrAfter][ContentScript] then
 
-    Action = ActionCache[npc][beforeOrAfter][priority];
+    Action = ActionCache[NPC][beforeOrAfter][ContentScript];
 
-  elseif not ActionCache[npc] then
+  elseif not ActionCache[NPC] then
 
-    ActionCache[npc] = {
+    ActionCache[NPC] = {
       Before = {};
       After = {};
     };
@@ -119,7 +119,7 @@ RemoteConnections.ExecuteAction.OnServerInvoke = function(player, npc, priority,
     local ActionScripts = script.Actions:FindFirstChild(beforeOrAfter):GetChildren();
     for _, action in ipairs(ActionScripts) do
 
-      if action.NPC.Value == npc and action.Priority.Value == priority then
+      if action.NPC.Value == NPC and action.Priority.Value == ContentScript then
 
         Action = action;
         break;
@@ -135,29 +135,7 @@ RemoteConnections.ExecuteAction.OnServerInvoke = function(player, npc, priority,
     end;
 
     -- Add the player to the action
-    Action = require(Action);
-
-    -- Check if there are any variables the user wants us to overwrite
-    for variable, value in pairs(Action.Variables(player)) do
-
-      if not DialogueVariables[player] then
-
-        DialogueVariables[player] = {};
-
-      end;
-
-      if not DialogueVariables[player][npc] then
-
-        DialogueVariables[player][npc] = {};
-
-      end;
-
-      DialogueVariables[player][npc][variable] = value;
-
-    end;
-
-
-    ActionCache[npc][beforeOrAfter][priority] = Action;
+    ActionCache[NPC][beforeOrAfter][ContentScript] = require(Action) :: any;
 
   end;
 
@@ -166,11 +144,11 @@ RemoteConnections.ExecuteAction.OnServerInvoke = function(player, npc, priority,
 
     if Action.Synchronous then
 
-      Action.Execute(player);
+      Action.Execute(Player);
 
     else
 
-      coroutine.wrap(Action.Execute)(player);
+      coroutine.wrap(Action.Execute)(Player);
 
     end;
 
@@ -178,67 +156,13 @@ RemoteConnections.ExecuteAction.OnServerInvoke = function(player, npc, priority,
 
 end;
 
-RemoteConnections.GetVariable.OnServerInvoke = function(player, npc, variable)
-
-  -- Ensure security
-  if not npc:IsA("Model") or typeof(variable) ~= "string" then
-
-    warn("[Dialogue Maker]: " .. player.Name .. " failed a security check");
-    error("[Dialogue Maker]: Invalid parameters given to check if " .. player.Name .. " passes a condition", 0);
-
-  end;
-
-  if not DialogueVariables[player] then
-
-    DialogueVariables[player] = {};
-
-  end;
-
-  if not DialogueVariables[player][npc] then
-
-    DialogueVariables[player][npc] = {
-      PlayerName = player.Name;
-    };
-
-  end;
-
-  -- Check the current variables
-  if not DialogueVariables[player][npc][variable] then
-
-    -- Check for default variables
-    for _, variablesScript in ipairs(script.DefaultVariables:GetChildren()) do
-
-      if variablesScript.NPC.Value == npc then
-
-        local DefaultVariablesScript = require(variablesScript);
-        for defaultVariable, value in pairs(DefaultVariablesScript) do
-
-          DialogueVariables[player][npc][defaultVariable] = value;
-
-        end;
-        break;
-
-      end;
-
-    end;
-
-  end;
-
-  if DialogueVariables[player][npc][variable] then
-
-    return DialogueVariables[player][npc][variable];
-
-  end;
-
-end;
-
-RemoteConnections.GetMinimumDistanceFromCharacter.OnServerInvoke = function()
+RemoteConnections.GetMinimumDistanceFromCharacter.OnServerInvoke = function(): number
 
   return Settings.MinimumDistanceFromCharacter;
 
 end;
 
-RemoteConnections.GetKeybinds.OnServerInvoke = function()
+RemoteConnections.GetKeybinds.OnServerInvoke = function(): any
 
   return {
 
@@ -252,7 +176,7 @@ RemoteConnections.GetKeybinds.OnServerInvoke = function()
 
 end;
 
-RemoteConnections.GetDefaultClickSound.OnServerInvoke = function()
+RemoteConnections.GetDefaultClickSound.OnServerInvoke = function(): number
 
   return Settings.DefaultClickSound;
 
