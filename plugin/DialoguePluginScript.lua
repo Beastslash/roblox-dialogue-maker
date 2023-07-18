@@ -628,41 +628,41 @@ EditDialogueButton.Click:Connect(function()
     
   end;
 
-  local SelectedObjects = Selection:Get();
+  local isTestSuccessful, errorMessage = pcall(function()
+    
+    -- Check if the user is selecting an object.
+    local SelectedObjects = Selection:Get();
+    assert(#SelectedObjects == 0, "You didn't select an object.");
+    assert(#SelectedObjects == 1, "You must select one object; not multiple objects.");
 
-  -- Check if the user is selecting ONE object
-  if #SelectedObjects == 0 then
+    -- Check if the model has a part
+    Model = SelectedObjects[1];
+    assert(Model:IsA("Model"), "You must select a Model, not a "..Model.ClassName..".");
+
+    local ModelHasPart = false;
+    for _, object in ipairs(Model:GetChildren()) do
+      
+      if object:IsA("BasePart") then
+        
+        ModelHasPart = true;
+        break;
+        
+      end
+      
+    end;
+
+    assert(ModelHasPart, "Your selected model doesn't have a part inside of it.");
+    
+  end);
+  
+  if not isTestSuccessful then
+
     EditDialogueButton:SetActive(false);
-    error("[Dialogue Maker] You didn't select an object.",0);
-  elseif #SelectedObjects > 1 then
-    EditDialogueButton:SetActive(false);
-    error("[Dialogue Maker] You must select one object; not multiple objects.",0);
-  end;
+    error("[Dialogue Maker] " .. errorMessage, 0);
+    
+  end
 
-  Model = SelectedObjects[1];
-
-  -- Check if the user is selecting a model
-  if not Model:IsA("Model") then
-    EditDialogueButton:SetActive(false);
-    error("[Dialogue Maker] You must select a Model, not a "..Model.ClassName..".",0);
-  end;
-
-  -- Check if the model has a part
-  local ModelHasPart = false;
-
-  for _, object in ipairs(Model:GetChildren()) do
-    if object:IsA("BasePart") then
-      ModelHasPart = true;
-      break;
-    end
-  end;
-
-  if not ModelHasPart then
-    EditDialogueButton:SetActive(false);
-    error("[Dialogue Maker] Your selected model doesn't have a part inside of it.",0);
-  end;
-
-  -- Check if there is a dialogue folder in the NPC
+  -- Verify NPC dialogue folder
   repairNPC();
 
   -- Add the chat receiver script in the starter player scripts
