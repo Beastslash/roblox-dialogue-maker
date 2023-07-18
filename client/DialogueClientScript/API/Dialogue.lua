@@ -296,7 +296,7 @@ function DialogueModule.ReadDialogue(npc: Model): ()
         
       end;
       local DialogueSettings = require(NPCSettingsScript) :: any;
-      local FreezePlayer = DialogueSettings.FreezePlayer or (DialogueSettings.General and DialogueSettings.General.FreezePlayer);
+      local FreezePlayer = DialogueSettings.general.freezePlayer;
       if FreezePlayer then 
 
         API.Player.freezePlayer(); 
@@ -304,7 +304,7 @@ function DialogueModule.ReadDialogue(npc: Model): ()
       end;
 
       -- Check if the NPC needs to look at the player.
-      if DialogueSettings.General.NPCLooksAtPlayerDuringDialogue and DialogueSettings.General.NPCNeckRotationMaxY then
+      if DialogueSettings.general.npcLooksAtPlayerDuringDialogue and DialogueSettings.general.npcNeckRotationMaxY then
 
         -- Handle this in a coroutine because the look shouldn't stop the dialogue.
         coroutine.wrap(function()
@@ -327,9 +327,9 @@ function DialogueModule.ReadDialogue(npc: Model): ()
 
             while DialogueModule.PlayerTalkingWithNPC.Value and NPCPrimaryPart and NPCHead and NPCNeck and PlayerHead and task.wait() do
 
-              local maxRotationX = DialogueSettings.General.NPCNeckRotationMaxX;
-              local maxRotationY = DialogueSettings.General.NPCNeckRotationMaxY;
-              local maxRotationZ = DialogueSettings.General.NPCNeckRotationMaxZ;
+              local maxRotationX = DialogueSettings.general.neckRotationMaxX;
+              local maxRotationY = DialogueSettings.general.npcNeckRotationMaxY;
+              local maxRotationZ = DialogueSettings.general.npcNeckRotationMaxZ;
               local goalRotationX, goalRotationY, goalRotationZ = CFrame.new(NPCHead.Position, PlayerHead.Position):ToOrientation();
               local rotationOffsetX = goalRotationX - math.rad(NPCPrimaryPart.Orientation.X);
               local rotationOffsetY = goalRotationY - math.rad(NPCPrimaryPart.Orientation.Y);
@@ -356,7 +356,7 @@ function DialogueModule.ReadDialogue(npc: Model): ()
       end
 
       -- Set the theme and prepare the response template
-      local DialogueGUI: ScreenGui = API.GUI.createNewDialogueGUI(DialogueSettings.Theme or (DialogueSettings.General and DialogueSettings.General.ThemeName));
+      local DialogueGUI: ScreenGui = API.GUI.createNewDialogueGUI(DialogueSettings.general.themeName);
       local ResponseContainer, ResponseTemplate, ClickSound: Sound?, ClickSoundEnabled, OldDialogueGui;
       local GUIDialogueContainer = DialogueGUI:FindFirstChild("DialogueContainer");
       local function SetupDialogueGui()
@@ -436,8 +436,8 @@ function DialogueModule.ReadDialogue(npc: Model): ()
 
         -- If necessary, end conversation if player or NPC goes out of distance
         local NPCPrimaryPart = npc.PrimaryPart;
-        local MaxConversationDistance = DialogueSettings.MaximumConversationDistance or (DialogueSettings.General and DialogueSettings.General.MaxConversationDistance);
-        local EndConversationIfOutOfDistance = DialogueSettings.EndConversationIfOutOfDistance or (DialogueSettings.General and DialogueSettings.General.EndConversationIfOutOfDistance);
+        local MaxConversationDistance = DialogueSettings.general.maxConversationDistance;
+        local EndConversationIfOutOfDistance = DialogueSettings.general.endConversationIfOutOfDistance;
         if EndConversationIfOutOfDistance and MaxConversationDistance and NPCPrimaryPart then
 
           coroutine.wrap(function() 
@@ -473,7 +473,7 @@ function DialogueModule.ReadDialogue(npc: Model): ()
             local DialoguePriorityPath = currentDialogueProperties.content:split(".");
             table.remove(DialoguePriorityPath, 1);
             DialoguePriority = table.concat(DialoguePriorityPath, ".");
-            RemoteConnections.ExecuteAction:InvokeServer(npc, currentDialogueScript, "After");
+            RemoteConnections.ExecuteAction:InvokeServer(npc, currentDialogueScript, "Succeeding");
             currentDialogueScript = rootDialogueScript;
 
           elseif RemoteConnections.PlayerPassesCondition:InvokeServer(npc, currentDialogueScript) then
@@ -562,7 +562,7 @@ function DialogueModule.ReadDialogue(npc: Model): ()
 
                 end;
 
-                if DialogueSettings.AllowPlayerToSkipDelay or (DialogueSettings.General and DialogueSettings.General.AllowPlayerToSkipDelay) then
+                if DialogueSettings.general.allowPlayerToSkipDelay then
 
                   -- Replace the incomplete dialogue with the full text
                   textContainerLine.MaxVisibleGraphemes = -1;
@@ -642,7 +642,7 @@ function DialogueModule.ReadDialogue(npc: Model): ()
 
                 textContainerLine.MaxVisibleGraphemes = count;
 
-                task.wait(PausePoints[Pointer] or DialogueSettings.LetterDelay or (DialogueSettings.General and DialogueSettings.General.LetterDelay));
+                task.wait(PausePoints[Pointer] or DialogueSettings.general.letterDelay);
 
                 if textContainerLine.MaxVisibleGraphemes == -1 then 
 
@@ -727,12 +727,12 @@ function DialogueModule.ReadDialogue(npc: Model): ()
             -- Run the timeout code in the background
             coroutine.wrap(function()
 
-              local ConversationTimeoutInSeconds: number? = DialogueSettings.ConversationTimeoutInSeconds or (DialogueSettings.General and DialogueSettings.General.ConversationTimeoutInSeconds);
-              local TimeoutEnabled = DialogueSettings.TimeoutEnabled or (DialogueSettings.General and DialogueSettings.General.TimeoutEnabled);
+              local ConversationTimeoutInSeconds: number? = DialogueSettings.general.conversationTimeoutInSeconds;
+              local TimeoutEnabled = DialogueSettings.general.timeoutEnabled;
               if TimeoutEnabled and ConversationTimeoutInSeconds then
 
                 -- Wait for the player if the developer wants to
-                local WaitForResponse = DialogueSettings.WaitForResponse or (DialogueSettings.General and DialogueSettings.General.WaitForResponse);
+                local WaitForResponse = DialogueSettings.general.waitForResponse;
                 if ResponsesEnabled and WaitForResponse then
 
                   return;
