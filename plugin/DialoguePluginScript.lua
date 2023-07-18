@@ -41,22 +41,8 @@ local function repairNPC(): ()
     SettingsScript.Name = "Settings";
     SettingsScript.Parent = DialogueContainer;
 
-    -- Create a root folder
-    -- TODO: Change this to a ModuleScript
-    local TempRootFolder = Instance.new("Folder");
-    TempRootFolder.Name = "1";
-    TempRootFolder.Parent = DialogueContainer;
-
-    -- Create a folder for every dialogue type
-    for _, folderName in ipairs({"Dialogue", "Responses", "Redirects"}) do
-      local Folder = Instance.new("Folder");
-      Folder.Name = folderName;
-      Folder.Parent = TempRootFolder;
-    end;
-
     -- Add the dialogue folder to the model
     DialogueContainer.Parent = Model;
-
     viewingPriority = "";
 
     return;
@@ -582,7 +568,7 @@ end;
 -- @since v1.0.0
 local function openDialogueEditor(): ()
 
-  PluginGui = plugin:CreateDockWidgetPluginGui("Dialogue Maker", DockWidgetPluginGuiInfo.new(Enum.InitialDockState.Float, true, true, 508, 241, 508, 241));
+  PluginGui = plugin:CreateDockWidgetPluginGui("Dialogue Maker", DockWidgetPluginGuiInfo.new(Enum.InitialDockState.Float, true, true, 525, 241, 525, 139));
   repairNPC();
   if PluginGui and CurrentDialogueContainer then
     
