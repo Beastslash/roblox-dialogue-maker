@@ -526,7 +526,7 @@ local function syncDialogueGUI(DirectoryContentScript: DialogueContainerClass): 
           
         end;
 
-        Events.ViewChildren[DialogueMessageContainer] = ViewChildrenButton.MouseButton1Click:Connect(function()
+        table.insert(Events.ViewChildren, ViewChildrenButton.MouseButton1Click:Connect(function()
 
           if DeleteModeEnabled then
             
@@ -535,40 +535,21 @@ local function syncDialogueGUI(DirectoryContentScript: DialogueContainerClass): 
             
           end;
 
-          Events.ViewChildren[DialogueMessageContainer]:Disconnect();
-
-          viewingPriority = dialogue.Priority.Value;
-
-          if Events.ViewParent then
-            
-            Events.ViewParent:Disconnect();
-            Events.ViewParent = nil;
-            
-          end;
-
-          Events.DeleteMode:Disconnect();
+          ViewChildrenButton.Visible = false;
 
           -- Go to the target directory
-          local Path = viewingPriority:split(".");
+          viewingPriority = table.concat(SplitPriority, ".");
           local CurrentDirectory = CurrentDialogueContainer;
 
-          for index, directory in ipairs(Path) do
-            
-            if CurrentDirectory:FindFirstChild(directory) then
+          for index, directory in ipairs(SplitPriority) do
               
-              CurrentDirectory = CurrentDirectory[directory].Dialogue;
-              
-            else
-              
-              CurrentDirectory = CurrentDirectory.Parent.Responses[directory].Dialogue;
-              
-            end;
+            CurrentDirectory = CurrentDirectory:FindFirstChild(directory) :: ModuleScript;
             
           end;
 
           syncDialogueGUI(DirectoryContentScript);
 
-        end);
+        end));
         
       end;
 
@@ -602,12 +583,13 @@ end;
 local function openDialogueEditor(): ()
 
   PluginGui = plugin:CreateDockWidgetPluginGui("Dialogue Maker", DockWidgetPluginGuiInfo.new(Enum.InitialDockState.Float, true, true, 508, 241, 508, 241));
-  if PluginGui then
+  repairNPC();
+  if PluginGui and CurrentDialogueContainer then
     
     PluginGui.Title = "Dialogue Maker";
     PluginGui:BindToClose(closeDialogueEditor);
 
-    Events.AdjustSettingsRequested = Tools.AdjustSettings.MouseButton1Click:Connect(function()
+    Events.AdjustSettingsRequested = (Tools:FindFirstChild("AdjustSettings") :: TextButton).MouseButton1Click:Connect(function()
 
       -- Make sure all of the important objects are in the NPC
       repairNPC();
@@ -616,30 +598,20 @@ local function openDialogueEditor(): ()
 
     end);
 
-    Events.AddMessage = Tools.AddMessage.MouseButton1Click:Connect(function()
+    Events.AddMessage = (Tools:FindFirstChild("AddMessage") :: TextButton).MouseButton1Click:Connect(function()
 
-      local path = ViewingPriority:split(".");
+      local path = viewingPriority:split(".");
       local CurrentDirectory = CurrentDialogueContainer;
 
       for _, directory in ipairs(path) do
-
-        local TargetDirectory = CurrentDirectory:FindFirstChild(directory);
-        if not TargetDirectory then
-
-          -- Create a folder to hold dialogue and responses
-          TargetDirectory = Instance.new("Folder");
-          TargetDirectory.Name = directory;
-          TargetDirectory.Parent = CurrentDirectory;
-
-        end;
         
-        CurrentDirectory = TargetDirectory:FindFirstChild(directory) or CurrentDirectory:FindFirstChild(directory);
+        CurrentDirectory = CurrentDirectory:FindFirstChild(directory) :: ModuleScript;
 
       end;
 
       -- Create the dialogue script.
       local MessageContentScript = script.ContentTemplate:Clone();
-      MessageContentScript.Name = viewingPriority .. "." .. (#CurrentDirectory.Parent:GetChildren() + 1);
+      MessageContentScript.Name = viewingPriority .. "." .. (#CurrentDirectory:GetChildren() + 1);
       MessageContentScript.Parent = CurrentDirectory;
 
       -- Now let's re-order the dialogue
@@ -649,7 +621,6 @@ local function openDialogueEditor(): ()
     end);
 
     -- Let's get the current dialogue settings
-    repairNPC();
     syncDialogueGUI(CurrentDialogueContainer)
     
     local DialogueMakerFrame = DialogueMakerFrame:Clone();
