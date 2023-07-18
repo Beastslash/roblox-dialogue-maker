@@ -1,4 +1,4 @@
--- Get Roblox services
+--!strict
 local Players = game:GetService("Players");
 local ControllerService = game:GetService("ControllerService");
 local RunService = game:GetService("RunService");
@@ -25,16 +25,16 @@ for _, npc in ipairs(NPCDialogue) do
 
   -- Make sure all NPCs aren't affected if this one doesn't load properly
   local success, msg = pcall(function()
-    
+
     -- Get speech bubble settings.
-    local DialogueSettings = require(npc.DialogueContainer.Settings);
+    local DialogueSettings = require(npc.DialogueContainer.Settings) :: any;
     local SpeechBubbleEnabled = DialogueSettings.SpeechBubble.Enabled;
     local SpeechBubblePart = DialogueSettings.SpeechBubble.BasePart;
-    
+
     -- Get prompt region settings.
     local PromptRegionEnabled = DialogueSettings.PromptRegion.Enabled;
     local PromptRegionPart = DialogueSettings.PromptRegion.Part;
-    
+
     -- Get proximity prompt settings.
     local ProximityPromptEnabled = DialogueSettings.ProximityPrompt.Enabled;
     local ProximityPromptLocation = DialogueSettings.ProximityPrompt.Location;
@@ -42,13 +42,13 @@ for _, npc in ipairs(NPCDialogue) do
     local ProximityPromptActivationDistance = DialogueSettings.ProximityPrompt.MaxActivationDistance;
     local ProximityPromptHoldDuration = DialogueSettings.ProximityPrompt.HoldDuration;
     local ProximityPromptRequiresLineOfSight = DialogueSettings.ProximityPrompt.RequiresLineOfSight;
-    
+
     -- Get click detector settings.
     local ClickDetectorEnabled = DialogueSettings.ClickDetector.Enabled;
     local ClickDetectorLocation = DialogueSettings.ClickDetector.Location;
     local ClickDetectorAutoCreate = DialogueSettings.ClickDetector.AutoCreate;
     local ClickDetectorActivationDistance = DialogueSettings.ClickDetector.ActivationDistance;
-    
+
     -- Now it's time to set up speech bubbles.
     if SpeechBubbleEnabled and SpeechBubblePart then
 
@@ -72,7 +72,7 @@ for _, npc in ipairs(NPCDialogue) do
       end;
 
     end;
-    
+
     -- Next, the prompt regions.
     if PromptRegionEnabled and PromptRegionPart then
 
@@ -97,7 +97,7 @@ for _, npc in ipairs(NPCDialogue) do
       end;
 
     end;
-    
+
     -- Now, the proximity prompts.
     if ProximityPromptEnabled and (ProximityPromptLocation or ProximityPromptAutoCreate) then
 
@@ -129,7 +129,7 @@ for _, npc in ipairs(NPCDialogue) do
       end;
 
     end;
-    
+
     -- Almost there: it's time for the click detectors.
     if ClickDetectorEnabled and (ClickDetectorLocation or ClickDetectorAutoCreate) then
 
@@ -157,7 +157,7 @@ for _, npc in ipairs(NPCDialogue) do
       end;
 
     end;
-    
+
     -- Finally, the keybinds.
     if Keybinds.KeybindsEnabled then
 
@@ -196,7 +196,7 @@ for _, npc in ipairs(NPCDialogue) do
     end;
 
   end);
-  
+
   -- One NPC doesn't stop the show, but it's important for you
   -- to know which ones didn't load properly.
   if not success then
