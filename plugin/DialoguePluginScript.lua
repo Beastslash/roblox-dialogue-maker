@@ -37,10 +37,6 @@ local function repairNPC(): ()
     local DialogueContainer = Instance.new("Folder");
     DialogueContainer.Name = "DialogueContainer";
 
-    local SettingsScript = script.NPCSettingsTemplate:Clone();
-    SettingsScript.Name = "Settings";
-    SettingsScript.Parent = DialogueContainer;
-
     -- Add the dialogue folder to the model
     DialogueContainer.Parent = Model;
     viewingPriority = "";
@@ -52,13 +48,13 @@ local function repairNPC(): ()
   CurrentDialogueContainer = Model:FindFirstChild("DialogueContainer") :: ModuleScript;
   assert(CurrentDialogueContainer, "[Dialogue Maker] DialogueContainer not found...");
   
-  if not CurrentDialogueContainer:FindFirstChild("Settings") then
+  if not Model:FindFirstChild("NPCDialogueSettings") then
 
     print("[Dialogue Maker] Adding settings script to "..Model.Name)
 
     local SettingsScript = script.NPCSettingsTemplate:Clone();
-    SettingsScript.Name = "Settings";
-    SettingsScript.Parent = CurrentDialogueContainer;
+    SettingsScript.Name = "NPCDialogueSettings";
+    SettingsScript.Parent = Model;
 
     print("[Dialogue Maker] Added settings script to "..Model.Name)
 
@@ -124,32 +120,6 @@ local Events: EventTypes = {
   ViewChildren = {};
 };
 
--- Disconnects all events.
--- @since v5.0.0
-local function disconnectEvents(): ()
-
-  for key, PossibleEvent: RBXScriptConnection | {[number]: RBXScriptConnection} in pairs(Events) do
-    
-    if typeof(PossibleEvent) == "table" then
-      
-      for _, event in ipairs(PossibleEvent) do
-        
-        event:Disconnect()
-        
-      end
-      Events[key] = {};
-      
-    else
-
-      PossibleEvent:Disconnect();
-      Events[key] = nil;
-        
-    end;
-    
-  end;
-
-end
-
 local Toolbar = plugin:CreateToolbar("Dialogue Maker by Beastslash");
 local EditDialogueButton = Toolbar:CreateButton("Edit Dialogue", "Edit dialogue of a selected NPC. The selected object must be a singular model.", "rbxassetid://332218617");
 local DeleteModeEnabled = false;
@@ -162,6 +132,30 @@ local ModelLocationFrame = ViewStatus:FindFirstChild("ModelLocationFrame");
 
 type DialogueContainerClass = ModuleScript | Folder;
 
+local function disconnectEvents(): ()
+  
+  for key, PossibleEvent: RBXScriptConnection | {[number]: RBXScriptConnection} in pairs(Events) do
+
+    if typeof(PossibleEvent) == "table" then
+
+      for _, event in ipairs(PossibleEvent) do
+
+        event:Disconnect()
+
+      end
+      Events[key] = {};
+
+    else
+
+      PossibleEvent:Disconnect();
+      Events[key] = nil;
+
+    end;
+
+  end;
+  
+end
+
 -- Refreshes all events and GUI elements in the plugin.
 -- @since v1.0.0
 local function syncDialogueGUI(DirectoryContentScript: DialogueContainerClass): ()
@@ -169,8 +163,45 @@ local function syncDialogueGUI(DirectoryContentScript: DialogueContainerClass): 
   -- Make sure everything with the NPC is OK
   repairNPC();
 
-  -- Check if there are any past events
+  -- Disconnect any past event
   disconnectEvents();
+  
+  -- Hook some button events
+  assert(CurrentDialogueContainer, "[Dialogue Maker] CurrentDialogueContainer not found");
+  Events.AdjustSettingsRequested = (Tools:FindFirstChild("AdjustSettings") :: TextButton).MouseButton1Click:Connect(function()
+
+    -- Make sure all of the important objects are in the NPC
+    repairNPC();
+
+    plugin:OpenScript(Model:FindFirstChild("NPCDialogueSettings"));
+
+  end);
+  
+  Events.AddMessage = (Tools:FindFirstChild("AddMessage") :: TextButton).MouseButton1Click:Connect(function()
+
+    local CurrentDirectory = CurrentDialogueContainer;
+    
+    if viewingPriority ~= "" then
+      
+      local path = viewingPriority:split(".");
+      for _, directory in ipairs(path) do
+
+        CurrentDirectory = CurrentDirectory:FindFirstChild(directory) :: ModuleScript;
+
+      end;
+      
+    end
+
+    -- Create the dialogue script.
+    local MessageContentScript = script.ContentTemplate:Clone();
+    MessageContentScript.Name = #CurrentDirectory:GetChildren() + 1;
+    MessageContentScript:SetAttribute("DialogueType", "Message");
+    MessageContentScript.Parent = CurrentDirectory;
+
+    -- Now let's re-order the dialogue
+    syncDialogueGUI(CurrentDirectory);
+
+  end);
   
   local isDirectoryRoot = viewingPriority == "";
   if isDirectoryRoot then
@@ -227,7 +258,7 @@ local function syncDialogueGUI(DirectoryContentScript: DialogueContainerClass): 
 
   end);
 
-  print("[Dialogue Maker] Viewing " .. viewingPriority);
+  print("[Dialogue Maker] " .. DialogueLocationStatus.Text);
 
   -- Clean up the old dialogue
   for _, status in ipairs(DialogueMessageList:GetChildren()) do
@@ -295,12 +326,13 @@ local function syncDialogueGUI(DirectoryContentScript: DialogueContainerClass): 
     for _, ContentScript in ipairs(category) do
 
       local DialogueMessageContainer = DialogueMessageTemplate:Clone();
-      local DialogueMessageContainerChildContainer = DialogueContainer:FindFirstChild("Container") :: Frame;
+      local DialogueMessageContainerChildContainer = DialogueMessageContainer:FindFirstChild("Container") :: Frame;
       local DialogueMessagePriorityTextBox = DialogueMessageContainerChildContainer:FindFirstChild("Priority") :: TextBox;
       local DialogueMessageTypeDropdownButton = DialogueMessageContainerChildContainer:FindFirstChild("DialogueTypeDropdown") :: TextButton;
       local SplitPriority = viewingPriority:split(".");
+      if viewingPriority == "" then table.remove(SplitPriority, 1) end;
       table.insert(SplitPriority, ContentScript.Name);
-      (DialogueMessageTypeDropdownButton:FindFirstChild("DialogueType") :: TextLabel).Text = SplitPriority[#SplitPriority];
+      (DialogueMessageTypeDropdownButton:FindFirstChild("DialogueType") :: TextLabel).Text = ContentScript:GetAttribute("DialogueType");
       DialogueMessagePriorityTextBox.PlaceholderText = SplitPriority[#SplitPriority];
       DialogueMessagePriorityTextBox.Text = SplitPriority[#SplitPriority];
       DialogueMessageContainer.Visible = true;
@@ -368,7 +400,6 @@ local function syncDialogueGUI(DirectoryContentScript: DialogueContainerClass): 
 
       end;
       
-      assert(CurrentDialogueContainer, "[Dialogue Maker] CurrentDialogueContainer not found");
       local FocusEvent;
       FocusEvent = DialogueMessagePriorityTextBox.FocusLost:Connect(function(input)
 
@@ -487,7 +518,7 @@ local function syncDialogueGUI(DirectoryContentScript: DialogueContainerClass): 
 
       end);
       
-      local ViewChildrenButton = DialogueMessageContainer:FindFirstChild("ViewChildren") :: TextButton;
+      local ViewChildrenButton = DialogueMessageContainerChildContainer:FindFirstChild("ViewChildren") :: TextButton;
       local SucceedingActionButton = OpenScriptsList:FindFirstChild("PrecedingAction") :: TextButton;
       if isRedirect then
 
@@ -522,18 +553,18 @@ local function syncDialogueGUI(DirectoryContentScript: DialogueContainerClass): 
           end;
 
           ViewChildrenButton.Visible = false;
-
+          
           -- Go to the target directory
           viewingPriority = table.concat(SplitPriority, ".");
           local CurrentDirectory = CurrentDialogueContainer;
-
+          
           for index, directory in ipairs(SplitPriority) do
               
             CurrentDirectory = CurrentDirectory:FindFirstChild(directory) :: ModuleScript;
             
           end;
 
-          syncDialogueGUI(DirectoryContentScript);
+          syncDialogueGUI(ContentScript);
 
         end));
         
@@ -554,9 +585,11 @@ local PluginGui: DockWidgetPluginGui?;
 -- @since v1.0.0
 local function closeDialogueEditor(): ()
 
-  Events = {ViewChildren = {}; EditingMessage = {}; EditingRedirect = {}; ConvertFromRedirect = {}; ConvertToRedirect = {}};
+  disconnectEvents();
 
   viewingPriority = "";
+  
+  DialogueMakerFrame.Parent = nil;
 
   if PluginGui then PluginGui:Destroy(); end;
   EditDialogueButton:SetActive(false);
@@ -574,45 +607,13 @@ local function openDialogueEditor(): ()
     
     PluginGui.Title = "Dialogue Maker";
     PluginGui:BindToClose(closeDialogueEditor);
-
-    Events.AdjustSettingsRequested = (Tools:FindFirstChild("AdjustSettings") :: TextButton).MouseButton1Click:Connect(function()
-
-      -- Make sure all of the important objects are in the NPC
-      repairNPC();
-
-      plugin:OpenScript(CurrentDialogueContainer:FindFirstChild("Settings"));
-
-    end);
-
-    Events.AddMessage = (Tools:FindFirstChild("AddMessage") :: TextButton).MouseButton1Click:Connect(function()
-
-      local path = viewingPriority:split(".");
-      local CurrentDirectory = CurrentDialogueContainer;
-
-      for _, directory in ipairs(path) do
-        
-        CurrentDirectory = CurrentDirectory:FindFirstChild(directory) :: ModuleScript;
-
-      end;
-
-      -- Create the dialogue script.
-      local MessageContentScript = script.ContentTemplate:Clone();
-      MessageContentScript.Name = viewingPriority .. "." .. (#CurrentDirectory:GetChildren() + 1);
-      MessageContentScript.Parent = CurrentDirectory;
-
-      -- Now let's re-order the dialogue
-      disconnectEvents();
-      syncDialogueGUI(CurrentDirectory);
-
-    end);
-
-    -- Let's get the current dialogue settings
-    syncDialogueGUI(CurrentDialogueContainer)
     
-    local DialogueMakerFrame = DialogueMakerFrame:Clone();
     (ModelLocationFrame:FindFirstChild("ModelLocation") :: TextLabel).Text = Model.Name;
     DialogueMakerFrame.Parent = PluginGui;
     isDialogueEditorOpen = true;
+
+    -- Let's get the current dialogue settings
+    syncDialogueGUI(CurrentDialogueContainer)
     
   end;
 
@@ -632,7 +633,7 @@ EditDialogueButton.Click:Connect(function()
     
     -- Check if the user is selecting an object.
     local SelectedObjects = Selection:Get();
-    assert(#SelectedObjects == 0, "You didn't select an object.");
+    assert(#SelectedObjects ~= 0, "You didn't select an object.");
     assert(#SelectedObjects == 1, "You must select one object; not multiple objects.");
 
     -- Check if the model has a part
