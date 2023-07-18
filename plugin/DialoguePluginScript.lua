@@ -193,8 +193,20 @@ local function syncDialogueGUI(DirectoryContentScript: DialogueContainerClass): 
     end
 
     -- Create the dialogue script.
+    -- TODO: Fix add message again
+    local targetPriority = 0;
+    for _, Child in ipairs(CurrentDirectory:GetChildren()) do
+      
+      local ComparedName = tonumber(Child.Name);
+      if ComparedName and ComparedName > targetPriority then
+        
+        targetPriority = ComparedName + 1;
+        
+      end
+      
+    end
     local MessageContentScript = script.ContentTemplate:Clone();
-    MessageContentScript.Name = #CurrentDirectory:GetChildren() + 1;
+    MessageContentScript.Name = targetPriority;
     MessageContentScript:SetAttribute("DialogueType", "Message");
     MessageContentScript.Parent = CurrentDirectory;
 
@@ -369,7 +381,7 @@ local function syncDialogueGUI(DirectoryContentScript: DialogueContainerClass): 
 
       local function showDeleteModePrompt(): ()
 
-        if not DeletePromptShown then return; end;
+        if DeletePromptShown then return; end;
         
         DeletePromptShown = true;
 
