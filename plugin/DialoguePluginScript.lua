@@ -213,9 +213,14 @@ local function syncDialogueGUI(DirectoryContentScript: DialogueContainerClass): 
     DialogueLocationStatus.Text = "Viewing " .. viewingPriority;
     
     local ViewParentButton = Tools:FindFirstChild("ViewParent") :: TextButton;
+    local ViewParentTextLabel = ViewParentButton:FindFirstChild("TextLabel") :: TextLabel;
+    local ViewParentImageLabel = ViewParentButton:FindFirstChild("ImageLabel") :: ImageLabel;
     Events.ViewParent = ViewParentButton.MouseButton1Click:Connect(function()
-
-      ViewParentButton.BackgroundColor3 = Color3.fromRGB(159, 159, 159);
+      
+      local GRAY = Color3.fromRGB(149, 149, 149);
+      ViewParentTextLabel.TextColor3 = GRAY;
+      ViewParentImageLabel.ImageColor3 = GRAY;
+      ViewParentButton.BackgroundTransparency = 1;
 
       local NewViewingPriority = viewingPriority:split(".");
       NewViewingPriority[#NewViewingPriority] = nil;
@@ -224,8 +229,11 @@ local function syncDialogueGUI(DirectoryContentScript: DialogueContainerClass): 
       syncDialogueGUI(DirectoryContentScript.Parent :: DialogueContainerClass);
       
     end);
-
-    ViewParentButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255);
+    
+    local WHITE = Color3.fromRGB(255, 255, 255);
+    ViewParentTextLabel.TextColor3 = WHITE;
+    ViewParentImageLabel.ImageColor3 = WHITE;
+    ViewParentButton.BackgroundTransparency = 0;
 
   end;
   
