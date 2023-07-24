@@ -265,7 +265,7 @@ function DialogueModule.divideTextToFitBox(text: string, tempLine: TextLabel): {
 end;
 
 -- @since v1.0.0
-function DialogueModule.ReadDialogue(npc: Model): ()
+function DialogueModule.readDialogue(npc: Model): ()
   
   local Events = {};
   local DefaultClickSound = RemoteConnections.GetDefaultClickSound:InvokeServer();
@@ -289,7 +289,7 @@ function DialogueModule.ReadDialogue(npc: Model): ()
       API.Triggers.disableAllProximityPrompts();
       
       -- Verify NPCSettingsScript.
-      local NPCSettingsScript = NPCDialogueContainer:FindFirstChild("Settings");
+      local NPCSettingsScript = npc:FindFirstChild("NPCDialogueSettings");
       if not NPCSettingsScript or not NPCSettingsScript:IsA("ModuleScript") then
         
         error("NPC settings script not found.");
@@ -356,10 +356,10 @@ function DialogueModule.ReadDialogue(npc: Model): ()
       end
 
       -- Set the theme and prepare the response template
-      local DialogueGUI: ScreenGui = API.GUI.createNewDialogueGUI(DialogueSettings.general.themeName);
+      local DialogueGUI: ScreenGui = API.GUI.createNewDialogueGui(DialogueSettings.general.themeName);
       local ResponseContainer, ResponseTemplate, ClickSound: Sound?, ClickSoundEnabled, OldDialogueGui;
       local GUIDialogueContainer = DialogueGUI:FindFirstChild("DialogueContainer");
-      local function SetupDialogueGui()
+      local function setupDialogueGui(): ()
 
         -- Set up responses
         DialogueGUI.Parent = Player:WaitForChild("PlayerGui");
@@ -396,12 +396,14 @@ function DialogueModule.ReadDialogue(npc: Model): ()
 
         -- Setup click sound
         local PossibleClickSound = DialogueGUI:FindFirstChild("ClickSound");
-        if PossibleClickSound:IsA("Sound") then
+        if PossibleClickSound and PossibleClickSound:IsA("Sound") then
           
           ClickSound = PossibleClickSound;
           
-        end
+        end;
+
         ClickSoundEnabled = false;
+
         if DefaultClickSound and DefaultClickSound ~= 0 then
 
           if not ClickSound then
@@ -420,7 +422,7 @@ function DialogueModule.ReadDialogue(npc: Model): ()
 
       end;
 
-      SetupDialogueGui();
+      setupDialogueGui();
       
       if GUIDialogueContainer:IsA("GuiObject") and ResponseContainer:IsA("ScrollingFrame") and ResponseTemplate:IsA("TextButton") then
 
@@ -430,7 +432,7 @@ function DialogueModule.ReadDialogue(npc: Model): ()
 
           DialogueGUI:Destroy();
           DialogueGUI = newTheme;
-          SetupDialogueGui();
+          setupDialogueGui();
 
         end);
 
@@ -458,33 +460,28 @@ function DialogueModule.ReadDialogue(npc: Model): ()
         end;
 
         -- Show the dialouge to the player
-        local DialoguePriority = "1";
-        local rootDialogueScript = NPCDialogueContainer:FindFirstChild("1");
-        local currentDialogueScript = rootDialogueScript; -- was currentDirectory
+        local currentDialoguePriority = "1";
+        local CurrentContentScript: ModuleScript;
         while DialogueModule.PlayerTalkingWithNPC.Value and task.wait() do
 
           -- Get the current directory.
-          currentDialogueScript = API.Dialogue.goToDirectory(rootDialogueScript, DialoguePriority:split("."));
-          local currentDialogueProperties = require(currentDialogueScript) :: any;
+          CurrentContentScript = API.Dialogue.goToDirectory(NPCDialogueContainer, currentDialoguePriority:split("."));
+          local dialogueType = CurrentContentScript:GetAttribute("DialogueType");
 
-          if currentDialogueProperties.type == "redirect" and RemoteConnections.PlayerPassesCondition:InvokeServer(npc, currentDialogueScript) then
+          if RemoteConnections.PlayerPassesCondition:InvokeServer(npc, CurrentContentScript) then
+
+            local dialogueContentArray = require(CurrentContentScript) :: any;
+            if dialogueType == "Redirect" then
 
             -- A redirect is available, so let's switch priorities.
-            local DialoguePriorityPath = currentDialogueProperties.content:split(".");
-            table.remove(DialoguePriorityPath, 1);
-            DialoguePriority = table.concat(DialoguePriorityPath, ".");
-            RemoteConnections.ExecuteAction:InvokeServer(npc, currentDialogueScript, "Succeeding");
-            currentDialogueScript = rootDialogueScript;
+              currentDialoguePriority = dialogueContentArray[0]:split(".");
+              continue;
 
-          elseif RemoteConnections.PlayerPassesCondition:InvokeServer(npc, currentDialogueScript) then
-
-            -- A message is available, so let's display it.
-            -- First, let's run the preceding action.
-            RemoteConnections.ExecuteAction:InvokeServer(npc, currentDialogueScript, "Preceding");
+            end;
             
             -- Get a list of responses from the dialogue.
             local responses: {{ModuleScript: ModuleScript; properties: any}} = {};
-            for _, PossibleResponse in ipairs(currentDialogueScript:GetChildren()) do
+            for _, PossibleResponse in ipairs(CurrentContentScript:GetChildren()) do
               
               if PossibleResponse:IsA("ModuleScript") and tonumber(PossibleResponse.Name) and PossibleResponse:GetAttribute("DialogueType") == "Response" then
                 
@@ -620,7 +617,7 @@ function DialogueModule.ReadDialogue(npc: Model): ()
             DialogueGUI.Enabled = true;
             local Position = 0;
             local Adding = false;
-            local MessageTextWithPauses = currentDialogueProperties.content;
+            local MessageTextWithPauses = dialogueContentArray[0];
 
             -- Clone the TextLabel.
             local TempLine: TextLabel = textContainerLine:Clone();
@@ -707,10 +704,6 @@ function DialogueModule.ReadDialogue(npc: Model): ()
                     end;
 
                     chosenResponse = response;
-                    
-                    -- Run the succeeding response.
-                    RemoteConnections.ExecuteAction:InvokeServer(npc, response, "Succeeding");
-
                     WaitingForResponse = false;
 
                   end);
@@ -754,15 +747,16 @@ function DialogueModule.ReadDialogue(npc: Model): ()
             end;
 
             -- Run after action
-            if currentDialogueProperties.hasSucceedingAction and DialogueModule.PlayerTalkingWithNPC.Value then
+            if DialogueModule.PlayerTalkingWithNPC.Value then
 
-              RemoteConnections.ExecuteAction:InvokeServer(npc, currentDialogueScript, "Succeeding");
+              -- TODO: Fix this
+              RemoteConnections.ExecuteAction:InvokeServer(npc, CurrentContentScript, "Succeeding");
 
             end;
 
             -- Check if there is more dialogue.
             local hasPossibleDialogue = false;
-            for _, PossibleDialogue in ipairs((if chosenResponse then chosenResponse.ModuleScript else currentDialogueScript):GetChildren()) do
+            for _, PossibleDialogue in ipairs((if chosenResponse then chosenResponse.ModuleScript else CurrentContentScript):GetChildren()) do
 
               local DialogueType = PossibleDialogue:GetAttribute("DialogueType");
               if PossibleDialogue:IsA("ModuleScript") and tonumber(PossibleDialogue.Name) and (DialogueType == "Message" or DialogueType == "Redirect") then
@@ -776,8 +770,7 @@ function DialogueModule.ReadDialogue(npc: Model): ()
             
             if DialogueModule.PlayerTalkingWithNPC.Value and hasPossibleDialogue then
 
-              DialoguePriority = if chosenResponse then string.sub(chosenResponse.ModuleScript.Name .. ".1", 3) else DialoguePriority .. ".1";
-              currentDialogueScript = rootDialogueScript;
+              currentDialoguePriority = if chosenResponse then string.sub(chosenResponse.ModuleScript.Name .. ".1", 3) else currentDialoguePriority .. ".1";
 
             else
 
@@ -790,9 +783,9 @@ function DialogueModule.ReadDialogue(npc: Model): ()
 
             -- There is a message; however, the player failed the condition.
             -- Let's check if there's something else available.
-            local SplitPriority = DialoguePriority:split(".");
+            local SplitPriority = currentDialoguePriority:split(".");
             SplitPriority[#SplitPriority] = tostring(tonumber(SplitPriority[#SplitPriority]) :: number + 1);
-            DialoguePriority = table.concat(SplitPriority, ".");
+            currentDialoguePriority = table.concat(SplitPriority, ".");
 
           end;
 

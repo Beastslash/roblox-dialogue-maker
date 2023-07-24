@@ -26,40 +26,20 @@ for _, npc in ipairs(NPCDialogue) do
   -- Make sure all NPCs aren't affected if this one doesn't load properly
   local success, msg = pcall(function()
 
-    -- Get speech bubble settings.
-    local DialogueSettings = require(npc.DialogueContainer.Settings) :: any;
-    local SpeechBubbleEnabled = DialogueSettings.SpeechBubble.Enabled;
-    local SpeechBubblePart = DialogueSettings.SpeechBubble.BasePart;
-
-    -- Get prompt region settings.
-    local PromptRegionEnabled = DialogueSettings.PromptRegion.Enabled;
-    local PromptRegionPart = DialogueSettings.PromptRegion.Part;
-
-    -- Get proximity prompt settings.
-    local ProximityPromptEnabled = DialogueSettings.ProximityPrompt.Enabled;
-    local ProximityPromptLocation = DialogueSettings.ProximityPrompt.Location;
-    local ProximityPromptAutoCreate = DialogueSettings.ProximityPrompt.AutoCreate;
-    local ProximityPromptActivationDistance = DialogueSettings.ProximityPrompt.MaxActivationDistance;
-    local ProximityPromptHoldDuration = DialogueSettings.ProximityPrompt.HoldDuration;
-    local ProximityPromptRequiresLineOfSight = DialogueSettings.ProximityPrompt.RequiresLineOfSight;
-
-    -- Get click detector settings.
-    local ClickDetectorEnabled = DialogueSettings.ClickDetector.Enabled;
-    local ClickDetectorLocation = DialogueSettings.ClickDetector.Location;
-    local ClickDetectorAutoCreate = DialogueSettings.ClickDetector.AutoCreate;
-    local ClickDetectorActivationDistance = DialogueSettings.ClickDetector.ActivationDistance;
-
-    -- Now it's time to set up speech bubbles.
+    -- Set up speech bubbles.
+    local dialogueSettings = require(npc.NPCDialogueSettings) :: any;
+    local SpeechBubbleEnabled = dialogueSettings.speechBubble.enabled;
+    local SpeechBubblePart = dialogueSettings.speechBubble.basePart;
     if SpeechBubbleEnabled and SpeechBubblePart then
 
       if SpeechBubblePart:IsA("BasePart") then
 
-        local SpeechBubble = API.Triggers.CreateSpeechBubble(npc, DialogueSettings);
+        local SpeechBubble = API.Triggers.createSpeechBubble(npc, dialogueSettings);
 
         -- Listen if the player clicks the speech bubble
         SpeechBubble.SpeechBubbleButton.MouseButton1Click:Connect(function()
 
-          API.Dialogue.ReadDialogue(npc);
+          API.Dialogue.readDialogue(npc);
 
         end);
 
@@ -74,6 +54,8 @@ for _, npc in ipairs(NPCDialogue) do
     end;
 
     -- Next, the prompt regions.
+    local PromptRegionEnabled = dialogueSettings.promptRegion.enabled;
+    local PromptRegionPart = dialogueSettings.promptRegion.part;
     if PromptRegionEnabled and PromptRegionPart then
 
       if PromptRegionPart:IsA("BasePart") then
@@ -84,7 +66,7 @@ for _, npc in ipairs(NPCDialogue) do
           local PlayerFromCharacter = Players:GetPlayerFromCharacter(part.Parent);
           if PlayerFromCharacter == Player then
 
-            API.Dialogue.ReadDialogue(npc);
+            API.Dialogue.readDialogue(npc);
 
           end;
 
@@ -99,14 +81,17 @@ for _, npc in ipairs(NPCDialogue) do
     end;
 
     -- Now, the proximity prompts.
+    local ProximityPromptEnabled = dialogueSettings.proximityPrompt.enabled;
+    local ProximityPromptLocation = dialogueSettings.proximityPrompt.location;
+    local ProximityPromptAutoCreate = dialogueSettings.proximityPrompt.autoCreate;
     if ProximityPromptEnabled and (ProximityPromptLocation or ProximityPromptAutoCreate) then
 
       if ProximityPromptAutoCreate then
 
         local ProximityPrompt = Instance.new("ProximityPrompt");
-        ProximityPrompt.MaxActivationDistance = ProximityPromptActivationDistance;
-        ProximityPrompt.HoldDuration = ProximityPromptHoldDuration;
-        ProximityPrompt.RequiresLineOfSight = ProximityPromptRequiresLineOfSight;
+        ProximityPrompt.MaxActivationDistance = dialogueSettings.proximityPrompt.maxActivationDistance;
+        ProximityPrompt.HoldDuration = dialogueSettings.proximityPrompt.holdDuration;
+        ProximityPrompt.RequiresLineOfSight = dialogueSettings.proximityPrompt.requiresLineOfSight;
         ProximityPrompt.Parent = npc;
         ProximityPromptLocation = ProximityPrompt;
 
@@ -114,11 +99,11 @@ for _, npc in ipairs(NPCDialogue) do
 
       if ProximityPromptLocation:IsA("ProximityPrompt") then
 
-        API.Triggers.AddProximityPrompt(npc, ProximityPromptLocation);
+        API.Triggers.addProximityPrompt(npc, ProximityPromptLocation);
 
         ProximityPromptLocation.Triggered:Connect(function()
 
-          API.Dialogue.ReadDialogue(npc);
+          API.Dialogue.readDialogue(npc);
 
         end);
 
@@ -131,12 +116,16 @@ for _, npc in ipairs(NPCDialogue) do
     end;
 
     -- Almost there: it's time for the click detectors.
+    local ClickDetectorEnabled = dialogueSettings.clickDetector.enabled;
+
+    local ClickDetectorLocation = dialogueSettings.clickDetector.location;
+    local ClickDetectorAutoCreate = dialogueSettings.clickDetector.autoCreate;
     if ClickDetectorEnabled and (ClickDetectorLocation or ClickDetectorAutoCreate) then
 
       if ClickDetectorAutoCreate then
 
         local ClickDetector = Instance.new("ClickDetector");
-        ClickDetector.MaxActivationDistance = ClickDetectorActivationDistance;
+        ClickDetector.MaxActivationDistance = dialogueSettings.clickDetector.activationDistance;
         ClickDetector.Parent = npc;
         ClickDetectorLocation = ClickDetector;
 
@@ -144,10 +133,12 @@ for _, npc in ipairs(NPCDialogue) do
 
       if ClickDetectorLocation:IsA("ClickDetector") then
 
-        API.Triggers.AddClickDetector(npc, ClickDetectorLocation);
+        API.Triggers.addClickDetector(npc, ClickDetectorLocation);
 
         ClickDetectorLocation.MouseClick:Connect(function()
-          API.Dialogue.ReadDialogue(npc);
+          
+          API.Dialogue.readDialogue(npc);
+          
         end);
 
       else
@@ -168,10 +159,12 @@ for _, npc in ipairs(NPCDialogue) do
         if CanPressButton then
 
           if not UserInputService:IsKeyDown(Keybinds.DefaultChatTriggerKey) and not UserInputService:IsKeyDown(Keybinds.DefaultChatTriggerKeyGamepad) then
+            
             return;
 
           end;
-          API.Dialogue.ReadDialogue(npc);
+          
+          API.Dialogue.readDialogue(npc);
 
         end;
 
@@ -197,8 +190,7 @@ for _, npc in ipairs(NPCDialogue) do
 
   end);
 
-  -- One NPC doesn't stop the show, but it's important for you
-  -- to know which ones didn't load properly.
+  -- One NPC doesn't stop the show, but it's important for you to know which ones didn't load properly.
   if not success then
 
     warn("[Dialogue Maker]: Couldn't load NPC " .. npc.Name .. ": " .. msg);
