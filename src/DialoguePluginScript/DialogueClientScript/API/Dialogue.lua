@@ -491,7 +491,7 @@ function DialogueModule.readDialogue(npc: Model): ()
             if dialogueType == "Redirect" then
 
               -- A redirect is available, so let's switch priorities.
-              currentDialoguePriority = dialogueContentArray[1]:split(".");
+              currentDialoguePriority = dialogueContentArray[1];
               continue;
 
             end;
