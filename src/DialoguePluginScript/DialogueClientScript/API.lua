@@ -1,3 +1,4 @@
+--!strict
 print("[Dialogue Maker]: Initializing client API...");
 
 local API = {};
@@ -5,7 +6,7 @@ local API = {};
 for _, instance in ipairs(script:GetChildren()) do
   
   -- Get the table.  
-  module = require(instance);
+  local module = require(instance) :: any;
   
   -- Check if we need to set the API.
   if module._setAPI then

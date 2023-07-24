@@ -1,16 +1,10 @@
+--!strict
 local TriggerModule = {};
 local ProximityPrompts = {};
 local SpeechBubbles = {};
 local ClickDetectors = {};
 
--- TODO: Remove .AddSpeechBubble() in v4.0.0
-function TriggerModule.AddSpeechBubble(npc: Model, speechBubble: BillboardGui)
-  
-  SpeechBubbles[npc] = speechBubble;
-  
-end;
-
-function TriggerModule.CreateSpeechBubble(npc: Model, properties: {[string]: any}): BillboardGui
+function TriggerModule.createSpeechBubble(npc: Model, properties: {[string]: any}): BillboardGui
 
   SpeechBubbles[npc] = Instance.new("BillboardGui");
   SpeechBubbles[npc].Name = "SpeechBubble";
@@ -33,40 +27,40 @@ function TriggerModule.CreateSpeechBubble(npc: Model, properties: {[string]: any
 
 end;
 
-function TriggerModule.DisableAllSpeechBubbles()
-  
+function TriggerModule.disableAllSpeechBubbles(): ()
+
   for _, speechBubble in pairs(SpeechBubbles) do
-    
+
     speechBubble.Enabled = false;
-    
+
   end;
-  
+
 end;
 
-function TriggerModule.EnableAllSpeechBubbles()
-  
+function TriggerModule.enableAllSpeechBubbles(): ()
+
   for _, speechBubble in pairs(SpeechBubbles) do
-    
+
     speechBubble.Enabled = true;
-    
+
   end;
-  
+
 end;
 
-function TriggerModule.AddClickDetector(npc: Model, clickDetector: ClickDetector)
-  
+function TriggerModule.addClickDetector(npc: Model, clickDetector: ClickDetector): ()
+
   ClickDetectors[npc] = clickDetector;
-  
+
 end;
 
-function TriggerModule.AddProximityPrompt(npc: Model, proximityPrompt: ProximityPrompt)
-  
+function TriggerModule.addProximityPrompt(npc: Model, proximityPrompt: ProximityPrompt): ()
+
   ProximityPrompts[npc] = proximityPrompt
-  
+
 end
 
-function TriggerModule.DisableAllClickDetectors()
-  
+function TriggerModule.disableAllClickDetectors(): ()
+
   for _, clickDetector in pairs(ClickDetectors) do
 
     -- Keep track of the original parent
@@ -78,26 +72,27 @@ function TriggerModule.DisableAllClickDetectors()
     clickDetector.Parent = nil;
 
   end;
-  
+
 end;
 
-function TriggerModule.EnableAllClickDetectors()
-  
+function TriggerModule.enableAllClickDetectors(): ()
+
   for _, clickDetector in pairs(ClickDetectors) do
     
-    if clickDetector:FindFirstChild("OriginalParent") and clickDetector.OriginalParent:IsA("ObjectValue") and clickDetector.OriginalParent.Value then
-      
-      clickDetector.Parent = clickDetector.OriginalParent.Value;
-      clickDetector.OriginalParent:Destroy();
-      
+    local OriginalParent = clickDetector:FindFirstChild("OriginalParent");
+    if OriginalParent:IsA("ObjectValue") and OriginalParent.Value then
+
+      clickDetector.Parent = OriginalParent.Value;
+      OriginalParent:Destroy();
+
     end;
-    
+
   end;
-  
+
 end;
 
-function TriggerModule.DisableAllProximityPrompts()
-  
+function TriggerModule.disableAllProximityPrompts(): ()
+
   for _, proximityPrompt in pairs(ProximityPrompts) do
 
     -- Keep track of the original parent
@@ -111,19 +106,20 @@ function TriggerModule.DisableAllProximityPrompts()
   end;
 end;
 
-function TriggerModule.EnableAllProximityPrompts()
-  
+function TriggerModule.enableAllProximityPrompts(): ()
+
   for _, proximityDetector in pairs(ProximityPrompts) do
     
-    if proximityDetector:FindFirstChild("OriginalParent") and proximityDetector.OriginalParent:IsA("ObjectValue") and proximityDetector.OriginalParent.Value then
-      
-      proximityDetector.Parent = proximityDetector.OriginalParent.Value;
-      proximityDetector.OriginalParent:Destroy();
-      
+    local OriginalParent = proximityDetector:FindFirstChild("OriginalParent");
+    if OriginalParent:IsA("ObjectValue") and OriginalParent.Value then
+
+      proximityDetector.Parent = OriginalParent.Value;
+      OriginalParent:Destroy();
+
     end;
-    
+
   end;
-  
+
 end;
 
 return TriggerModule;
