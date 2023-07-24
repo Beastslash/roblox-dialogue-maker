@@ -8,38 +8,52 @@ local Player = game:GetService("Players").LocalPlayer;
 local PlayerGui = Player:WaitForChild("PlayerGui");
 local ReplicatedStorage = game:GetService("ReplicatedStorage");
 
--- Check if the DialogueMakerRemoteConnections folder was moved
-local RemoteConnections = ReplicatedStorage:WaitForChild("DialogueMakerRemoteConnections", 3);
-assert(RemoteConnections, "[Dialogue Maker]: Couldn't find the DialogueMakerRemoteConnections folder in the ReplicatedStorage.");
-
 -- Set some constants
 local API = require(script.API);
-local Keybinds = RemoteConnections.GetKeybinds:InvokeServer();
-local DefaultMinDistance = RemoteConnections.GetMinimumDistanceFromCharacter:InvokeServer();
+local clientSettings = require(script.Settings);
 
 -- Iterate through every NPC
 print("[Dialogue Maker]: Preparing dialogue received from the server...");
 
-local NPCDialogue = RemoteConnections.GetNPCDialogue:InvokeServer();
-for _, npc in ipairs(NPCDialogue) do
-
+for _, NPCLocation: ObjectValue in ipairs(script.NPCLocations:GetChildren()) do
+  
   -- Make sure all NPCs aren't affected if this one doesn't load properly
+  if not NPCLocation:IsA("ObjectValue") then
+    
+    warn("[Dialogue Maker] " .. NPCLocation.Name .. " is not an ObjectValue. Skipping...");
+    continue;
+    
+  end;
+  
+  local NPC: Model = NPCLocation.Value :: Model;
+  if not NPC then
+    
+    warn("[Dialogue Maker] " .. NPCLocation.Name .. " does not have a Value. Skipping...");
+    continue;
+    
+  elseif not NPC:IsA("Model") then
+    
+    warn("[Dialogue Maker] " .. NPC.Name .. "'s Value is not a Model. Skipping...");
+    continue;
+    
+  end
+    
   local success, msg = pcall(function()
-
+    
     -- Set up speech bubbles.
-    local dialogueSettings = require(npc.NPCDialogueSettings) :: any;
+    local dialogueSettings = require(NPC:FindFirstChild("NPCDialogueSettings")) :: any;
     local SpeechBubbleEnabled = dialogueSettings.speechBubble.enabled;
     local SpeechBubblePart = dialogueSettings.speechBubble.basePart;
     if SpeechBubbleEnabled and SpeechBubblePart then
 
       if SpeechBubblePart:IsA("BasePart") then
 
-        local SpeechBubble = API.Triggers.createSpeechBubble(npc, dialogueSettings);
+        local SpeechBubble = API.Triggers.createSpeechBubble(NPC, dialogueSettings);
 
         -- Listen if the player clicks the speech bubble
         SpeechBubble.SpeechBubbleButton.MouseButton1Click:Connect(function()
 
-          API.Dialogue.readDialogue(npc);
+          API.Dialogue.readDialogue(NPC);
 
         end);
 
@@ -47,7 +61,7 @@ for _, npc in ipairs(NPCDialogue) do
 
       else
 
-        warn("[Dialogue Maker]: The SpeechBubblePart for " .. npc.Name .. " is not a Part.");
+        warn("[Dialogue Maker]: The SpeechBubblePart for " .. NPC.Name .. " is not a Part.");
 
       end;
 
@@ -66,7 +80,7 @@ for _, npc in ipairs(NPCDialogue) do
           local PlayerFromCharacter = Players:GetPlayerFromCharacter(part.Parent);
           if PlayerFromCharacter == Player then
 
-            API.Dialogue.readDialogue(npc);
+            API.Dialogue.readDialogue(NPC);
 
           end;
 
@@ -74,7 +88,7 @@ for _, npc in ipairs(NPCDialogue) do
 
       else
 
-        warn("[Dialogue Maker]: The PromptRegionPart for " .. npc.Name .. " is not a Part.");
+        warn("[Dialogue Maker]: The PromptRegionPart for " .. NPC.Name .. " is not a Part.");
 
       end;
 
@@ -92,24 +106,24 @@ for _, npc in ipairs(NPCDialogue) do
         ProximityPrompt.MaxActivationDistance = dialogueSettings.proximityPrompt.maxActivationDistance;
         ProximityPrompt.HoldDuration = dialogueSettings.proximityPrompt.holdDuration;
         ProximityPrompt.RequiresLineOfSight = dialogueSettings.proximityPrompt.requiresLineOfSight;
-        ProximityPrompt.Parent = npc;
+        ProximityPrompt.Parent = NPC;
         ProximityPromptLocation = ProximityPrompt;
 
       end;
 
       if ProximityPromptLocation:IsA("ProximityPrompt") then
 
-        API.Triggers.addProximityPrompt(npc, ProximityPromptLocation);
+        API.Triggers.addProximityPrompt(NPC, ProximityPromptLocation);
 
         ProximityPromptLocation.Triggered:Connect(function()
 
-          API.Dialogue.readDialogue(npc);
+          API.Dialogue.readDialogue(NPC);
 
         end);
 
       else
 
-        warn("[Dialogue Maker]: The ProximityPromptLocation for " .. npc.Name .. " is not a ProximityPrompt.");
+        warn("[Dialogue Maker]: The ProximityPromptLocation for " .. NPC.Name .. " is not a ProximityPrompt.");
 
       end;
 
@@ -126,55 +140,57 @@ for _, npc in ipairs(NPCDialogue) do
 
         local ClickDetector = Instance.new("ClickDetector");
         ClickDetector.MaxActivationDistance = dialogueSettings.clickDetector.activationDistance;
-        ClickDetector.Parent = npc;
+        ClickDetector.Parent = NPC;
         ClickDetectorLocation = ClickDetector;
 
       end;
 
       if ClickDetectorLocation:IsA("ClickDetector") then
 
-        API.Triggers.addClickDetector(npc, ClickDetectorLocation);
+        API.Triggers.addClickDetector(NPC, ClickDetectorLocation);
 
         ClickDetectorLocation.MouseClick:Connect(function()
           
-          API.Dialogue.readDialogue(npc);
+          API.Dialogue.readDialogue(NPC);
           
         end);
 
       else
 
-        warn("[Dialogue Maker]: The ClickDetectorLocation for " .. npc.Name .. " is not a ClickDetector.");
+        warn("[Dialogue Maker]: The ClickDetectorLocation for " .. NPC.Name .. " is not a ClickDetector.");
 
       end;
 
     end;
 
     -- Finally, the keybinds.
-    if Keybinds.KeybindsEnabled then
+    if clientSettings.keybindsEnabled then
 
       local CanPressButton = false;
       local ReadDialogueWithKeybind;
+      local defaultChatTriggerKey = clientSettings.defaultChatTriggerKey;
+      local defaultChatTriggerKeyGamepad = clientSettings.defaultChatTriggerKeyGamepad;
       ReadDialogueWithKeybind = function()
 
         if CanPressButton then
 
-          if not UserInputService:IsKeyDown(Keybinds.DefaultChatTriggerKey) and not UserInputService:IsKeyDown(Keybinds.DefaultChatTriggerKeyGamepad) then
+          if not UserInputService:IsKeyDown(defaultChatTriggerKey) and not UserInputService:IsKeyDown(defaultChatTriggerKeyGamepad) then
             
             return;
 
           end;
           
-          API.Dialogue.readDialogue(npc);
+          API.Dialogue.readDialogue(NPC);
 
         end;
 
       end;
-      ContextActionService:BindAction("OpenDialogueWithKeybind", ReadDialogueWithKeybind, false, Keybinds.DefaultChatTriggerKey, Keybinds.DefaultChatTriggerKeyGamepad);
+      ContextActionService:BindAction("OpenDialogueWithKeybind", ReadDialogueWithKeybind, false, defaultChatTriggerKey, defaultChatTriggerKeyGamepad);
 
       -- Check if the player is in range
       RunService.Heartbeat:Connect(function()
 
-        if Player:DistanceFromCharacter(npc:GetPivot().Position) < DefaultMinDistance then
+        if Player:DistanceFromCharacter(NPC:GetPivot().Position) < dialogueSettings.minimumDistanceFromCharacter then
 
           CanPressButton = true;
 
@@ -193,7 +209,7 @@ for _, npc in ipairs(NPCDialogue) do
   -- One NPC doesn't stop the show, but it's important for you to know which ones didn't load properly.
   if not success then
 
-    warn("[Dialogue Maker]: Couldn't load NPC " .. npc.Name .. ": " .. msg);
+    warn("[Dialogue Maker]: Couldn't load NPC " .. NPC.Name .. ": " .. msg);
 
   end;
 

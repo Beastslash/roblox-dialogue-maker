@@ -1,42 +1,62 @@
 --!strict
-local Settings: {
-  DefaultTheme: {
+type ClientSettings = {
+
+  -- This is the default theme that will be used when talking with NPCs
+  defaultThemes: {
     [number]: {
-      MinimumViewportWidth: number;
-      MinimumViewportHeight: number;
-      ThemeName: string;
+      minimumViewportWidth: number;
+      minimumViewportHeight: number;
+      themeName: string;
     }
   };
-  ShowResponsesAfterMessageFinished: boolean;
-  DefaultClickSound: number;
-  MinimumDistanceFromCharacter: number;
-  KeybindsEnabled: boolean;
-  DefaultChatTriggerKey: Enum.KeyCode;
-  DefaultChatTriggerKeyGamepad: Enum.KeyCode;
-  DefaultChatContinueKey: Enum.KeyCode;
-  DefaultChatContinueKeyGamepad: Enum.KeyCode;
-} = {
+
+  -- Prevents the player from selecting responses without first viewing the dialogue
+  showResponsesAfterMessageFinished: boolean;
+
+  -- Replace this with an audio ID that'll play every time a player continues a conversation or selects a response. Replace with 0 to not play any sound.
+  defaultClickSound: number;
+
+  -- Minimum distance from a character required for keybinds should work
+  minimumDistanceFromCharacter: number;
+
+  -- Whether keybinds should work
+  keybindsEnabled: boolean;
+
+  -- Keyboard keybind to start a conversation with an NPC
+  defaultChatTriggerKey: Enum.KeyCode;
+
+  -- Gamepad keybind to start a conversation with an NPC
+  defaultChatTriggerKeyGamepad: Enum.KeyCode;
+
+  -- Keyboard keybind to continue a conversation with an NPC
+  defaultChatContinueKey: Enum.KeyCode;
+
+  -- Gamepad keybind to continue a conversation with an NPC
+  defaultChatContinueKeyGamepad: Enum.KeyCode;
+};
+
+local Settings: ClientSettings = {
 
   -- [ Theme Settings ] --
-  DefaultTheme = {
+  defaultThemes = {
     {
-      MinimumViewportWidth = 0,
-      MinimumViewportHeight = 0,
-      ThemeName = "BigAndBoldDialogue"
+      minimumViewportWidth = 0;
+      minimumViewportHeight = 0;
+      themeName = "BigAndBoldDialogue";
     }
-  }; -- This is the default theme that will be used when talking with NPCs
+  };
 
   -- [ Response Settings ] --
-  ShowResponsesAfterMessageFinished = true; -- Prevents the player from selecting responses without first viewing the dialogue
-  DefaultClickSound = 0; -- Replace this with an audio ID that'll play every time a player continues a conversation or selects a response. Replace with 0 to not play any sound.
+  showResponsesAfterMessageFinished = true; 
+  defaultClickSound = 0; 
 
   -- [ Chat Triggers and Keybinds ] --
-  MinimumDistanceFromCharacter = 10; -- Minimum distance from a character required for keybinds should work
-  KeybindsEnabled = true; -- Whether or not keybinds should work
-  DefaultChatTriggerKey = Enum.KeyCode.F; -- Keyboard keybind to start a conversation with an NPC
-  DefaultChatTriggerKeyGamepad = Enum.KeyCode.ButtonX; -- Gamepad keybind to start a conversation with an NPC
-  DefaultChatContinueKey = Enum.KeyCode.F; -- Keyboard keybind to continue a conversation with an NPC
-  DefaultChatContinueKeyGamepad = Enum.KeyCode.ButtonA; -- Gamepad keybind to continue a conversation with an NPC
+  minimumDistanceFromCharacter = 10; 
+  keybindsEnabled = true; 
+  defaultChatTriggerKey = Enum.KeyCode.F; 
+  defaultChatTriggerKeyGamepad = Enum.KeyCode.ButtonX; 
+  defaultChatContinueKey = Enum.KeyCode.F; 
+  defaultChatContinueKeyGamepad = Enum.KeyCode.ButtonA; 
 
 };
 
