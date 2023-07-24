@@ -749,24 +749,16 @@ ResetScriptsButton.Click:Connect(function()
     end
 
     -- Take the children from the old scripts
-    for _, dialogueScript in ipairs({OldDialogueServerScript, OldDialogueClientScript}) do
+    for _, DialogueMakerScript in ipairs({OldDialogueServerScript, OldDialogueClientScript}) do
       
-      for _, child in ipairs(dialogueScript:GetChildren()) do
+      for _, child in ipairs(DialogueMakerScript:GetChildren()) do
         
-        if dialogueScript == OldDialogueServerScript then
-          
-          child.Parent = NewDialogueServerScript;
-          
-        else
-          
-          child.Parent = NewDialogueClientScript;
-          
-        end;
+        child.Parent = if DialogueMakerScript == OldDialogueServerScript then NewDialogueServerScript else NewDialogueClientScript;
         
       end;
 
       -- Delete the old scripts
-      dialogueScript.Parent = nil;
+      DialogueMakerScript.Parent = nil;
       
     end;
 
