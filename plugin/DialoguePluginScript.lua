@@ -276,19 +276,7 @@ local function syncDialogueGUI(DirectoryContentScript: DialogueContainerClass): 
       
       -- Get the dialogue item type.
       local DialogueType = PossibleDialogueItem:GetAttribute("DialogueType");
-      if DialogueType == "Response" then
-        
-        table.insert(responses, PossibleDialogueItem);
-        
-      elseif DialogueType == "Message" then
-
-        table.insert(messages, PossibleDialogueItem);
-        
-      elseif DialogueType == "Redirect" then
-
-        table.insert(redirects, PossibleDialogueItem);
-        
-      end
+      table.insert(if DialogueType == "Response" then responses elseif DialogueType == "Message" then messages else redirects, PossibleDialogueItem);
       
     end
     
