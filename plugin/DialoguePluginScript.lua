@@ -4,7 +4,6 @@ local StarterPlayer = game:GetService("StarterPlayer");
 local StarterPlayerScripts = StarterPlayer.StarterPlayerScripts;
 local ReplicatedStorage = game:GetService("ReplicatedStorage");
 local ServerScriptService = game:GetService("ServerScriptService");
-local UserInputService = game:GetService("UserInputService");
 local ChangeHistoryService = game:GetService("ChangeHistoryService");
 
 -- Make sure we have all of the plugin GUI stuff.
