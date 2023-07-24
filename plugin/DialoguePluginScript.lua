@@ -3,7 +3,6 @@ local Selection = game:GetService("Selection");
 local StarterPlayer = game:GetService("StarterPlayer");
 local StarterPlayerScripts = StarterPlayer.StarterPlayerScripts;
 local ReplicatedStorage = game:GetService("ReplicatedStorage");
-local ServerScriptService = game:GetService("ServerScriptService");
 local ChangeHistoryService = game:GetService("ChangeHistoryService");
 
 -- Make sure we have all of the plugin GUI stuff.
@@ -59,32 +58,25 @@ local function repairNPC(): ()
 
   end;
 
-  -- Check if they're registered on the sevrer
-  local DialogueServerScript = ServerScriptService:FindFirstChild("DialogueServerScript");
+  -- Initialize DialogueLocations.
+  local DialogueClientScript = StarterPlayerScripts:FindFirstChild("DialogueClientScript");
 
-  assert(DialogueServerScript, "[Dialogue Maker] DialogueServerScript wasn't found in the ServerScriptService! \nPlease replace the script by pressing the \"Fix Scripts\" button.");
+  assert(DialogueClientScript, "[Dialogue Maker] DialogueClientScript wasn't found in the StarterPlayerScripts! \nPlease replace the script by pressing the \"Fix Scripts\" button.");
 
-  local NPCRegistered;
-  for _, dialogueLocation in ipairs(DialogueServerScript.DialogueLocations:GetChildren()) do
+  for _, dialogueLocation in ipairs(DialogueClientScript.DialogueLocations:GetChildren()) do
     
     if dialogueLocation.Value == Model then
       
-      NPCRegistered = true;
-      break;
+      return;
       
     end
     
   end;
 
-  if not NPCRegistered then
-    
-    -- Add this model to the DialogueManager
-    local DialogueLocation = Instance.new("ObjectValue");
-    DialogueLocation.Value = Model;
-    DialogueLocation.Name = "DialogueLocation";
-    DialogueLocation.Parent = DialogueServerScript.DialogueLocations;
-    
-  end
+  local DialogueLocation = Instance.new("ObjectValue");
+  DialogueLocation.Value = Model;
+  DialogueLocation.Name = "DialogueLocation";
+  DialogueLocation.Parent = DialogueClientScript.DialogueLocations;
 
 end;
 
@@ -430,14 +422,7 @@ local function syncDialogueGUI(DirectoryContentScript: DialogueContainerClass): 
       local ConditionButton = OpenScriptsList:FindFirstChild("Condition") :: TextButton;
       ConditionButton.MouseButton1Click:Connect(function()
 
-        openSpecialScript(ServerScriptService.DialogueServerScript.Conditions, script.ConditionTemplate);
-
-      end);
-
-      local PrecedingActionButton = OpenScriptsList:FindFirstChild("PrecedingAction") :: TextButton;
-      PrecedingActionButton.MouseButton1Click:Connect(function()
-
-        openSpecialScript(ServerScriptService.DialogueServerScript.Actions.Preceding, script.ActionTemplate);
+        openSpecialScript(StarterPlayerScripts.DialogueClientScript.Conditions, script.ConditionTemplate);
 
       end);
       
@@ -487,13 +472,13 @@ local function syncDialogueGUI(DirectoryContentScript: DialogueContainerClass): 
       local dialogueType = ContentScript:GetAttribute("DialogueType");
       local isResponse = dialogueType == "Response";
       local isRedirect = dialogueType == "Redirect";
-      local SucceedingActionButton = OpenScriptsList:FindFirstChild("PrecedingAction") :: TextButton;
+      local ActionButton = OpenScriptsList:FindFirstChild("Action") :: TextButton;
       if isRedirect then
 
-        -- Don't show the Before Action button for redirects
+        -- Don't show the action button for redirects
         DialogueMessageContainer.BackgroundTransparency = 0.4;
         DialogueMessageContainer.BackgroundColor3 = Color3.fromRGB(21, 44, 126);
-        SucceedingActionButton.Visible = false;
+        ActionButton.Visible = false;
         ViewChildrenButton.Visible = false;
 
       else
@@ -503,14 +488,14 @@ local function syncDialogueGUI(DirectoryContentScript: DialogueContainerClass): 
           -- Don't show the Before Action button for responses
           DialogueMessageContainer.BackgroundTransparency = 0.4;
           DialogueMessageContainer.BackgroundColor3 = Color3.fromRGB(30,103,19);
-          SucceedingActionButton.Visible = false;
+          ActionButton.Visible = false;
           
         else 
           
           DialogueMessageContainer.BackgroundTransparency = 1;
-          SucceedingActionButton.MouseButton1Click:Connect(function()
+          ActionButton.MouseButton1Click:Connect(function()
 
-            openSpecialScript(ServerScriptService.DialogueServerScript.Actions.Succeeding, script.ActionTemplate);
+            openSpecialScript(StarterPlayerScripts.DialogueClientScript.Actions, script.ActionTemplate);
 
           end);
           
@@ -700,6 +685,12 @@ EditDialogueButton.Click:Connect(function()
     DialogueClientScript.Parent = StarterPlayerScripts;
     DialogueClientScript.Disabled = false;
     print("[Dialogue Maker] Added DialogueClientScript to the StarterPlayerScripts.");
+    
+    -- Add this model to the DialogueManager
+    local DialogueLocation = Instance.new("ObjectValue");
+    DialogueLocation.Value = Model;
+    DialogueLocation.Name = "DialogueLocation";
+    DialogueLocation.Parent = DialogueClientScript.DialogueLocations;
 
   end;
 
@@ -713,30 +704,13 @@ EditDialogueButton.Click:Connect(function()
 
   end;
 
-  -- Add the chat receiver script in the starter player scripts
-  if not ServerScriptService:FindFirstChild("DialogueServerScript") then
-
-    print("[Dialogue Maker] Adding DialogueServerScript to the ServerScriptService...");
-    local DialogueServerScript = script.DialogueServerScript:Clone();
-    DialogueServerScript.Parent = ServerScriptService;
-    DialogueServerScript.Disabled = false;
-    print("[Dialogue Maker] Added DialogueServerScript to the ServerScriptService.");
-
-    -- Add this model to the DialogueManager
-    local DialogueLocation = Instance.new("ObjectValue");
-    DialogueLocation.Value = Model;
-    DialogueLocation.Name = "DialogueLocation";
-    DialogueLocation.Parent = DialogueServerScript.DialogueLocations;
-
-  end;
-
   -- Now we can open the dialogue editor.
   openDialogueEditor();
 
 end);
 
 local isBusy = false;
-local ResetScriptsButton = Toolbar:CreateButton("Fix Scripts", "Reset DialogueMakerSharedDependencies, DialogueServerScript, and DialogueClientScript back to the a stable version.", "rbxassetid://14109193905");
+local ResetScriptsButton = Toolbar:CreateButton("Fix Scripts", "Reset DialogueMakerSharedDependencies and DialogueClientScript back to the a stable version.", "rbxassetid://14109193905");
 ResetScriptsButton.Click:Connect(function()
 
   -- Debounce
@@ -748,24 +722,22 @@ ResetScriptsButton.Click:Connect(function()
     ChangeHistoryService:SetWaypoint("Resetting Dialogue Maker scripts");
 
     -- Make copies
-    local NewDialogueServerScript = script.DialogueServerScript:Clone();
     local NewDialogueClientScript = script.DialogueClientScript:Clone();
     local ClientAPI = NewDialogueClientScript.API:Clone();
     local NewThemes = NewDialogueClientScript.Themes:Clone();
 
     -- Save the old copies
-    local OldDialogueServerScript = ServerScriptService:FindFirstChild("DialogueServerScript") or NewDialogueServerScript:Clone();
     local OldDialogueClientScript = StarterPlayerScripts:FindFirstChild("DialogueClientScript") or NewDialogueClientScript:Clone();
 
     -- Remove the children from the new copies
-    for _, dialogueScript in ipairs({NewDialogueServerScript, NewDialogueClientScript}) do
-      for _, child in ipairs(dialogueScript:GetChildren()) do
-        child.Parent = nil;
-      end;
-
-      -- Enable the scripts
-      dialogueScript.Disabled = false;
+    for _, child in ipairs(OldDialogueClientScript:GetChildren()) do
+      
+      child.Parent = nil;
+      
     end;
+
+    -- Enable the scripts
+    OldDialogueClientScript.Disabled = false;
 
     -- Remove connections from ReplicatedStorage
     local NewDMRC = script.DialogueMakerSharedDependencies:Clone();
@@ -793,21 +765,16 @@ ResetScriptsButton.Click:Connect(function()
     end
 
     -- Take the children from the old scripts
-    for _, DialogueMakerScript in ipairs({OldDialogueServerScript, OldDialogueClientScript}) do
+    for _, Child in ipairs(OldDialogueClientScript:GetChildren()) do
       
-      for _, child in ipairs(DialogueMakerScript:GetChildren()) do
-        
-        child.Parent = if DialogueMakerScript == OldDialogueServerScript then NewDialogueServerScript else NewDialogueClientScript;
-        
-      end;
-
-      -- Delete the old scripts
-      DialogueMakerScript.Parent = nil;
+      Child.Parent = NewDialogueClientScript;
       
     end;
 
+    -- Delete the old scripts
+    OldDialogueClientScript.Parent = nil;
+
     -- Put the new instances in their places
-    NewDialogueServerScript.Parent = ServerScriptService;
     NewDialogueClientScript.Parent = StarterPlayerScripts;
     ClientAPI.Parent = NewDialogueClientScript;
     NewDMRC.Parent = ReplicatedStorage;
@@ -831,15 +798,6 @@ RemoveUnusedInstancesButton.Click:Connect(function()
 
   local Count = 0;
   pcall(function()
-    
-    local DSS = ServerScriptService:FindFirstChild("DialogueServerScript");
-    if not DSS then
-      
-      warn("[Dialogue Maker] There isn't a DialogueServerScript in the ServerScriptService!");
-      isBusy = false;
-      return;
-      
-    end;
 
     -- Set an undo point
     ChangeHistoryService:SetWaypoint("Removing unused Dialogue Maker instances");
