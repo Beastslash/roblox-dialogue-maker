@@ -1,8 +1,6 @@
 --!strict
-local ReplicatedStorage = game:GetService("ReplicatedStorage");
 local UserInputService = game:GetService("UserInputService");
 local ContextActionService = game:GetService("ContextActionService");
-local RemoteConnections = ReplicatedStorage:WaitForChild("DialogueMakerRemoteConnections");
 local TweenService = game:GetService("TweenService");
 local Players = game:GetService("Players");
 local Player = Players.LocalPlayer;
@@ -26,16 +24,16 @@ end
 -- @since v1.0.0
 -- @returns A module script of a given directory.
 function DialogueModule.goToDirectory(CurrentDirectoryScript: ModuleScript, targetPath: {string}): ModuleScript
-  
+
   local currentPath = "";
   for index, directory in ipairs(targetPath) do
-    
+
     currentPath = currentPath .. (if currentPath ~= "" then "." else "") .. directory;
     local PossibleDirectory = CurrentDirectoryScript:FindFirstChild(directory);
     if not PossibleDirectory or not PossibleDirectory:IsA("ModuleScript") then
-      
+
       error("[Dialogue Maker]" .. currentPath .. " is not a ModuleScript");
-      
+
     end
     CurrentDirectoryScript = PossibleDirectory;
 
@@ -112,7 +110,7 @@ function DialogueModule.divideTextToFitBox(text: string, tempLine: TextLabel): {
     -- Get the tag name and attributes.
     local tagText = tag:match("<([^<>]-)>");
     if tagText then
-      
+
       local firstSpaceIndex = tagText:find(" ");
       local tagTextLength = tagText:len();
       local name = tagText:sub(1, (firstSpaceIndex and firstSpaceIndex - 1) or tagTextLength);
@@ -125,9 +123,9 @@ function DialogueModule.divideTextToFitBox(text: string, tempLine: TextLabel): {
             -- Add a tag end offset.
             local _, endOffset = textCopy:find(tagPattern);
             if endOffset then
-              
+
               richTextTagIndices[index].endOffset = pointer + endOffset;
-              
+
             end;
 
             -- Remove the tag from the open tag table.
@@ -155,12 +153,12 @@ function DialogueModule.divideTextToFitBox(text: string, tempLine: TextLabel): {
       -- Remove the tag from our copy.
       local _, pointerUpdate = textCopy:find(tagPattern);
       if pointerUpdate then
-        
+
         pointer += pointerUpdate - 1;
         textCopy = textCopy:sub(pointerUpdate);
-        
+
       end;
-      
+
     end;
 
   end
@@ -198,7 +196,7 @@ function DialogueModule.divideTextToFitBox(text: string, tempLine: TextLabel): {
       local function refreshTempRichTextEndTags() 
 
         for i = #richTextTagIndices, 1, -1 do
-          
+
           local richTextTagIndex = richTextTagIndices[i];
           if richTextTagIndex.startOffset < tempPointer and richTextTagIndex.endOffset and richTextTagIndex.endOffset >= tempPointer then
 
@@ -266,34 +264,32 @@ end;
 
 -- @since v1.0.0
 function DialogueModule.readDialogue(npc: Model): ()
-  
+
   local Events = {};
-  local DefaultClickSound = RemoteConnections.GetDefaultClickSound:InvokeServer();
-  local Keybinds = RemoteConnections.GetKeybinds:InvokeServer();
-  local DefaultMinDistance = RemoteConnections.GetMinimumDistanceFromCharacter:InvokeServer();
+  local clientSettings = require(script.Parent.Parent.Settings);
 
   -- Make sure we aren't already talking to an NPC
   if not DialogueModule.PlayerTalkingWithNPC.Value then
 
     DialogueModule.PlayerTalkingWithNPC.Value = true;
-    
+
     local ranSuccessfully, errorMessage = pcall(function()
-      
+
       -- Make sure we have a DialogueContainer.
       local NPCDialogueContainer: Folder? = npc:FindFirstChild("DialogueContainer") :: Folder;
       assert(NPCDialogueContainer, "DialogueContainer not found in NPC.");
-      
+
       -- Make sure we can't talk to another NPC
       API.Triggers.disableAllSpeechBubbles();
       API.Triggers.disableAllClickDetectors();
       API.Triggers.disableAllProximityPrompts();
-      
+
       -- Verify NPCSettingsScript.
       local NPCSettingsScript = npc:FindFirstChild("NPCDialogueSettings");
       if not NPCSettingsScript or not NPCSettingsScript:IsA("ModuleScript") then
-        
+
         error("NPC settings script not found.");
-        
+
       end;
       local DialogueSettings = require(NPCSettingsScript) :: any;
       local FreezePlayer = DialogueSettings.general.freezePlayer;
@@ -366,45 +362,46 @@ function DialogueModule.readDialogue(npc: Model): ()
         GUIDialogueContainer = DialogueGUI:FindFirstChild("DialogueContainer");
         ResponseContainer = GUIDialogueContainer:FindFirstChild("ResponseContainer");
         if not ResponseContainer or not ResponseContainer:IsA("ScrollingFrame") then
-          
+
           error("ResponseContainer is not a ScrollingFrame");
-          
+
         end
         ResponseTemplate = ResponseContainer:FindFirstChild("ResponseTemplate"):Clone();
-        
+
         -- Set NPC name
         local NPCName = DialogueSettings.general.npcName;
         local NPCNameContainer = GUIDialogueContainer:FindFirstChild("NPCNameContainer");
         if NPCNameContainer:IsA("GuiObject") then
-          
+
           local NPCNameTextClass = NPCNameContainer:FindFirstChild("NPCName");
           if NPCNameTextClass:IsA("TextLabel") then
-            
+
             NPCNameTextClass.Text = NPCName;
             if DialogueSettings.General and DialogueSettings.General.FitName then
 
               local TextBoundsOffset = (DialogueSettings.General and DialogueSettings.General.TextBoundsOffset) or 30;
               NPCNameContainer.Size = UDim2.new(NPCNameContainer.Size.X.Scale, NPCNameTextClass.TextBounds.X + TextBoundsOffset, NPCNameContainer.Size.Y.Scale, NPCNameContainer.Size.Y.Offset);
-              
+
             end;
-            
+
             NPCNameContainer.Visible = typeof(NPCName) == "string" and NPCName ~= "";
 
           end
-          
+
         end;
 
         -- Setup click sound
         local PossibleClickSound = DialogueGUI:FindFirstChild("ClickSound");
         if PossibleClickSound and PossibleClickSound:IsA("Sound") then
-          
+
           ClickSound = PossibleClickSound;
-          
+
         end;
 
         ClickSoundEnabled = false;
-
-        if DefaultClickSound and DefaultClickSound ~= 0 then
+        
+        local defaultClickSound = clientSettings.defaultClickSound;
+        if defaultClickSound and defaultClickSound ~= 0 then
 
           if not ClickSound then
 
@@ -412,18 +409,18 @@ function DialogueModule.readDialogue(npc: Model): ()
             NewClickSound.Name = "ClickSound";
             NewClickSound.Parent = DialogueGUI;
             ClickSound = NewClickSound;
-            
+
           end;
 
           ClickSoundEnabled = true;
-          (ClickSound :: Sound).SoundId = "rbxassetid://" .. DefaultClickSound;
+          (ClickSound :: Sound).SoundId = "rbxassetid://" .. defaultClickSound;
 
         end;
 
       end;
 
       setupDialogueGui();
-      
+
       if GUIDialogueContainer:IsA("GuiObject") and ResponseContainer:IsA("ScrollingFrame") and ResponseTemplate:IsA("TextButton") then
 
         -- Initialize the theme, then listen for changes
@@ -467,31 +464,51 @@ function DialogueModule.readDialogue(npc: Model): ()
           -- Get the current directory.
           CurrentContentScript = API.Dialogue.goToDirectory(NPCDialogueContainer, currentDialoguePriority:split("."));
           local dialogueType = CurrentContentScript:GetAttribute("DialogueType");
+          
+          -- Checks if the local player passes a condition.
+          -- @since v5.0.0
+          local function doesPlayerPassCondition(ContentScript: ModuleScript): boolean
 
-          if RemoteConnections.PlayerPassesCondition:InvokeServer(npc, CurrentContentScript) then
+            -- Search for condition
+            for _, PossibleCondition in ipairs(script.Conditions:GetChildren()) do
+
+              if PossibleCondition.ContentScript.Value == ContentScript then
+
+                -- Check if there is no condition or the condition passed
+                return (require(PossibleCondition) :: () -> boolean)();
+
+              end;
+
+            end;
+
+            return true;
+            
+          end
+
+          if doesPlayerPassCondition(CurrentContentScript) then
 
             local dialogueContentArray = require(CurrentContentScript) :: any;
             if dialogueType == "Redirect" then
 
-            -- A redirect is available, so let's switch priorities.
+              -- A redirect is available, so let's switch priorities.
               currentDialoguePriority = dialogueContentArray[0]:split(".");
               continue;
 
             end;
-            
+
             -- Get a list of responses from the dialogue.
             local responses: {{ModuleScript: ModuleScript; properties: any}} = {};
             for _, PossibleResponse in ipairs(CurrentContentScript:GetChildren()) do
-              
+
               if PossibleResponse:IsA("ModuleScript") and tonumber(PossibleResponse.Name) and PossibleResponse:GetAttribute("DialogueType") == "Response" then
-                
+
                 table.insert(responses, {
                   ModuleScript = PossibleResponse,
                   properties = require(PossibleResponse) :: any
                 });
-                
+
               end
-              
+
             end
 
             -- Determine which text container we should use.
@@ -519,7 +536,7 @@ function DialogueModule.readDialogue(npc: Model): ()
               ResponseContainer.Visible = false;
 
             end;
-            
+
             -- Ensure we have a text container line.
             local textContainerLine: TextLabel? = TextContainer:FindFirstChild("Line") :: TextLabel;
             assert(textContainerLine, "Line not found.");
@@ -533,10 +550,12 @@ function DialogueModule.readDialogue(npc: Model): ()
             local ContinueDialogue;
             local Pointer = 1;
             local PointerBefore = 1;
-            ContinueDialogue = function(keybind)
+            local defaultChatContinueKey = clientSettings.defaultChatContinueKey;
+            local defaultChatContinueKeyGamepad = clientSettings.defaultChatContinueKeyGamepad;
+            ContinueDialogue = function(keybind: Enum.KeyCode)
 
               -- Ensure the player is holding the key.
-              if keybind and not UserInputService:IsKeyDown(Keybinds.DefaultChatContinueKey) and not UserInputService:IsKeyDown(Keybinds.DefaultChatContinueKeyGamepad) then
+              if keybind and not UserInputService:IsKeyDown(defaultChatContinueKey) and not UserInputService:IsKeyDown(defaultChatContinueKeyGamepad) then
 
                 return;
 
@@ -567,7 +586,7 @@ function DialogueModule.readDialogue(npc: Model): ()
 
                 end;
 
-                ContextActionService:BindAction("ContinueDialogue", ContinueDialogue, false, Keybinds.DefaultChatContinueKey, Keybinds.DefaultChatContinueKeyGamepad);
+                ContextActionService:BindAction("ContinueDialogue", ContinueDialogue, false, defaultChatContinueKey, defaultChatContinueKeyGamepad);
 
               elseif #responses == 0 then	
 
@@ -588,26 +607,26 @@ function DialogueModule.readDialogue(npc: Model): ()
 
             end);
 
-            if Keybinds.KeybindsEnabled then
+            if clientSettings.keybindsEnabled then
 
               local KEYS_PRESSED = UserInputService:GetKeysPressed();
               local KeybindPressed = false;
-              if UserInputService:IsKeyDown(Keybinds.DefaultChatContinueKey) or UserInputService:IsKeyDown(Keybinds.DefaultChatContinueKeyGamepad) then
+              if UserInputService:IsKeyDown(defaultChatContinueKey) or UserInputService:IsKeyDown(defaultChatContinueKeyGamepad) then
 
                 coroutine.wrap(function()
 
-                  while UserInputService:IsKeyDown(Keybinds.DefaultChatContinueKey) or UserInputService:IsKeyDown(Keybinds.DefaultChatContinueKeyGamepad) do
+                  while UserInputService:IsKeyDown(defaultChatContinueKey) or UserInputService:IsKeyDown(defaultChatContinueKeyGamepad) do
 
                     task.wait();
 
                   end;
-                  ContextActionService:BindAction("ContinueDialogue", ContinueDialogue, false, Keybinds.DefaultChatContinueKey, Keybinds.DefaultChatContinueKeyGamepad);
+                  ContextActionService:BindAction("ContinueDialogue", ContinueDialogue, false, defaultChatContinueKey, defaultChatContinueKeyGamepad);
 
                 end)();
 
               else
 
-                ContextActionService:BindAction("ContinueDialogue", ContinueDialogue, false, Keybinds.DefaultChatContinueKey, Keybinds.DefaultChatContinueKeyGamepad);
+                ContextActionService:BindAction("ContinueDialogue", ContinueDialogue, false, defaultChatContinueKey, defaultChatContinueKeyGamepad);
 
               end;
 
@@ -685,18 +704,18 @@ function DialogueModule.readDialogue(npc: Model): ()
               -- Add response buttons
               for _, response in ipairs(responses) do
 
-                if RemoteConnections.PlayerPassesCondition:InvokeServer(npc, response) then
+                if doesPlayerPassCondition(response.ModuleScript) then
 
                   local ResponseButton = ResponseTemplate:Clone();
                   ResponseButton.Name = "Response";
-                  ResponseButton.Text = response.properties.content;
+                  ResponseButton.Text = response.properties;
                   ResponseButton.Parent = ResponseContainer;
                   ResponseButton.MouseButton1Click:Connect(function()
-                    
+
                     -- Acknowledge that the player clicked the button.
                     print("[Dialogue Maker] [Response] " .. Player.Name .. " (" .. Player.UserId .. "): " .. ResponseButton.Text);
                     ResponseContainer.Visible = false;
-                    
+
                     if ClickSoundEnabled and ClickSound then
 
                       ClickSound:Play();
@@ -746,11 +765,19 @@ function DialogueModule.readDialogue(npc: Model): ()
 
             end;
 
-            -- Run after action
+            -- Run action
             if DialogueModule.PlayerTalkingWithNPC.Value then
 
-              -- TODO: Fix this
-              RemoteConnections.ExecuteAction:InvokeServer(npc, CurrentContentScript, "Succeeding");
+              for _, PossibleAction in ipairs(script.Actions:GetChildren()) do
+
+                if PossibleAction.ContentScript.Value == CurrentContentScript then
+
+                  (require(PossibleAction) :: () -> ())();
+                  break;
+
+                end;
+
+              end;
 
             end;
 
@@ -767,7 +794,7 @@ function DialogueModule.readDialogue(npc: Model): ()
               end
 
             end
-            
+
             if DialogueModule.PlayerTalkingWithNPC.Value and hasPossibleDialogue then
 
               currentDialoguePriority = if chosenResponse then string.sub(chosenResponse.ModuleScript.Name .. ".1", 3) else currentDialoguePriority .. ".1";
@@ -801,17 +828,17 @@ function DialogueModule.readDialogue(npc: Model): ()
           API.Player.unfreezePlayer(); 
 
         end;
-        
+
       end
-      
+
     end);
-    
+
     DialogueModule.PlayerTalkingWithNPC.Value = false;
-    
+
     if not ranSuccessfully then
-      
+
       error("[Dialogue Maker] " .. errorMessage);
-      
+
     end
 
   end;
