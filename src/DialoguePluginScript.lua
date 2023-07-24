@@ -2,7 +2,6 @@
 local Selection = game:GetService("Selection");
 local StarterPlayer = game:GetService("StarterPlayer");
 local StarterPlayerScripts = StarterPlayer.StarterPlayerScripts;
-local ReplicatedStorage = game:GetService("ReplicatedStorage");
 local ChangeHistoryService = game:GetService("ChangeHistoryService");
 
 -- Make sure we have all of the plugin GUI stuff.
@@ -694,16 +693,6 @@ EditDialogueButton.Click:Connect(function()
 
   end;
 
-  -- Add the chat receiver script in the starter player scripts
-  if not ReplicatedStorage:FindFirstChild("DialogueMakerSharedDependencies") then
-
-    print("[Dialogue Maker] Adding DialogueMakerSharedDependencies to the ReplicatedStorage...");
-    local DialogueMakerSharedDependencies = script.DialogueMakerSharedDependencies:Clone()
-    DialogueMakerSharedDependencies.Parent = ReplicatedStorage;
-    print("[Dialogue Maker] Added DialogueMakerSharedDependencies to the ReplicatedStorage.");
-
-  end;
-
   -- Now we can open the dialogue editor.
   openDialogueEditor();
 
@@ -739,15 +728,6 @@ ResetScriptsButton.Click:Connect(function()
     -- Enable the scripts
     OldDialogueClientScript.Disabled = false;
 
-    -- Remove connections from ReplicatedStorage
-    local NewDMRC = script.DialogueMakerSharedDependencies:Clone();
-    local OldDMRC = ReplicatedStorage:FindFirstChild("DialogueMakerSharedDependencies");
-    if OldDMRC then
-      
-      OldDMRC.Parent = nil;
-      
-    end;
-
     -- Check for themes
     local OldThemes = OldDialogueClientScript:FindFirstChild("Themes");
     if not OldThemes then
@@ -777,7 +757,6 @@ ResetScriptsButton.Click:Connect(function()
     -- Put the new instances in their places
     NewDialogueClientScript.Parent = StarterPlayerScripts;
     ClientAPI.Parent = NewDialogueClientScript;
-    NewDMRC.Parent = ReplicatedStorage;
 
     -- Finalize the undo point
     ChangeHistoryService:SetWaypoint("Reset Dialogue Maker scripts");
@@ -803,7 +782,7 @@ RemoveUnusedInstancesButton.Click:Connect(function()
     ChangeHistoryService:SetWaypoint("Removing unused Dialogue Maker instances");
 
     -- Remove the unused instances
-    for _, folder in ipairs(DSS:GetChildren()) do
+    for _, folder in ipairs(StarterPlayerScripts.DialogueClientScript:GetChildren()) do
 
       if not folder:IsA("Folder") then
 
