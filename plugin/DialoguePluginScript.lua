@@ -91,16 +91,22 @@ end;
 type EventTypes = {
   AddMessage: RBXScriptConnection?;
   AdjustSettingsRequested: RBXScriptConnection?;
+  AttributeChanged: {RBXScriptConnection?};
   ChildAdded: RBXScriptConnection?;
   ChildRemoved: RBXScriptConnection?;
   DeleteMode: RBXScriptConnection?;
   DeleteYesButton: RBXScriptConnection?;
   DeleteNoButton: RBXScriptConnection?;
+  PriorityFocusLost: {RBXScriptConnection?};
+  TypeDropdown: {RBXScriptConnection?};
   ViewChildren: {RBXScriptConnection?};
   ViewParent: RBXScriptConnection?;
 };
 
 local Events: EventTypes = {
+  AttributeChanged = {};
+  PriorityFocusLost = {};
+  TypeDropdown = {};
   ViewChildren = {};
 };
 
@@ -300,31 +306,39 @@ local function syncDialogueGUI(DirectoryContentScript: DialogueContainerClass): 
   table.sort(messages, sortByMessagePriority);
   table.sort(redirects, sortByMessagePriority);
 
-  -- Keep track if a message GUI is open
+  -- Listen for instance family changes.
   local function refreshDialogueGUI()
 
     syncDialogueGUI(DirectoryContentScript) 
 
   end;
   
+  Events.ChildAdded = DirectoryContentScript.ChildAdded:Connect(refreshDialogueGUI);
+  Events.ChildRemoved = DirectoryContentScript.ChildRemoved:Connect(refreshDialogueGUI);
+  
   -- Create new status
+  local currentZIndex = #responses + #messages + #redirects;
   for _, category in ipairs({responses, messages, redirects}) do
 
     for _, ContentScript in ipairs(category) do
-
+      
+      -- Make sure the message container is completely visible, even when dropdowns are open.
       local DialogueMessageContainer = DialogueMessageTemplate:Clone();
-      local DialogueMessageContainerChildContainer = DialogueMessageContainer:FindFirstChild("Container") :: Frame;
-      local DialogueMessagePriorityTextBox = DialogueMessageContainerChildContainer:FindFirstChild("Priority") :: TextBox;
-      local DialogueMessageTypeDropdownButton = DialogueMessageContainerChildContainer:FindFirstChild("DialogueTypeDropdown") :: TextButton;
-      local splitPriority = viewingPriority:split(".");
-      if viewingPriority == "" then table.remove(splitPriority, 1) end;
-      table.insert(splitPriority, ContentScript.Name);
-      (DialogueMessageTypeDropdownButton:FindFirstChild("DialogueType") :: TextLabel).Text = ContentScript:GetAttribute("DialogueType");
-      DialogueMessagePriorityTextBox.PlaceholderText = splitPriority[#splitPriority];
-      DialogueMessagePriorityTextBox.Text = splitPriority[#splitPriority];
+      DialogueMessageContainer.ZIndex = currentZIndex;
+      currentZIndex -= 1;
       DialogueMessageContainer.Visible = true;
       DialogueMessageContainer.Parent = DialogueMessageList;
       
+      -- Set the message priority.
+      local DialogueMessageContainerChildContainer = DialogueMessageContainer:FindFirstChild("Container") :: Frame;
+      local DialogueMessagePriorityTextBox = DialogueMessageContainerChildContainer:FindFirstChild("Priority") :: TextBox;
+      local splitPriority = viewingPriority:split(".");
+      if viewingPriority == "" then table.remove(splitPriority, 1) end;
+      table.insert(splitPriority, ContentScript.Name);
+      DialogueMessagePriorityTextBox.PlaceholderText = splitPriority[#splitPriority];
+      DialogueMessagePriorityTextBox.Text = splitPriority[#splitPriority];
+      
+      -- Set the dialogue type.
       local dialogueType = ContentScript:GetAttribute("DialogueType");
       local isResponse = dialogueType == "Response";
       local isRedirect = dialogueType == "Redirect";
@@ -343,6 +357,70 @@ local function syncDialogueGUI(DirectoryContentScript: DialogueContainerClass): 
         DialogueMessageContainer.BackgroundTransparency = 1;
 
       end;
+      
+      table.insert(Events.PriorityFocusLost, DialogueMessagePriorityTextBox.FocusLost:Connect(function(input)
+
+        -- Make sure the priority is valid
+        local isUserTextInvalid = false;
+        local userText = DialogueMessagePriorityTextBox.Text;
+        if userText:sub(1, 1) == "." or userText:sub(userText:len()) == "." then
+
+          isUserTextInvalid = true;
+
+        end;
+
+        local CurrentDirectory = CurrentDialogueContainer;
+        splitPriority = DialogueMessagePriorityTextBox.Text:split(".");
+        if not isUserTextInvalid then
+
+          for index, priority in ipairs(splitPriority) do
+
+            -- Make sure everyone's a number
+            if not tonumber(priority) then
+
+              warn("[Dialogue Maker] " .. DialogueMessagePriorityTextBox.Text .. " is not a valid priority. Make sure you're not using any characters other than numbers and periods.");
+              isUserTextInvalid = true;
+              break;
+
+            end;
+
+            -- Make sure the folder exists
+            local TargetDirectory = CurrentDirectory:FindFirstChild(priority);
+            if not TargetDirectory and index ~= #splitPriority then
+
+              warn("[Dialogue Maker] " .. DialogueMessagePriorityTextBox.Text .. " is not a valid priority. Make sure all parent directories exist.");
+              isUserTextInvalid = true;
+              break;
+
+            elseif index == #splitPriority then
+
+              if TargetDirectory then
+
+                warn("[Dialogue Maker] " .. DialogueMessagePriorityTextBox.Text .. " is not a valid priority. Make sure that " .. DialogueMessagePriorityTextBox.Text .. " isn't already being used.");
+                isUserTextInvalid = true;
+
+              else
+
+                CurrentDirectory = ContentScript;
+                local UserSplitPriority = DialogueMessagePriorityTextBox.Text:split(".");
+                ContentScript.Name = UserSplitPriority[#UserSplitPriority];
+                ContentScript.Parent = CurrentDirectory;
+
+              end;
+              break;
+
+            end;
+
+            CurrentDirectory = CurrentDirectory:FindFirstChild(priority) :: ModuleScript;
+
+          end;
+
+        end;
+
+        -- Refresh the GUI
+        refreshDialogueGUI();
+
+      end));
 
       local function showDeleteModePrompt(): ()
 
@@ -384,71 +462,48 @@ local function syncDialogueGUI(DirectoryContentScript: DialogueContainerClass): 
 
       end;
       
-      local FocusEvent;
-      FocusEvent = DialogueMessagePriorityTextBox.FocusLost:Connect(function(input)
-
-        -- Make sure the priority is valid
-        local isUserTextInvalid = false;
-        local userText = DialogueMessagePriorityTextBox.Text;
-        if userText:sub(1, 1) == "." or userText:sub(userText:len()) == "." then
+      -- Add functionality to the type dropdown.
+      local DialogueMessageTypeDropdownButton = DialogueMessageContainerChildContainer:FindFirstChild("DialogueTypeDropdown") :: TextButton;
+      (DialogueMessageTypeDropdownButton:FindFirstChild("DialogueType") :: TextLabel).Text = ContentScript:GetAttribute("DialogueType");
+      table.insert(Events.TypeDropdown, DialogueMessageTypeDropdownButton.MouseButton1Click:Connect(function()
+        
+        if isDeleteModeEnabled then
           
-          isUserTextInvalid = true;
+          showDeleteModePrompt();
+          return;
           
         end;
         
-        local CurrentDirectory = CurrentDialogueContainer;
-        splitPriority = DialogueMessagePriorityTextBox.Text:split(".");
-        if not isUserTextInvalid then
+        local List = DialogueMessageTypeDropdownButton:FindFirstChild("List") :: ScrollingFrame;
+        List.Visible = not List.Visible;
+        if List.Visible then
           
-          for index, priority in ipairs(splitPriority) do
-
-            -- Make sure everyone's a number
-            if not tonumber(priority) then
-              
-              warn("[Dialogue Maker] " .. DialogueMessagePriorityTextBox.Text .. " is not a valid priority. Make sure you're not using any characters other than numbers and periods.");
-              isUserTextInvalid = true;
-              break;
-              
-            end;
-
-            -- Make sure the folder exists
-            local TargetDirectory = CurrentDirectory:FindFirstChild(priority);
-            if not TargetDirectory and index ~= #splitPriority then
-
-              warn("[Dialogue Maker] " .. DialogueMessagePriorityTextBox.Text .. " is not a valid priority. Make sure all parent directories exist.");
-              isUserTextInvalid = true;
-              break;
-
-            elseif index == #splitPriority then
-
-              if TargetDirectory then
-
-                warn("[Dialogue Maker] " .. DialogueMessagePriorityTextBox.Text .. " is not a valid priority. Make sure that " .. DialogueMessagePriorityTextBox.Text .. " isn't already being used.");
-                isUserTextInvalid = true;
-
-              else
-
-                CurrentDirectory = ContentScript;
-                local UserSplitPriority = DialogueMessagePriorityTextBox.Text:split(".");
-                ContentScript.Name = UserSplitPriority[#UserSplitPriority];
-                ContentScript.Parent = CurrentDirectory;
-
-              end;
-              break;
-
-            end;
-
-            CurrentDirectory = CurrentDirectory:FindFirstChild(priority) :: ModuleScript;
+          local MessageButton = List:FindFirstChild("Message") :: TextButton;
+          table.insert(Events.TypeDropdown, MessageButton.MouseButton1Click:Connect(function()
             
-          end;
+            ContentScript:SetAttribute("DialogueType", "Message");
+            
+          end));
           
-        end;
+          local RedirectButton = List:FindFirstChild("Redirect") :: TextButton;
+          table.insert(Events.TypeDropdown, RedirectButton.MouseButton1Click:Connect(function()
 
-        -- Refresh the GUI
-        refreshDialogueGUI();
+            ContentScript:SetAttribute("DialogueType", "Redirect");
+
+          end));
+          
+          local ResponseButton = List:FindFirstChild("Response") :: TextButton;
+          table.insert(Events.TypeDropdown, ResponseButton.MouseButton1Click:Connect(function()
+
+            ContentScript:SetAttribute("DialogueType", "Response");
+
+          end));
+          
+        end
         
-      end);
+      end));
       
+      -- Add functionality to create special scripts, like actions and conditions.
       local function openSpecialScript(Folder: Folder, Template: ModuleScript): ()
 
         -- Search through the script list
@@ -546,16 +601,15 @@ local function syncDialogueGUI(DirectoryContentScript: DialogueContainerClass): 
         end));
         
       end;
-
+      
+      table.insert(Events.AttributeChanged, ContentScript.AttributeChanged:Connect(refreshDialogueGUI));
+      
     end;
 
   end;
-
-  DialogueMessageList.CanvasSize = UDim2.new(0, 0, 0, (DialogueMessageList:FindFirstChild("UIListLayout") :: UIListLayout).AbsoluteContentSize.Y);
   
-  -- Listen for changes
-  Events.ChildAdded = DirectoryContentScript.ChildAdded:Connect(refreshDialogueGUI);
-  Events.ChildRemoved = DirectoryContentScript.ChildRemoved:Connect(refreshDialogueGUI);
+  -- Adjust the canvas size accordingly.
+  DialogueMessageList.CanvasSize = UDim2.new(0, 0, 0, (DialogueMessageList:FindFirstChild("UIListLayout") :: UIListLayout).AbsoluteContentSize.Y);
 
 end;
 
@@ -585,7 +639,8 @@ local function openDialogueEditor(): ()
   PluginGui = plugin:CreateDockWidgetPluginGui("Dialogue Maker", DockWidgetPluginGuiInfo.new(Enum.InitialDockState.Float, true, true, 525, 241, 525, 139));
   repairNPC();
   if PluginGui and CurrentDialogueContainer then
-    
+
+    PluginGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling;
     PluginGui.Title = "Dialogue Maker";
     PluginGui:BindToClose(closeDialogueEditor);
     
