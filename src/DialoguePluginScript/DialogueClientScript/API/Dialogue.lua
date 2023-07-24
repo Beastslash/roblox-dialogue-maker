@@ -519,7 +519,7 @@ function DialogueModule.readDialogue(npc: Model): ()
             if #responses > 0 then
 
               -- Clear the text container just in case there was some responses left behind.
-              API.Dialogue.ClearResponses(ResponseContainer);
+              API.Dialogue.clearResponses(ResponseContainer);
 
               -- Use the text container with responses.
               TextContainer = NPCTextContainerWithResponses;
@@ -707,7 +707,7 @@ function DialogueModule.readDialogue(npc: Model): ()
 
                   local ResponseButton = ResponseTemplate:Clone();
                   ResponseButton.Name = "Response";
-                  ResponseButton.Text = response.properties;
+                  ResponseButton.Text = response.properties()[1];
                   ResponseButton.Parent = ResponseContainer;
                   ResponseButton.MouseButton1Click:Connect(function()
 
@@ -796,7 +796,7 @@ function DialogueModule.readDialogue(npc: Model): ()
 
             if DialogueModule.PlayerTalkingWithNPC.Value and hasPossibleDialogue then
 
-              currentDialoguePriority = if chosenResponse then string.sub(chosenResponse.ModuleScript.Name .. ".1", 3) else currentDialoguePriority .. ".1";
+              currentDialoguePriority = (if chosenResponse then currentDialoguePriority .. "." .. chosenResponse.ModuleScript.Name else currentDialoguePriority) .. ".1";
 
             else
 
