@@ -1,54 +1,42 @@
 -- Get Roblox services
 local ReplicatedStorage = game:GetService("ReplicatedStorage");
-local RemoteConnections = ReplicatedStorage:WaitForChild("DialogueMakerRemoteConnections");
 
 -- Prepare these methods
 local GUIModule = {
   CurrentTheme = script.CurrentTheme;
 };
 
-local DefaultThemes: {
-  [number]: {
-    MinimumViewportWidth: number;
-    MinimumViewportHeight: number;
-    ThemeName: string;
-  }  
-};
+local clientSettings = require(script.Parent.Parent.Settings);
+local defaultThemes = clientSettings.defaultThemes;
 function GUIModule.getDefaultThemeName(viewportWidth: number, viewportHeight: number): string
 
-  -- Check if the theme is in the cache
-  if not DefaultThemes then
+  assert(defaultThemes, "[Dialogue Maker] Couldn't get default themes from the server.");
 
-    DefaultThemes = RemoteConnections.GetDefaultThemes:InvokeServer();
+  local defaultThemeName;
+  for _, themeInfo in ipairs(defaultThemes) do
 
-  end;
-  assert(DefaultThemes, "[Dialogue Maker] Couldn't get default themes from the server.");
+    if viewportWidth >= themeInfo.minimumViewportWidth and viewportHeight >= themeInfo.minimumViewportHeight then
 
-  local DefaultThemeName;
-  for _, themeInfo in ipairs(DefaultThemes) do
-
-    if viewportWidth >= themeInfo.MinimumViewportWidth and viewportHeight >= themeInfo.MinimumViewportHeight then
-
-      DefaultThemeName = themeInfo.ThemeName;
+      defaultThemeName = themeInfo.themeName;
 
     end
 
   end
 
-  return DefaultThemeName;
+  return defaultThemeName;
 
 end;
 
-function GUIModule.createNewDialogueGui(theme: string?): ScreenGui
+function GUIModule.createNewDialogueGui(themeName: string?): ScreenGui
 
   -- Check if we have the theme
   local ThemeFolder = script.Parent.Parent.Themes;
-  local DialogueGui = ThemeFolder:FindFirstChild(theme);
-  if theme and not DialogueGui then
+  local DialogueGui = ThemeFolder:FindFirstChild(themeName);
+  if themeName and not DialogueGui then
 
-    if theme ~= "" then
+    if themeName ~= "" then
 
-      warn("[Dialogue Maker]: Can't find theme \"" .. theme .. "\" in the Themes folder of the DialogueClientScript. Using default theme...");
+      warn("[Dialogue Maker]: Can't find theme \"" .. themeName .. "\" in the Themes folder of the DialogueClientScript. Using default theme...");
 
     end
 
@@ -69,12 +57,6 @@ function GUIModule.createNewDialogueGui(theme: string?): ScreenGui
 
   -- Return the theme
   return DialogueGui:Clone();
-
-end;
-
-ReplicatedStorage:WaitForChild("DialogueMakerRemoteConnections").ChangeTheme.OnClientInvoke = function(themeName)
-
-  script.CurrentTheme.Value = GUIModule.createNewDialogueGui(themeName);
 
 end;
 

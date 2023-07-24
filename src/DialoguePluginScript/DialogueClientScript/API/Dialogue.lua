@@ -470,7 +470,7 @@ function DialogueModule.readDialogue(npc: Model): ()
           local function doesPlayerPassCondition(ContentScript: ModuleScript): boolean
 
             -- Search for condition
-            for _, PossibleCondition in ipairs(script.Conditions:GetChildren()) do
+            for _, PossibleCondition in ipairs(script.Parent.Parent.Conditions:GetChildren()) do
 
               if PossibleCondition.ContentScript.Value == ContentScript then
 
@@ -487,11 +487,11 @@ function DialogueModule.readDialogue(npc: Model): ()
 
           if doesPlayerPassCondition(CurrentContentScript) then
 
-            local dialogueContentArray = require(CurrentContentScript) :: any;
+            local dialogueContentArray = (require(CurrentContentScript) :: () -> ())() :: any;
             if dialogueType == "Redirect" then
 
               -- A redirect is available, so let's switch priorities.
-              currentDialoguePriority = dialogueContentArray[0]:split(".");
+              currentDialoguePriority = dialogueContentArray[1]:split(".");
               continue;
 
             end;
@@ -545,7 +545,6 @@ function DialogueModule.readDialogue(npc: Model): ()
             local NPCTalking = true;
             local WaitingForResponse = true;
             local Skipped = false;
-            local FullMessageText = "";
             local NPCPaused = false;
             local ContinueDialogue;
             local Pointer = 1;
@@ -636,7 +635,7 @@ function DialogueModule.readDialogue(npc: Model): ()
             DialogueGUI.Enabled = true;
             local Position = 0;
             local Adding = false;
-            local MessageTextWithPauses = dialogueContentArray[0];
+            local MessageTextWithPauses = dialogueContentArray[1];
 
             -- Clone the TextLabel.
             local TempLine: TextLabel = textContainerLine:Clone();
@@ -645,15 +644,15 @@ function DialogueModule.readDialogue(npc: Model): ()
             TempLine.Parent = TextContainer;
 
             local MessageText, PausePoints = API.Dialogue.retrievePausePoints(MessageTextWithPauses, TempLine);
-            local DividedText = API.Dialogue.DivideTextToFitBox(MessageText, TempLine);
+            local DividedText = API.Dialogue.divideTextToFitBox(MessageText, TempLine);
             TempLine:Destroy();
 
             for index, page in ipairs(DividedText) do
 
               -- Now we can get the new text
               PointerBefore = Pointer;
-              FullMessageText = page;
-              textContainerLine.Text = FullMessageText;
+              local fullMessageText = page;
+              textContainerLine.Text = fullMessageText;
               for count = 0, textContainerLine.Text:len() do
 
                 textContainerLine.MaxVisibleGraphemes = count;
@@ -768,7 +767,7 @@ function DialogueModule.readDialogue(npc: Model): ()
             -- Run action
             if DialogueModule.PlayerTalkingWithNPC.Value then
 
-              for _, PossibleAction in ipairs(script.Actions:GetChildren()) do
+              for _, PossibleAction in ipairs(script.Parent.Parent.Actions:GetChildren()) do
 
                 if PossibleAction.ContentScript.Value == CurrentContentScript then
 

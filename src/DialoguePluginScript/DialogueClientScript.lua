@@ -190,7 +190,7 @@ for _, NPCLocation: ObjectValue in ipairs(script.NPCLocations:GetChildren()) do
       -- Check if the player is in range
       RunService.Heartbeat:Connect(function()
 
-        if Player:DistanceFromCharacter(NPC:GetPivot().Position) < dialogueSettings.minimumDistanceFromCharacter then
+        if Player:DistanceFromCharacter(NPC:GetPivot().Position) < clientSettings.minimumDistanceFromCharacter then
 
           CanPressButton = true;
 
