@@ -92,40 +92,24 @@ end;
 type EventTypes = {
   AddMessage: RBXScriptConnection?;
   AdjustSettingsRequested: RBXScriptConnection?;
-  ConvertFromRedirect: {
-    [number]: RBXScriptConnection?;
-  };
-  ConvertToRedirect: {
-    [number]: RBXScriptConnection?;
-  };
+  ChildAdded: RBXScriptConnection?;
+  ChildRemoved: RBXScriptConnection?;
   DeleteMode: RBXScriptConnection?;
   DeleteYesButton: RBXScriptConnection?;
   DeleteNoButton: RBXScriptConnection?;
-  EditingMessage: {
-    [number]: RBXScriptConnection?;
-  };
-  EditingRedirect: {
-    [number]: RBXScriptConnection?;
-  };
-  ViewChildren: {
-    [number]: RBXScriptConnection?;
-  };
+  ViewChildren: {RBXScriptConnection?};
   ViewParent: RBXScriptConnection?;
 };
+
 local Events: EventTypes = {
-  ConvertFromRedirect = {}; 
-  ConvertToRedirect = {};
-  EditingMessage = {}; 
-  EditingRedirect = {}; 
   ViewChildren = {};
 };
 
 local Toolbar = plugin:CreateToolbar("Dialogue Maker by Beastslash");
 local EditDialogueButton = Toolbar:CreateButton("Edit Dialogue", "Edit dialogue of a selected NPC. The selected object must be a singular model.", "rbxassetid://14109181603");
-local DeleteModeEnabled = false;
+local isDeleteModeEnabled = false;
 local DeletePromptShown = false;
 local isDialogueEditorOpen = false;
-
 local ViewStatus = DialogueMakerFrame:FindFirstChild("ViewStatus");
 local DialogueLocationStatus = ViewStatus:FindFirstChild("DialogueLocationStatus") :: TextLabel;
 local ModelLocationFrame = ViewStatus:FindFirstChild("ModelLocationFrame");
@@ -196,10 +180,10 @@ local function syncDialogueGUI(DirectoryContentScript: DialogueContainerClass): 
     local targetPriority = 0;
     for _, Child in ipairs(CurrentDirectory:GetChildren()) do
       
-      local ComparedName = tonumber(Child.Name);
-      if ComparedName and ComparedName > targetPriority then
+      local comparedName = tonumber(Child.Name);
+      if comparedName and comparedName > targetPriority then
         
-        targetPriority = ComparedName + 1;
+        targetPriority = comparedName + 1;
         
       end
       
@@ -215,9 +199,7 @@ local function syncDialogueGUI(DirectoryContentScript: DialogueContainerClass): 
 
   end);
   
-  local isDirectoryRoot = viewingPriority == "";
-  local WHITE = Color3.fromRGB(255, 255, 255);
-  if isDirectoryRoot then
+  if viewingPriority == "" then
     
     DialogueLocationStatus.Text = "Viewing the beginning of the conversation";
     
@@ -242,7 +224,8 @@ local function syncDialogueGUI(DirectoryContentScript: DialogueContainerClass): 
       syncDialogueGUI(DirectoryContentScript.Parent :: DialogueContainerClass);
       
     end);
-    
+
+    local WHITE = Color3.fromRGB(255, 255, 255);
     ViewParentTextLabel.TextColor3 = WHITE;
     ViewParentImageLabel.ImageColor3 = WHITE;
     ViewParentButton.BackgroundTransparency = 0;
@@ -253,30 +236,13 @@ local function syncDialogueGUI(DirectoryContentScript: DialogueContainerClass): 
   local DeleteModeImageLabel = DeleteModeButton:FindFirstChild("ImageLabel") :: ImageLabel;
   local DeleteModeTextLabel = DeleteModeButton:FindFirstChild("TextLabel") :: TextLabel;
   Events.DeleteMode = DeleteModeButton.MouseButton1Click:Connect(function()
-
-    if DeleteModeEnabled then
-
-      -- Disable delete mode
-      DeleteModeEnabled = false;
-
-      -- Turn the button match the header background.
-      DeleteModeButton.BackgroundColor3 = Color3.fromRGB(74, 74, 74);
-
-      -- Tell the user that we're no longer in delete mode
-      print("[Dialogue Maker] Whew. Delete Mode has been disabled.");
-
-    else
-
-      -- Enable delete mode
-      DeleteModeEnabled = true;
-
-      -- Turn the button red
-      DeleteModeButton.BackgroundColor3 = Color3.fromRGB(217, 39, 39);
-
-      -- Tell the user that we're in delete mode
-      print("[Dialogue Maker] Warning: Delete Mode has been enabled!");
-
-    end;
+    
+    -- Toggle delete mode and tell the current status to the developer.
+    isDeleteModeEnabled = not isDeleteModeEnabled;
+    
+    DeleteModeButton.BackgroundColor3 = if isDeleteModeEnabled then Color3.fromRGB(74, 74, 74) else Color3.fromRGB(217, 39, 39);
+    
+    print("[Dialogue Maker] " .. if isDeleteModeEnabled then "Warning: Delete Mode has been enabled!" else "Whew. Delete Mode has been disabled.");
 
   end);
 
@@ -332,18 +298,18 @@ local function syncDialogueGUI(DirectoryContentScript: DialogueContainerClass): 
   end;
   
   table.sort(responses, sortByMessagePriority);
-
   table.sort(messages, sortByMessagePriority);
-
   table.sort(redirects, sortByMessagePriority);
 
   -- Keep track if a message GUI is open
-  local EditingMessage = false;
+  local function refreshDialogueGUI()
 
-  local CombinedDirectories = {responses, messages, redirects};
+    syncDialogueGUI(DirectoryContentScript) 
 
+  end;
+  
   -- Create new status
-  for _, category in ipairs(CombinedDirectories) do
+  for _, category in ipairs({responses, messages, redirects}) do
 
     for _, ContentScript in ipairs(category) do
 
@@ -351,12 +317,12 @@ local function syncDialogueGUI(DirectoryContentScript: DialogueContainerClass): 
       local DialogueMessageContainerChildContainer = DialogueMessageContainer:FindFirstChild("Container") :: Frame;
       local DialogueMessagePriorityTextBox = DialogueMessageContainerChildContainer:FindFirstChild("Priority") :: TextBox;
       local DialogueMessageTypeDropdownButton = DialogueMessageContainerChildContainer:FindFirstChild("DialogueTypeDropdown") :: TextButton;
-      local SplitPriority = viewingPriority:split(".");
-      if viewingPriority == "" then table.remove(SplitPriority, 1) end;
-      table.insert(SplitPriority, ContentScript.Name);
+      local splitPriority = viewingPriority:split(".");
+      if viewingPriority == "" then table.remove(splitPriority, 1) end;
+      table.insert(splitPriority, ContentScript.Name);
       (DialogueMessageTypeDropdownButton:FindFirstChild("DialogueType") :: TextLabel).Text = ContentScript:GetAttribute("DialogueType");
-      DialogueMessagePriorityTextBox.PlaceholderText = SplitPriority[#SplitPriority];
-      DialogueMessagePriorityTextBox.Text = SplitPriority[#SplitPriority];
+      DialogueMessagePriorityTextBox.PlaceholderText = splitPriority[#splitPriority];
+      DialogueMessagePriorityTextBox.Text = splitPriority[#splitPriority];
       DialogueMessageContainer.Visible = true;
       DialogueMessageContainer.Parent = DialogueMessageList;
       
@@ -397,12 +363,9 @@ local function syncDialogueGUI(DirectoryContentScript: DialogueContainerClass): 
           
           -- Delete the dialogue
           ContentScript:Destroy();
-
+          
           -- Allow the user to continue using the plugin
           DeletePromptShown = false;
-
-          -- Refresh the view
-          syncDialogueGUI(DirectoryContentScript);
 
         end);
 
@@ -435,10 +398,10 @@ local function syncDialogueGUI(DirectoryContentScript: DialogueContainerClass): 
         end;
         
         local CurrentDirectory = CurrentDialogueContainer;
-        SplitPriority = DialogueMessagePriorityTextBox.Text:split(".");
+        splitPriority = DialogueMessagePriorityTextBox.Text:split(".");
         if not isUserTextInvalid then
           
-          for index, priority in ipairs(SplitPriority) do
+          for index, priority in ipairs(splitPriority) do
 
             -- Make sure everyone's a number
             if not tonumber(priority) then
@@ -451,13 +414,13 @@ local function syncDialogueGUI(DirectoryContentScript: DialogueContainerClass): 
 
             -- Make sure the folder exists
             local TargetDirectory = CurrentDirectory:FindFirstChild(priority);
-            if not TargetDirectory and index ~= #SplitPriority then
+            if not TargetDirectory and index ~= #splitPriority then
 
               warn("[Dialogue Maker] " .. DialogueMessagePriorityTextBox.Text .. " is not a valid priority. Make sure all parent directories exist.");
               isUserTextInvalid = true;
               break;
 
-            elseif index == #SplitPriority then
+            elseif index == #splitPriority then
 
               if TargetDirectory then
 
@@ -483,7 +446,7 @@ local function syncDialogueGUI(DirectoryContentScript: DialogueContainerClass): 
         end;
 
         -- Refresh the GUI
-        syncDialogueGUI(DirectoryContentScript);
+        refreshDialogueGUI();
         
       end);
       
@@ -505,7 +468,7 @@ local function syncDialogueGUI(DirectoryContentScript: DialogueContainerClass): 
         if not SpecialScript then
           
           local TempSpecialScript = Template:Clone();
-          TempSpecialScript.Name = table.concat(SplitPriority, ".");
+          TempSpecialScript.Name = table.concat(splitPriority, ".");
           (TempSpecialScript:FindFirstChild("ContentScript") :: ObjectValue).Value = ContentScript;
           TempSpecialScript.Parent = Folder;
           SpecialScript = TempSpecialScript;
@@ -516,7 +479,6 @@ local function syncDialogueGUI(DirectoryContentScript: DialogueContainerClass): 
         plugin:OpenScript(SpecialScript);
 
       end;
-
       
       local OpenScriptsButton = DialogueMessageContainerChildContainer:FindFirstChild("OpenScripts");
       local OpenScriptsList = OpenScriptsButton:FindFirstChild("List");
@@ -561,7 +523,7 @@ local function syncDialogueGUI(DirectoryContentScript: DialogueContainerClass): 
 
         table.insert(Events.ViewChildren, ViewChildrenButton.MouseButton1Click:Connect(function()
 
-          if DeleteModeEnabled then
+          if isDeleteModeEnabled then
             
             showDeleteModePrompt();
             return;
@@ -571,10 +533,10 @@ local function syncDialogueGUI(DirectoryContentScript: DialogueContainerClass): 
           ViewChildrenButton.Visible = false;
           
           -- Go to the target directory
-          viewingPriority = table.concat(SplitPriority, ".");
+          viewingPriority = table.concat(splitPriority, ".");
           local CurrentDirectory = CurrentDialogueContainer;
           
-          for index, directory in ipairs(SplitPriority) do
+          for index, directory in ipairs(splitPriority) do
               
             CurrentDirectory = CurrentDirectory:FindFirstChild(directory) :: ModuleScript;
             
@@ -591,6 +553,10 @@ local function syncDialogueGUI(DirectoryContentScript: DialogueContainerClass): 
   end;
 
   DialogueMessageList.CanvasSize = UDim2.new(0, 0, 0, (DialogueMessageList:FindFirstChild("UIListLayout") :: UIListLayout).AbsoluteContentSize.Y);
+  
+  -- Listen for changes
+  Events.ChildAdded = DirectoryContentScript.ChildAdded:Connect(refreshDialogueGUI);
+  Events.ChildRemoved = DirectoryContentScript.ChildRemoved:Connect(refreshDialogueGUI);
 
 end;
 
