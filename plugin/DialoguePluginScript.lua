@@ -100,6 +100,7 @@ type EventTypes = {
   PriorityFocusLost: {RBXScriptConnection?};
   TypeDropdown: {RBXScriptConnection?};
   ViewChildren: {RBXScriptConnection?};
+  ViewContent: {RBXScriptConnection?};
   ViewParent: RBXScriptConnection?;
 };
 
@@ -108,6 +109,7 @@ local Events: EventTypes = {
   PriorityFocusLost = {};
   TypeDropdown = {};
   ViewChildren = {};
+  ViewContent = {};
 };
 
 local Toolbar = plugin:CreateToolbar("Dialogue Maker by Beastslash");
@@ -338,26 +340,7 @@ local function syncDialogueGUI(DirectoryContentScript: DialogueContainerClass): 
       DialogueMessagePriorityTextBox.PlaceholderText = splitPriority[#splitPriority];
       DialogueMessagePriorityTextBox.Text = splitPriority[#splitPriority];
       
-      -- Set the dialogue type.
-      local dialogueType = ContentScript:GetAttribute("DialogueType");
-      local isResponse = dialogueType == "Response";
-      local isRedirect = dialogueType == "Redirect";
-      if isResponse then
-
-        DialogueMessageContainer.BackgroundTransparency = 0.4;
-        DialogueMessageContainer.BackgroundColor3 = Color3.fromRGB(30,103,19);
-
-      elseif isRedirect then
-
-        DialogueMessageContainer.BackgroundTransparency = 0.4;
-        DialogueMessageContainer.BackgroundColor3 = Color3.fromRGB(21,44,126);
-
-      else
-
-        DialogueMessageContainer.BackgroundTransparency = 1;
-
-      end;
-      
+      -- Set up what to do if the priority changes.
       table.insert(Events.PriorityFocusLost, DialogueMessagePriorityTextBox.FocusLost:Connect(function(input)
 
         -- Make sure the priority is valid
@@ -421,11 +404,61 @@ local function syncDialogueGUI(DirectoryContentScript: DialogueContainerClass): 
         refreshDialogueGUI();
 
       end));
+      
+      -- Add functionality to create special scripts, like actions and conditions.
+      local function openSpecialScript(Folder: Folder, Template: ModuleScript): ()
 
+        -- Search through the script list
+        local SpecialScript;
+        for _, PossibleSpecialScript in ipairs(Folder:GetChildren()) do
+
+          if PossibleSpecialScript:IsA("ModuleScript") and (PossibleSpecialScript:FindFirstChild("ContentScript") :: ObjectValue).Value == ContentScript then
+
+            SpecialScript = PossibleSpecialScript;
+            break;
+
+          end;
+
+        end;
+
+        if not SpecialScript then
+
+          local TempSpecialScript = Template:Clone();
+          TempSpecialScript.Name = table.concat(splitPriority, ".");
+          (TempSpecialScript:FindFirstChild("ContentScript") :: ObjectValue).Value = ContentScript;
+          TempSpecialScript.Parent = Folder;
+          SpecialScript = TempSpecialScript;
+
+        end;
+
+        -- Open the condition script
+        plugin:OpenScript(SpecialScript);
+
+      end;
+
+      local ViewChildrenButton = DialogueMessageContainerChildContainer:FindFirstChild("ViewChildren") :: TextButton;
+      local OpenScriptsButton = DialogueMessageContainerChildContainer:FindFirstChild("OpenScripts");
+      local OpenScriptsList = OpenScriptsButton:FindFirstChild("List");
+      local ConditionButton = OpenScriptsList:FindFirstChild("Condition") :: TextButton;
+      ConditionButton.MouseButton1Click:Connect(function()
+
+        openSpecialScript(ServerScriptService.DialogueServerScript.Conditions, script.ConditionTemplate);
+
+      end);
+
+      local PrecedingActionButton = OpenScriptsList:FindFirstChild("PrecedingAction") :: TextButton;
+      PrecedingActionButton.MouseButton1Click:Connect(function()
+
+        openSpecialScript(ServerScriptService.DialogueServerScript.Actions.Preceding, script.ActionTemplate);
+
+      end);
+      
+      -- Asks the user if they want to delete this message.
+      -- @since v1.0.0
       local function showDeleteModePrompt(): ()
 
         if DeletePromptShown then return; end;
-        
+
         DeletePromptShown = true;
 
         -- Show the deletion options to the user
@@ -437,10 +470,10 @@ local function syncDialogueGUI(DirectoryContentScript: DialogueContainerClass): 
 
           -- Hide the deletion options from the user
           DeleteFrame.Visible = false;
-          
+
           -- Delete the dialogue
           ContentScript:Destroy();
-          
+
           -- Allow the user to continue using the plugin
           DeletePromptShown = false;
 
@@ -459,6 +492,66 @@ local function syncDialogueGUI(DirectoryContentScript: DialogueContainerClass): 
           DeletePromptShown = false;
 
         end);
+
+      end;
+
+      -- Find the dialogue type and adjust accordingly.
+      local dialogueType = ContentScript:GetAttribute("DialogueType");
+      local isResponse = dialogueType == "Response";
+      local isRedirect = dialogueType == "Redirect";
+      local SucceedingActionButton = OpenScriptsList:FindFirstChild("PrecedingAction") :: TextButton;
+      if isRedirect then
+
+        -- Don't show the Before Action button for redirects
+        DialogueMessageContainer.BackgroundTransparency = 0.4;
+        DialogueMessageContainer.BackgroundColor3 = Color3.fromRGB(21, 44, 126);
+        SucceedingActionButton.Visible = false;
+        ViewChildrenButton.Visible = false;
+
+      else
+        
+        if isResponse then
+
+          -- Don't show the Before Action button for responses
+          DialogueMessageContainer.BackgroundTransparency = 0.4;
+          DialogueMessageContainer.BackgroundColor3 = Color3.fromRGB(30,103,19);
+          SucceedingActionButton.Visible = false;
+          
+        else 
+          
+          DialogueMessageContainer.BackgroundTransparency = 1;
+          SucceedingActionButton.MouseButton1Click:Connect(function()
+
+            openSpecialScript(ServerScriptService.DialogueServerScript.Actions.Succeeding, script.ActionTemplate);
+
+          end);
+          
+        end
+        
+        table.insert(Events.ViewChildren, ViewChildrenButton.MouseButton1Click:Connect(function()
+
+          if isDeleteModeEnabled then
+
+            showDeleteModePrompt();
+            return;
+
+          end;
+
+          ViewChildrenButton.Visible = false;
+
+          -- Go to the target directory
+          viewingPriority = table.concat(splitPriority, ".");
+          local CurrentDirectory = CurrentDialogueContainer;
+
+          for index, directory in ipairs(splitPriority) do
+
+            CurrentDirectory = CurrentDirectory:FindFirstChild(directory) :: ModuleScript;
+
+          end;
+
+          syncDialogueGUI(ContentScript);
+
+        end));
 
       end;
       
@@ -503,104 +596,13 @@ local function syncDialogueGUI(DirectoryContentScript: DialogueContainerClass): 
         
       end));
       
-      -- Add functionality to create special scripts, like actions and conditions.
-      local function openSpecialScript(Folder: Folder, Template: ModuleScript): ()
-
-        -- Search through the script list
-        local SpecialScript;
-        for _, PossibleSpecialScript in ipairs(Folder:GetChildren()) do
-
-          if PossibleSpecialScript:IsA("ModuleScript") and (PossibleSpecialScript:FindFirstChild("ContentScript") :: ObjectValue).Value == ContentScript then
-
-            SpecialScript = PossibleSpecialScript;
-            break;
-
-          end;
-
-        end;
-
-        if not SpecialScript then
-          
-          local TempSpecialScript = Template:Clone();
-          TempSpecialScript.Name = table.concat(splitPriority, ".");
-          (TempSpecialScript:FindFirstChild("ContentScript") :: ObjectValue).Value = ContentScript;
-          TempSpecialScript.Parent = Folder;
-          SpecialScript = TempSpecialScript;
-
-        end;
-
-        -- Open the condition script
-        plugin:OpenScript(SpecialScript);
-
-      end;
-      
-      local OpenScriptsButton = DialogueMessageContainerChildContainer:FindFirstChild("OpenScripts");
-      local OpenScriptsList = OpenScriptsButton:FindFirstChild("List");
-      local ConditionButton = OpenScriptsList:FindFirstChild("Condition") :: TextButton;
-      ConditionButton.MouseButton1Click:Connect(function()
-
-        openSpecialScript(ServerScriptService.DialogueServerScript.Conditions, script.ConditionTemplate);
-
-      end);
-      
-      local PrecedingActionButton = OpenScriptsList:FindFirstChild("PrecedingAction") :: TextButton;
-      PrecedingActionButton.MouseButton1Click:Connect(function()
-
-        openSpecialScript(ServerScriptService.DialogueServerScript.Actions.Preceding, script.ActionTemplate);
-
-      end);
-      
-      local ViewChildrenButton = DialogueMessageContainerChildContainer:FindFirstChild("ViewChildren") :: TextButton;
-      local SucceedingActionButton = OpenScriptsList:FindFirstChild("PrecedingAction") :: TextButton;
-      if isRedirect then
-
-        -- Don't show the Before Action button for redirects
-        SucceedingActionButton.Visible = false;
-        ViewChildrenButton.Visible = false;
-
-      else
-
-        -- Don't show the Before Action button for responses
-        if not isResponse then
-          
-          SucceedingActionButton.MouseButton1Click:Connect(function()
-
-            openSpecialScript(ServerScriptService.DialogueServerScript.Actions.Succeeding, script.ActionTemplate);
-
-          end);
-          
-        else
-          
-          SucceedingActionButton.Visible = false;
-          
-        end;
-
-        table.insert(Events.ViewChildren, ViewChildrenButton.MouseButton1Click:Connect(function()
-
-          if isDeleteModeEnabled then
-            
-            showDeleteModePrompt();
-            return;
-            
-          end;
-
-          ViewChildrenButton.Visible = false;
-          
-          -- Go to the target directory
-          viewingPriority = table.concat(splitPriority, ".");
-          local CurrentDirectory = CurrentDialogueContainer;
-          
-          for index, directory in ipairs(splitPriority) do
-              
-            CurrentDirectory = CurrentDirectory:FindFirstChild(directory) :: ModuleScript;
-            
-          end;
-
-          syncDialogueGUI(ContentScript);
-
-        end));
+      -- Add functionality to the View Content button.
+      local ViewContentButton = DialogueMessageContainerChildContainer:FindFirstChild("ViewContent") :: TextButton;
+      table.insert(Events.ViewContent, ViewContentButton.MouseButton1Click:Connect(function()
         
-      end;
+        plugin:OpenScript(ContentScript);
+        
+      end));
       
       table.insert(Events.AttributeChanged, ContentScript.AttributeChanged:Connect(refreshDialogueGUI));
       
