@@ -193,7 +193,6 @@ local function syncDialogueGUI(DirectoryContentScript: DialogueContainerClass): 
     end
 
     -- Create the dialogue script.
-    -- TODO: Fix add message again
     local targetPriority = 0;
     for _, Child in ipairs(CurrentDirectory:GetChildren()) do
       
@@ -204,9 +203,10 @@ local function syncDialogueGUI(DirectoryContentScript: DialogueContainerClass): 
         
       end
       
-    end
+    end;
+    
     local MessageContentScript = script.ContentTemplate:Clone();
-    MessageContentScript.Name = targetPriority;
+    MessageContentScript.Name = if targetPriority == 0 then 1 else targetPriority;
     MessageContentScript:SetAttribute("DialogueType", "Message");
     MessageContentScript.Parent = CurrentDirectory;
 
@@ -501,20 +501,14 @@ local function syncDialogueGUI(DirectoryContentScript: DialogueContainerClass): 
           end;
 
         end;
-        
-        local function createSpecialScript()
-          
-          SpecialScript = Template:Clone();
-          SpecialScript.Name = table.concat(SplitPriority, ".");
-          (SpecialScript:FindFirstChild("ContentScript") :: ObjectValue).Value = ContentScript;
-          SpecialScript.Parent = Folder;
-          
-        end
 
         if not SpecialScript then
-
-          -- Create a new condition
-          createSpecialScript();
+          
+          local TempSpecialScript = Template:Clone();
+          TempSpecialScript.Name = table.concat(SplitPriority, ".");
+          (TempSpecialScript:FindFirstChild("ContentScript") :: ObjectValue).Value = ContentScript;
+          TempSpecialScript.Parent = Folder;
+          SpecialScript = TempSpecialScript;
 
         end;
 
@@ -700,12 +694,12 @@ EditDialogueButton.Click:Connect(function()
   end;
 
   -- Add the chat receiver script in the starter player scripts
-  if not ReplicatedStorage:FindFirstChild("DialogueMakerRemoteConnections") then
+  if not ReplicatedStorage:FindFirstChild("DialogueMakerSharedDependencies") then
 
-    print("[Dialogue Maker] Adding DialogueMakerRemoteConnections to the ReplicatedStorage...");
-    local DialogueMakerRemoteConnections = script.DialogueMakerRemoteConnections:Clone()
-    DialogueMakerRemoteConnections.Parent = ReplicatedStorage;
-    print("[Dialogue Maker] Added DialogueMakerRemoteConnections to the ReplicatedStorage.");
+    print("[Dialogue Maker] Adding DialogueMakerSharedDependencies to the ReplicatedStorage...");
+    local DialogueMakerSharedDependencies = script.DialogueMakerSharedDependencies:Clone()
+    DialogueMakerSharedDependencies.Parent = ReplicatedStorage;
+    print("[Dialogue Maker] Added DialogueMakerSharedDependencies to the ReplicatedStorage.");
 
   end;
 
@@ -732,7 +726,7 @@ EditDialogueButton.Click:Connect(function()
 end);
 
 local isBusy = false;
-local ResetScriptsButton = Toolbar:CreateButton("Fix Scripts", "Reset DialogueMakerRemoteConnections, DialogueServerScript, and DialogueClientScript back to the a stable version.", "rbxassetid://14109193905");
+local ResetScriptsButton = Toolbar:CreateButton("Fix Scripts", "Reset DialogueMakerSharedDependencies, DialogueServerScript, and DialogueClientScript back to the a stable version.", "rbxassetid://14109193905");
 ResetScriptsButton.Click:Connect(function()
 
   -- Debounce
@@ -764,36 +758,50 @@ ResetScriptsButton.Click:Connect(function()
     end;
 
     -- Remove connections from ReplicatedStorage
-    local NewDMRC = script.DialogueMakerRemoteConnections:Clone();
-    local OldDMRC = ReplicatedStorage:FindFirstChild("DialogueMakerRemoteConnections");
+    local NewDMRC = script.DialogueMakerSharedDependencies:Clone();
+    local OldDMRC = ReplicatedStorage:FindFirstChild("DialogueMakerSharedDependencies");
     if OldDMRC then
+      
       OldDMRC.Parent = nil;
+      
     end;
 
     -- Check for themes
     local OldThemes = OldDialogueClientScript:FindFirstChild("Themes");
     if not OldThemes then
+      
       NewThemes.Parent = OldDialogueClientScript;
+      
     end;
 
     -- Check for API
     local OldAPI = OldDialogueClientScript:FindFirstChild("API");
     if OldAPI then
+      
       OldAPI.Parent = nil;
+      
     end
 
     -- Take the children from the old scripts
     for _, dialogueScript in ipairs({OldDialogueServerScript, OldDialogueClientScript}) do
+      
       for _, child in ipairs(dialogueScript:GetChildren()) do
+        
         if dialogueScript == OldDialogueServerScript then
+          
           child.Parent = NewDialogueServerScript;
+          
         else
+          
           child.Parent = NewDialogueClientScript;
+          
         end;
+        
       end;
 
       -- Delete the old scripts
       dialogueScript.Parent = nil;
+      
     end;
 
     -- Put the new instances in their places
@@ -821,11 +829,14 @@ RemoveUnusedInstancesButton.Click:Connect(function()
 
   local Count = 0;
   pcall(function()
+    
     local DSS = ServerScriptService:FindFirstChild("DialogueServerScript");
     if not DSS then
+      
       warn("[Dialogue Maker] There isn't a DialogueServerScript in the ServerScriptService!");
       isBusy = false;
       return;
+      
     end;
 
     -- Set an undo point
