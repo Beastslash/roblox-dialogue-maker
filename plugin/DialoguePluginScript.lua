@@ -176,11 +176,11 @@ local function syncDialogueGUI(DirectoryContentScript: DialogueContainerClass): 
     end
 
     -- Create the dialogue script.
-    local targetPriority = 0;
+    local targetPriority = 1;
     for _, Child in ipairs(CurrentDirectory:GetChildren()) do
       
       local comparedName = tonumber(Child.Name);
-      if comparedName and comparedName > targetPriority then
+      if comparedName and comparedName >= targetPriority then
         
         targetPriority = comparedName + 1;
         
@@ -189,7 +189,7 @@ local function syncDialogueGUI(DirectoryContentScript: DialogueContainerClass): 
     end;
     
     local MessageContentScript = script.ContentTemplate:Clone();
-    MessageContentScript.Name = if targetPriority == 0 then 1 else targetPriority;
+    MessageContentScript.Name = targetPriority;
     MessageContentScript:SetAttribute("DialogueType", "Message");
     MessageContentScript.Parent = CurrentDirectory;
 
@@ -239,7 +239,7 @@ local function syncDialogueGUI(DirectoryContentScript: DialogueContainerClass): 
     -- Toggle delete mode and tell the current status to the developer.
     isDeleteModeEnabled = not isDeleteModeEnabled;
     
-    DeleteModeButton.BackgroundColor3 = if isDeleteModeEnabled then Color3.fromRGB(74, 74, 74) else Color3.fromRGB(217, 39, 39);
+    DeleteModeButton.BackgroundColor3 = if isDeleteModeEnabled then Color3.fromRGB(217, 39, 39) else Color3.fromRGB(74, 74, 74);
     
     print("[Dialogue Maker] " .. if isDeleteModeEnabled then "Warning: Delete Mode has been enabled!" else "Whew. Delete Mode has been disabled.");
 
