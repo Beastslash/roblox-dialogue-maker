@@ -672,8 +672,13 @@ function DialogueModule.readDialogue(npc: Model): ()
               if DividedText[index + 1] and NPCTalking then
 
                 -- Wait for the player to click
-                local ClickToContinueButton = GUIDialogueContainer:FindFirstChild("ClickToContinue") :: GuiButton;
-                ClickToContinueButton.Visible = true;
+                local ClickToContinueButton: GuiButton? = GUIDialogueContainer:FindFirstChild("ClickToContinue") :: GuiButton;
+                if ClickToContinueButton then
+                  
+                  ClickToContinueButton.Visible = true;
+                  
+                end;
+                
                 NPCPaused = true;
                 while NPCPaused and NPCTalking and DialogueModule.PlayerTalkingWithNPC.Value do 
 
@@ -682,7 +687,11 @@ function DialogueModule.readDialogue(npc: Model): ()
                 end;
 
                 -- Let the NPC speak again
-                ClickToContinueButton.Visible = false;
+                if ClickToContinueButton then
+
+                  ClickToContinueButton.Visible = false;
+
+                end;
                 NPCPaused = false;
 
               end;
