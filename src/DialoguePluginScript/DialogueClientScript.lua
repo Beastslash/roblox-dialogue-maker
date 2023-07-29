@@ -9,11 +9,46 @@ local PlayerGui = Player:WaitForChild("PlayerGui");
 local ReplicatedStorage = game:GetService("ReplicatedStorage");
 
 -- Set some constants
-local API = require(script.API);
+local APIFolder = script.API;
+local API = {
+  dialogue = require(APIFolder.Dialogue);
+  triggers = require(APIFolder.Triggers);
+  player = require(APIFolder.Player);
+};
 local clientSettings = require(script.Settings);
 
 -- Iterate through every NPC
 print("[Dialogue Maker]: Preparing dialogue received from the server...");
+
+local Types = require(script.Types);
+local function readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
+  
+  -- Make sure we can't talk to another NPC
+  API.triggers.disableAllSpeechBubbles();
+  API.triggers.disableAllClickDetectors();
+  API.triggers.disableAllProximityPrompts();
+  
+  local freezePlayer = npcSettings.general.freezePlayer;
+  if freezePlayer then 
+
+    API.player.freezePlayer(); 
+
+  end;
+  
+  -- Let the Dialogue module handle it.
+  API.dialogue.readDialogue(NPC, npcSettings);
+  
+  -- Clean up.
+  API.triggers.enableAllSpeechBubbles();
+  API.triggers.enableAllClickDetectors();
+  API.triggers.enableAllProximityPrompts();
+  if freezePlayer then 
+
+    API.player.unfreezePlayer(); 
+
+  end;
+  
+end
 
 for _, NPCLocation: ObjectValue in ipairs(script.NPCLocations:GetChildren()) do
   
@@ -51,9 +86,9 @@ for _, NPCLocation: ObjectValue in ipairs(script.NPCLocations:GetChildren()) do
         local SpeechBubble = API.Triggers.createSpeechBubble(NPC, dialogueSettings);
 
         -- Listen if the player clicks the speech bubble
-        SpeechBubble.SpeechBubbleButton.MouseButton1Click:Connect(function()
+        (SpeechBubble:FindFirstChild("SpeechBubbleButton") :: ImageButton).MouseButton1Click:Connect(function()
 
-          API.Dialogue.readDialogue(NPC);
+          API.Dialogue.readDialogue(NPC, dialogueSettings);
 
         end);
 
@@ -80,7 +115,7 @@ for _, NPCLocation: ObjectValue in ipairs(script.NPCLocations:GetChildren()) do
           local PlayerFromCharacter = Players:GetPlayerFromCharacter(part.Parent);
           if PlayerFromCharacter == Player then
 
-            API.Dialogue.readDialogue(NPC);
+            API.Dialogue.readDialogue(NPC, dialogueSettings);
 
           end;
 
@@ -117,7 +152,7 @@ for _, NPCLocation: ObjectValue in ipairs(script.NPCLocations:GetChildren()) do
 
         ProximityPromptLocation.Triggered:Connect(function()
 
-          API.Dialogue.readDialogue(NPC);
+          API.Dialogue.readDialogue(NPC, dialogueSettings);
 
         end);
 
@@ -151,7 +186,7 @@ for _, NPCLocation: ObjectValue in ipairs(script.NPCLocations:GetChildren()) do
 
         ClickDetectorLocation.MouseClick:Connect(function()
           
-          API.Dialogue.readDialogue(NPC);
+          API.Dialogue.readDialogue(NPC, dialogueSettings);
           
         end);
 
@@ -180,7 +215,7 @@ for _, NPCLocation: ObjectValue in ipairs(script.NPCLocations:GetChildren()) do
 
           end;
           
-          API.Dialogue.readDialogue(NPC);
+          API.Dialogue.readDialogue(NPC, dialogueSettings);
 
         end;
 
