@@ -10,9 +10,10 @@ local DialogueModule = {
   isPlayerTakingWithNPC = false;  
 };
 
-local Types = require(script.Parent.Parent.Types);
+local DialogueClientScript = script.Parent.Parent;
+local Types = require(DialogueClientScript.Types);
 
-local clientSettings = require(script.Parent.Parent.Settings);
+local clientSettings = require(DialogueClientScript.Settings);
 local defaultThemes = clientSettings.defaultThemes;
 function DialogueModule.getDefaultThemeName(viewportWidth: number, viewportHeight: number): string
 
@@ -36,7 +37,7 @@ end;
 function DialogueModule.createNewDialogueGui(themeName: string?): ScreenGui
 
   -- Check if we have the theme
-  local ThemeFolder = script.Parent.Parent.Themes;
+  local ThemeFolder = DialogueClientScript.Themes;
   local DialogueGui = ThemeFolder:FindFirstChild(themeName);
   if themeName and not DialogueGui then
 
@@ -72,7 +73,7 @@ end;
 function DialogueModule.goToDirectory(DialogueContainerFolder: Folder, targetPath: {string}): ModuleScript
 
   local currentPath = "";
-  local CurrentDirectoryScript: ModuleScript | Folder;
+  local CurrentDirectoryScript: ModuleScript | Folder = DialogueContainerFolder;
   for index, directory in ipairs(targetPath) do
 
     currentPath = currentPath .. (if currentPath ~= "" then "." else "") .. directory;
@@ -324,6 +325,7 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
 
   -- Make sure we aren't already talking to an NPC
   assert(not DialogueModule.isPlayerTakingWithNPC, "[Dialogue Maker] Cannot read dialogue because player is currently talking with another NPC.");
+  DialogueModule.isPlayerTakingWithNPC = true;
 
   -- Make sure we have a DialogueContainer.
   local NPCDialogueContainer: Folder? = NPC:FindFirstChild("DialogueContainer") :: Folder;
@@ -495,7 +497,7 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
       local function doesPlayerPassCondition(ContentScript: ModuleScript): boolean
 
         -- Search for condition
-        for _, PossibleCondition in ipairs(script.Parent.Parent.Conditions:GetChildren()) do
+        for _, PossibleCondition in ipairs(DialogueClientScript.Conditions:GetChildren()) do
 
           if PossibleCondition.ContentScript.Value == ContentScript then
 
@@ -511,8 +513,17 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
       end
 
       if doesPlayerPassCondition(CurrentContentScript) then
-
-        local dialogueContentArray = (require(CurrentContentScript) :: () -> ())() :: any;
+        
+        local function useEffect(effectProperties: Types.UseEffectProperties): Types.Effect
+          
+          -- Try to find the effect script based on the name.
+          local EffectScript = DialogueClientScript.Effects:FindFirstChild(effectProperties.name);
+          assert(EffectScript and EffectScript:IsA("ModuleScript"), "[Dialogue Maker] " .. effectProperties.name .. " is not a valid effect. Check your Effects folder to make sure there's a ModuleScript with that name.");
+          return require(EffectScript) :: Types.Effect;
+          
+        end;
+        
+        local dialogueContentArray = (require(CurrentContentScript) :: (useEffect: typeof(useEffect)) -> ())(useEffect) :: any;
         if dialogueType == "Redirect" then
 
           -- A redirect is available, so let's switch priorities.
@@ -798,7 +809,7 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
         -- Run action
         if DialogueModule.isPlayerTakingWithNPC then
 
-          for _, PossibleAction in ipairs(script.Parent.Parent.Actions:GetChildren()) do
+          for _, PossibleAction in ipairs(DialogueClientScript.Actions:GetChildren()) do
 
             if PossibleAction.ContentScript.Value == CurrentContentScript then
 
