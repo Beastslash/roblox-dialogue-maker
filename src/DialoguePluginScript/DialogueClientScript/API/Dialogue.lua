@@ -113,175 +113,192 @@ function DialogueModule.clearResponses(responseContainer: ScrollingFrame): ()
 end;
 
 -- @since v1.0.0
-function DialogueModule.divideTextToFitBox(text: string, tempLine: TextLabel): {string}
+function DialogueModule.getPages(contentArray: Types.ContentArray, tempLine: TextLabel): {Types.ContentArray}
 
-  -- Determine rich text indices.
-  local richTextTagIndices: {
-    [number]: {
-      attributes: string?;
-      endOffset: number?;
-      name: string;
-      startOffset: number;
-    }
-  } = {};
-  local openTagIndices: {number} = {};
-  local textCopy = text;
-  local tagPattern = "<[^<>]->";
-  local pointer = 1;
-  for tag in textCopy:gmatch(tagPattern) do
+  local pages: {Types.ContentArray} = {};
+  local currentPage: Types.ContentArray = {};
+  
+  for _, contentItem in ipairs(contentArray) do
+    
+    if typeof(contentItem) == "table" then
+      
+      contentItem.runFromGetPages();
+      table.insert(currentPage, contentItem);
+      
+    elseif typeof(contentItem) == "string" then
+      
+      -- Determine rich text indices.
+      local richTextTagIndices: {
+        [number]: {
+          attributes: string?;
+          endOffset: number?;
+          name: string;
+          startOffset: number;
+        }
+      } = {};
+      local openTagIndices: {number} = {};
+      local textCopy = contentItem;
+      local tagPattern = "<[^<>]->";
+      local pointer = 1;
+      for tag in textCopy:gmatch(tagPattern) do
 
-    -- Get the tag name and attributes.
-    local tagText = tag:match("<([^<>]-)>");
-    if tagText then
+        -- Get the tag name and attributes.
+        local tagText = tag:match("<([^<>]-)>");
+        if tagText then
 
-      local firstSpaceIndex = tagText:find(" ");
-      local tagTextLength = tagText:len();
-      local name = tagText:sub(1, (firstSpaceIndex and firstSpaceIndex - 1) or tagTextLength);
-      if name:sub(1, 1) == "/" then
+          local firstSpaceIndex = tagText:find(" ");
+          local tagTextLength = tagText:len();
+          local name = tagText:sub(1, (firstSpaceIndex and firstSpaceIndex - 1) or tagTextLength);
+          if name:sub(1, 1) == "/" then
 
-        for _, index in ipairs(openTagIndices) do
+            for _, index in ipairs(openTagIndices) do
 
-          if richTextTagIndices[index].name == name:sub(2) then
+              if richTextTagIndices[index].name == name:sub(2) then
 
-            -- Add a tag end offset.
-            local _, endOffset = textCopy:find(tagPattern);
-            if endOffset then
+                -- Add a tag end offset.
+                local _, endOffset = textCopy:find(tagPattern);
+                if endOffset then
 
-              richTextTagIndices[index].endOffset = pointer + endOffset;
+                  richTextTagIndices[index].endOffset = pointer + endOffset;
 
-            end;
+                end;
 
-            -- Remove the tag from the open tag table.
-            table.remove(openTagIndices, index);
-            break;
+                -- Remove the tag from the open tag table.
+                table.remove(openTagIndices, index);
+                break;
+
+              end
+
+            end
+
+          else
+
+            -- Get the tag start offset.
+            local startOffset = pointer;
+            local attributes = firstSpaceIndex and tagText:sub(firstSpaceIndex + 1) or "";
+            table.insert(richTextTagIndices, {
+              name = name;
+              attributes = attributes;
+              startOffset = pointer;
+            });
+            table.insert(openTagIndices, #richTextTagIndices);
 
           end
 
-        end
+          -- Remove the tag from our copy.
+          local _, pointerUpdate = textCopy:find(tagPattern);
+          if pointerUpdate then
 
-      else
+            pointer += pointerUpdate - 1;
+            textCopy = textCopy:sub(pointerUpdate);
 
-        -- Get the tag start offset.
-        local startOffset = pointer;
-        local attributes = firstSpaceIndex and tagText:sub(firstSpaceIndex + 1) or "";
-        table.insert(richTextTagIndices, {
-          name = name;
-          attributes = attributes;
-          startOffset = pointer;
-        });
-        table.insert(openTagIndices, #richTextTagIndices);
+          end;
+
+        end;
 
       end
 
-      -- Remove the tag from our copy.
-      local _, pointerUpdate = textCopy:find(tagPattern);
-      if pointerUpdate then
+      -- 
+      pointer = 1;
+      repeat
 
-        pointer += pointerUpdate - 1;
-        textCopy = textCopy:sub(pointerUpdate);
-
-      end;
-
-    end;
-
-  end
-
-  -- 
-  pointer = 1;
-  local MessageParts = {};
-  repeat
-
-    -- Check if there's rich text missing.
-    tempLine.Text = text;
-    local richTextTags = "";
-    for i = #richTextTagIndices, 1, -1 do
-
-      local tagInfo = richTextTagIndices[i];
-      if tagInfo.startOffset < pointer and tagInfo.endOffset and tagInfo.endOffset >= pointer then
-
-        richTextTags = "<" .. tagInfo.name .. (if tagInfo.attributes and tagInfo.attributes ~= "" then " " .. tagInfo.attributes else  "") .. ">" .. richTextTags;
-
-      end;
-
-    end
-
-    local richTextStart = richTextTags:len() + 1;
-    tempLine.Text = richTextTags .. tempLine.Text;
-
-    -- Check if the message fits without us having to do anything.
-    local richTextAdditions = 0;
-    while not tempLine.TextFits do
-
-      -- Add rich text endings to see if that changes anything.
-      local tempRichTextEndTags = "";
-      local originalText = tempLine.Text;
-      local tempPointer = pointer + originalText:sub(richTextStart):len();
-      local function refreshTempRichTextEndTags() 
-
+        -- Check if there's rich text missing.
+        tempLine.Text = contentItem;
+        local richTextTags = "";
         for i = #richTextTagIndices, 1, -1 do
 
-          local richTextTagIndex = richTextTagIndices[i];
-          if richTextTagIndex.startOffset < tempPointer and richTextTagIndex.endOffset and richTextTagIndex.endOffset >= tempPointer then
+          local tagInfo = richTextTagIndices[i];
+          if tagInfo.startOffset < pointer and tagInfo.endOffset and tagInfo.endOffset >= pointer then
 
-            tempRichTextEndTags = tempRichTextEndTags .. "</" .. richTextTagIndices[i].name .. ">";
-
-          elseif richTextTagIndex.startOffset > tempPointer then
-
-            break;
+            richTextTags = "<" .. tagInfo.name .. (if tagInfo.attributes and tagInfo.attributes ~= "" then " " .. tagInfo.attributes else  "") .. ">" .. richTextTags;
 
           end;
 
         end
 
-      end;
+        local richTextStart = richTextTags:len() + 1;
+        tempLine.Text = richTextTags .. tempLine.Text;
 
-      tempLine.Text = originalText .. tempRichTextEndTags;
-      richTextAdditions = tempRichTextEndTags:len();
+        -- Check if the message fits without us having to do anything.
+        local richTextAdditions = 0;
+        while not tempLine.TextFits do
 
-      -- Check if popping off a word helps.
-      if not tempLine.TextFits then
+          -- Add rich text endings to see if that changes anything.
+          local tempRichTextEndTags = "";
+          local originalText = tempLine.Text;
+          local tempPointer = pointer + originalText:sub(richTextStart):len();
+          local function refreshTempRichTextEndTags() 
 
-        -- Get the space that is the closest to the end of the message.
-        local lastSpaceIndex = originalText:match("^.*() ");
-        if not lastSpaceIndex or typeof(lastSpaceIndex) ~= "number" then
+            for i = #richTextTagIndices, 1, -1 do
 
-          break;
+              local richTextTagIndex = richTextTagIndices[i];
+              if richTextTagIndex.startOffset < tempPointer and richTextTagIndex.endOffset and richTextTagIndex.endOffset >= tempPointer then
+
+                tempRichTextEndTags = tempRichTextEndTags .. "</" .. richTextTagIndices[i].name .. ">";
+
+              elseif richTextTagIndex.startOffset > tempPointer then
+
+                break;
+
+              end;
+
+            end
+
+          end;
+
+          tempLine.Text = originalText .. tempRichTextEndTags;
+          richTextAdditions = tempRichTextEndTags:len();
+
+          -- Check if popping off a word helps.
+          if not tempLine.TextFits then
+
+            -- Get the space that is the closest to the end of the message.
+            local lastSpaceIndex = originalText:match("^.*() ");
+            if not lastSpaceIndex or typeof(lastSpaceIndex) ~= "number" then
+
+              break;
+
+            end;
+
+            -- Reform the message without that word.
+            originalText = originalText:sub(1, lastSpaceIndex :: number - 1);
+            tempPointer = pointer + originalText:sub(richTextStart):len();
+            refreshTempRichTextEndTags();
+            richTextAdditions = tempRichTextEndTags:len();
+            tempLine.Text = originalText .. tempRichTextEndTags;
+
+            -- 
+            if not tempLine.TextFits then
+
+              richTextAdditions = 0;
+              tempLine.Text = originalText;
+
+            end
+
+          end;
+
+          task.wait();
 
         end;
 
-        -- Reform the message without that word.
-        originalText = originalText:sub(1, lastSpaceIndex :: number - 1);
-        tempPointer = pointer + originalText:sub(richTextStart):len();
-        refreshTempRichTextEndTags();
-        richTextAdditions = tempRichTextEndTags:len();
-        tempLine.Text = originalText .. tempRichTextEndTags;
+        -- Add the words to the table.
+        table.insert(currentPage, tempLine.Text);
 
-        -- 
-        if not tempLine.TextFits then
+        -- Update the pointer.
+        pointer += tempLine.Text:sub(richTextStart):len() - richTextAdditions;
 
-          richTextAdditions = 0;
-          tempLine.Text = originalText;
+        -- Subtract what we added to the table.
+        contentItem = contentItem:sub(tempLine.Text:sub(richTextStart):len() - richTextAdditions + 2);
 
-        end
+      until contentItem == "";
+      
+    end
+    
+  end;
+  
+  table.insert(pages, currentPage);
 
-      end;
-
-      task.wait();
-
-    end;
-
-    -- Add the words to the table.
-    table.insert(MessageParts, tempLine.Text);
-
-    -- Update the pointer.
-    pointer += tempLine.Text:sub(richTextStart):len() - richTextAdditions;
-
-    -- Subtract what we added to the table.
-    text = text:sub(tempLine.Text:sub(richTextStart):len() - richTextAdditions + 2);
-
-  until text == "";
-
-  return MessageParts;
+  return pages;
 
 end;
 
@@ -488,7 +505,7 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
           -- Try to find the effect script based on the name.
           local EffectScript = DialogueClientScript.Effects:FindFirstChild(effectProperties.name);
           assert(EffectScript and EffectScript:IsA("ModuleScript"), "[Dialogue Maker] " .. effectProperties.name .. " is not a valid effect. Check your Effects folder to make sure there's a ModuleScript with that name.");
-          return require(EffectScript) :: Types.Effect;
+          return require(EffectScript)(effectProperties) :: Types.Effect;
           
         end;
         
@@ -527,37 +544,27 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
           -- Clear the text container just in case there was some responses left behind.
           DialogueModule.clearResponses(ResponseContainer);
 
-          -- Use the text container with responses.
-          TextContainer = NPCTextContainerWithResponses;
-          NPCTextContainerWithResponses.Visible = true;
-          NPCTextContainerWithoutResponses.Visible = false;
-          ResponsesEnabled = true;
-
-        else
-
-          -- Use the text container without responses.
-          TextContainer = NPCTextContainerWithoutResponses;
-          NPCTextContainerWithoutResponses.Visible = true;
-          NPCTextContainerWithResponses.Visible = false;
-          ResponseContainer.Visible = false;
-
         end;
+        
+        TextContainer = if #responses > 0 then NPCTextContainerWithResponses else NPCTextContainerWithoutResponses;
+        NPCTextContainerWithResponses.Visible = #responses > 0;
+        NPCTextContainerWithoutResponses.Visible = not (#responses > 0);
+        ResponsesEnabled = #responses > 0;
 
         -- Ensure we have a text container line.
         local textContainerLine: TextLabel? = TextContainer:FindFirstChild("Line") :: TextLabel;
         assert(textContainerLine, "Line not found.");
 
         -- Make the NPC stop talking if the player clicks the frame
-        local NPCTalking = true;
+        local isNPCTalking = true;
         local WaitingForResponse = true;
-        local Skipped = false;
         local NPCPaused = false;
-        local ContinueDialogue;
         local Pointer = 1;
         local PointerBefore = 1;
         local defaultChatContinueKey = clientSettings.defaultChatContinueKey;
         local defaultChatContinueKeyGamepad = clientSettings.defaultChatContinueKeyGamepad;
-        ContinueDialogue = function(keybind: Enum.KeyCode)
+        local ContinueDialogue;
+        ContinueDialogue = function(keybind: Enum.KeyCode): ()
 
           -- Ensure the player is holding the key.
           if keybind and not UserInputService:IsKeyDown(defaultChatContinueKey) and not UserInputService:IsKeyDown(defaultChatContinueKeyGamepad) then
@@ -569,7 +576,7 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
           -- Temporarily remove the keybind so that the player doesn't skip the next message.
           ContextActionService:UnbindAction("ContinueDialogue");
 
-          if NPCTalking then
+          if isNPCTalking then
 
             if ClickSoundEnabled and ClickSound then
 
@@ -637,44 +644,54 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
 
         end;
 
-        -- Put the letters of the message together for an animation effect
-        DialogueGUI.Enabled = true;
-        local Position = 0;
-        local Adding = false;
-        local MessageText = dialogueContentArray[1] :: string;
-
         -- Clone the TextLabel.
+        textContainerLine.Text = "";
         local TempLine: TextLabel = textContainerLine:Clone();
         TempLine.Name = "LineTest";
         TempLine.Visible = false;
         TempLine.Parent = TextContainer;
-
-        local DividedText = DialogueModule.divideTextToFitBox(MessageText, TempLine);
+        local pages = DialogueModule.getPages(dialogueContentArray, TempLine);
         TempLine:Destroy();
+        DialogueGUI.Enabled = true;
+        
+        for pageIndex, page in ipairs(pages) do
+          
+          -- Show what's on the current page.
+          for _, dialogueContentItem in ipairs(page) do
+            
+            if typeof(dialogueContentItem) == "table" then
 
-        for index, page in ipairs(DividedText) do
+              -- The item is an effect. Let's run it.
+              dialogueContentItem.run(false);
 
-          -- Now we can get the new text
-          PointerBefore = Pointer;
-          local fullMessageText = page;
-          textContainerLine.Text = fullMessageText;
-          for count = 0, textContainerLine.Text:len() do
+            elseif typeof(dialogueContentItem) == "string" then
 
-            textContainerLine.MaxVisibleGraphemes = count;
+              -- Now we can get the new text
+              PointerBefore = Pointer;
+              textContainerLine.Text = textContainerLine.Text .. dialogueContentItem;
+              textContainerLine.MaxVisibleGraphemes = if textContainerLine.MaxVisibleGraphemes == -1 then 0 else textContainerLine.MaxVisibleGraphemes;
+              for count = textContainerLine.MaxVisibleGraphemes, textContainerLine.Text:len() do
 
-            task.wait(npcSettings.general.letterDelay);
+                textContainerLine.MaxVisibleGraphemes = count;
 
-            if textContainerLine.MaxVisibleGraphemes == -1 then 
+                task.wait(npcSettings.general.letterDelay);
 
-              break;
+                if textContainerLine.MaxVisibleGraphemes == -1 then 
 
-            end
+                  break;
 
-            Pointer += 1;
+                end
 
-          end;
+                Pointer += 1;
 
-          if DividedText[index + 1] and NPCTalking then
+              end;
+
+            end;
+            
+          end
+          
+          -- Check if there are more pages.
+          if pages[pageIndex + 1] and isNPCTalking then
 
             -- Wait for the player to click
             local ClickToContinueButton: GuiButton? = GUIDialogueContainer:FindFirstChild("ClickToContinue") :: GuiButton;
@@ -685,7 +702,7 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
             end;
 
             NPCPaused = true;
-            while NPCPaused and NPCTalking and DialogueModule.isPlayerTakingWithNPC do 
+            while NPCPaused and isNPCTalking and DialogueModule.isPlayerTakingWithNPC do 
 
               task.wait();
 
@@ -700,9 +717,9 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
             NPCPaused = false;
 
           end;
-
+          
         end;
-        NPCTalking = false;
+        isNPCTalking = false;
 
         local chosenResponse;
         if ResponsesEnabled and DialogueModule.isPlayerTakingWithNPC then
