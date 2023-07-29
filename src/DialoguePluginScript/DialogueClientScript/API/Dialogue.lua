@@ -98,37 +98,6 @@ function DialogueModule.goToDirectory(DialogueContainerFolder: Folder, targetPat
 end;
 
 -- @since v1.0.0
-function DialogueModule.retrievePausePoints(text: string, tempLine: TextLabel): (string, {number})
-
-  local PausePoints: {
-    [number]: number
-  } = {};
-
-  local Pattern: string = "%[/wait time=(%d+%.?%d+)%]";
-  tempLine.Text = text;
-  for pauseTime: string in string.gmatch(tempLine.ContentText, Pattern) do
-
-    -- Get the index.
-    local Index: number? = tempLine.ContentText:find(Pattern);
-
-    -- Add the data to the table.
-    local Time: number? = tonumber(pauseTime);
-    if Time and Index then
-
-      PausePoints[Index] = Time;
-
-      -- Remove the string.
-      tempLine.Text = tempLine.Text:gsub(Pattern, "", 1);
-
-    end;
-
-  end;
-
-  return tempLine.Text, PausePoints;
-
-end;
-
--- @since v1.0.0
 function DialogueModule.clearResponses(responseContainer: ScrollingFrame): ()
 
   for _, response in ipairs(responseContainer:GetChildren()) do
@@ -523,11 +492,12 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
           
         end;
         
-        local dialogueContentArray = (require(CurrentContentScript) :: (useEffect: typeof(useEffect)) -> ())(useEffect) :: any;
+        local dialogueContentArray = (require(CurrentContentScript) :: (useEffect: typeof(useEffect)) -> Types.ContentArray)(useEffect);
         if dialogueType == "Redirect" then
 
           -- A redirect is available, so let's switch priorities.
-          currentDialoguePriority = dialogueContentArray[1];
+          assert(typeof(dialogueContentArray[1]) == "string", "[Dialogue Maker] Item at index 1 is not a directory.");
+          currentDialoguePriority = dialogueContentArray[1] :: string;
           continue;
 
         end;
@@ -671,7 +641,7 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
         DialogueGUI.Enabled = true;
         local Position = 0;
         local Adding = false;
-        local MessageTextWithPauses = dialogueContentArray[1];
+        local MessageText = dialogueContentArray[1] :: string;
 
         -- Clone the TextLabel.
         local TempLine: TextLabel = textContainerLine:Clone();
@@ -679,7 +649,6 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
         TempLine.Visible = false;
         TempLine.Parent = TextContainer;
 
-        local MessageText, PausePoints = DialogueModule.retrievePausePoints(MessageTextWithPauses, TempLine);
         local DividedText = DialogueModule.divideTextToFitBox(MessageText, TempLine);
         TempLine:Destroy();
 
@@ -693,7 +662,7 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
 
             textContainerLine.MaxVisibleGraphemes = count;
 
-            task.wait(PausePoints[Pointer] or npcSettings.general.letterDelay);
+            task.wait(npcSettings.general.letterDelay);
 
             if textContainerLine.MaxVisibleGraphemes == -1 then 
 
