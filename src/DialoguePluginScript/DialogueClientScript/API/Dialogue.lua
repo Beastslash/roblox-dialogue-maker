@@ -7,7 +7,7 @@ local Players = game:GetService("Players");
 local Player = Players.LocalPlayer;
 
 local DialogueModule = {
-  PlayerTalkingWithNPC = script.PlayerTalkingWithNPC;
+  isPlayerTakingWithNPC = false;  
 };
 
 local Types = require(script.Parent.Parent.Types);
@@ -315,287 +315,439 @@ function DialogueModule.divideTextToFitBox(text: string, tempLine: TextLabel): {
 
 end;
 
+local isPlayerTakingWithNPC = false;
+
 -- @since v1.0.0
 function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings): ()
 
   local Events = {};
-  local clientSettings = require(script.Parent.Parent.Settings);
 
   -- Make sure we aren't already talking to an NPC
-  if not script.PlayerTalkingWithNPC.Value then
+  assert(not DialogueModule.isPlayerTakingWithNPC, "[Dialogue Maker] Cannot read dialogue because player is currently talking with another NPC.");
 
-    script.PlayerTalkingWithNPC.Value = true;
+  -- Make sure we have a DialogueContainer.
+  local NPCDialogueContainer: Folder? = NPC:FindFirstChild("DialogueContainer") :: Folder;
+  assert(NPCDialogueContainer, "DialogueContainer not found in NPC.");
 
-    local ranSuccessfully, errorMessage = pcall(function()
+  -- Check if the NPC needs to look at the player.
+  if npcSettings.general.npcLooksAtPlayerDuringDialogue and npcSettings.general.npcNeckRotationMaxY then
 
-      -- Make sure we have a DialogueContainer.
-      local NPCDialogueContainer: Folder? = NPC:FindFirstChild("DialogueContainer") :: Folder;
-      assert(NPCDialogueContainer, "DialogueContainer not found in NPC.");
+    -- Handle this in a coroutine because the look shouldn't stop the dialogue.
+    coroutine.wrap(function()
 
-      -- Check if the NPC needs to look at the player.
-      if npcSettings.general.npcLooksAtPlayerDuringDialogue and npcSettings.general.npcNeckRotationMaxY then
+      local NPCHead: BasePart? = NPC:FindFirstChild("Head") :: BasePart;
+      local NPCPrimaryPart: BasePart? = NPC.PrimaryPart :: BasePart;
+      local NPCHumanoid: Humanoid? = NPC:FindFirstChild("Humanoid") :: Humanoid;
+      local NPCTorso: BasePart? = NPCHumanoid and NPCHumanoid.RigType == Enum.HumanoidRigType.R6 and (NPC:FindFirstChild("Torso") :: BasePart) or nil;
+      local NPCNeckParent = NPCTorso or NPCHead;
+      local NPCNeck: Motor6D? = NPCNeckParent and NPCNeckParent:FindFirstChild("Neck") :: Motor6D;
+      local PlayerCharacter: Model? = Player.Character;
+      local PlayerHead: BasePart? = (PlayerCharacter and PlayerCharacter:FindFirstChild("Head") :: BasePart);
+      if NPCNeck then
 
-        -- Handle this in a coroutine because the look shouldn't stop the dialogue.
-        coroutine.wrap(function()
+        -- Set the base position.
+        NPCNeck.C0 = CFrame.new(NPCNeck.C0.Position) * CFrame.fromOrientation(0, 0, 0);
+        NPCNeck.C1 = CFrame.new(NPCNeck.C1.Position) * CFrame.fromOrientation(0, 0, 0);
+        local OriginalC0 = NPCNeck.C0;
+        local OriginalC1 = NPCNeck.C1;
 
-          local NPCHead: BasePart? = NPC:FindFirstChild("Head") :: BasePart;
-          local NPCPrimaryPart: BasePart? = NPC.PrimaryPart :: BasePart;
-          local NPCHumanoid: Humanoid? = NPC:FindFirstChild("Humanoid") :: Humanoid;
-          local NPCTorso: BasePart? = NPCHumanoid and NPCHumanoid.RigType == Enum.HumanoidRigType.R6 and (NPC:FindFirstChild("Torso") :: BasePart) or nil;
-          local NPCNeckParent = NPCTorso or NPCHead;
-          local NPCNeck: Motor6D? = NPCNeckParent and NPCNeckParent:FindFirstChild("Neck") :: Motor6D;
-          local PlayerCharacter: Model? = Player.Character;
-          local PlayerHead: BasePart? = (PlayerCharacter and PlayerCharacter:FindFirstChild("Head") :: BasePart);
-          if NPCNeck then
+        while DialogueModule.isPlayerTakingWithNPC and NPCPrimaryPart and NPCHead and NPCNeck and PlayerHead and task.wait() do
 
-            -- Set the base position.
-            NPCNeck.C0 = CFrame.new(NPCNeck.C0.Position) * CFrame.fromOrientation(0, 0, 0);
-            NPCNeck.C1 = CFrame.new(NPCNeck.C1.Position) * CFrame.fromOrientation(0, 0, 0);
-            local OriginalC0 = NPCNeck.C0;
-            local OriginalC1 = NPCNeck.C1;
+          local maxRotationX = npcSettings.general.npcNeckRotationMaxX;
+          local maxRotationY = npcSettings.general.npcNeckRotationMaxY;
+          local maxRotationZ = npcSettings.general.npcNeckRotationMaxZ;
+          local goalRotationX, goalRotationY, goalRotationZ = CFrame.new(NPCHead.Position, PlayerHead.Position):ToOrientation();
+          local rotationOffsetX = goalRotationX - math.rad(NPCPrimaryPart.Orientation.X);
+          local rotationOffsetY = goalRotationY - math.rad(NPCPrimaryPart.Orientation.Y);
+          local rotationOffsetZ = goalRotationZ - math.rad(NPCPrimaryPart.Orientation.Z);
+          local rotationXAbs = math.abs(rotationOffsetX);
+          local rotationYAbs = math.abs(rotationOffsetY);
+          local rotationZAbs = math.abs(rotationOffsetZ);
+          TweenService:Create(NPCNeck, TweenInfo.new(0.3), {
+            C0 = CFrame.new(NPCNeck.C0.Position) * CFrame.fromOrientation(
+            ((rotationXAbs > maxRotationX and maxRotationX * (rotationOffsetX / rotationXAbs) * ((rotationXAbs > math.pi and -1) or 1)) or rotationOffsetX), 
+            ((rotationYAbs > maxRotationY and maxRotationY * (rotationOffsetY / rotationYAbs) * ((rotationYAbs > math.pi and -1) or 1)) or rotationOffsetY), 
+            ((rotationZAbs > maxRotationZ and maxRotationZ * (rotationOffsetZ / rotationZAbs) * ((rotationZAbs > math.pi and -1) or 1)) or rotationOffsetZ)
+            )
+          }):Play();
 
-            while script.PlayerTalkingWithNPC.Value and NPCPrimaryPart and NPCHead and NPCNeck and PlayerHead and task.wait() do
+        end
 
-              local maxRotationX = npcSettings.general.npcNeckRotationMaxX;
-              local maxRotationY = npcSettings.general.npcNeckRotationMaxY;
-              local maxRotationZ = npcSettings.general.npcNeckRotationMaxZ;
-              local goalRotationX, goalRotationY, goalRotationZ = CFrame.new(NPCHead.Position, PlayerHead.Position):ToOrientation();
-              local rotationOffsetX = goalRotationX - math.rad(NPCPrimaryPart.Orientation.X);
-              local rotationOffsetY = goalRotationY - math.rad(NPCPrimaryPart.Orientation.Y);
-              local rotationOffsetZ = goalRotationZ - math.rad(NPCPrimaryPart.Orientation.Z);
-              local rotationXAbs = math.abs(rotationOffsetX);
-              local rotationYAbs = math.abs(rotationOffsetY);
-              local rotationZAbs = math.abs(rotationOffsetZ);
-              TweenService:Create(NPCNeck, TweenInfo.new(0.3), {
-                C0 = CFrame.new(NPCNeck.C0.Position) * CFrame.fromOrientation(
-                ((rotationXAbs > maxRotationX and maxRotationX * (rotationOffsetX / rotationXAbs) * ((rotationXAbs > math.pi and -1) or 1)) or rotationOffsetX), 
-                ((rotationYAbs > maxRotationY and maxRotationY * (rotationOffsetY / rotationYAbs) * ((rotationYAbs > math.pi and -1) or 1)) or rotationOffsetY), 
-                ((rotationZAbs > maxRotationZ and maxRotationZ * (rotationOffsetZ / rotationZAbs) * ((rotationZAbs > math.pi and -1) or 1)) or rotationOffsetZ)
-                )
-              }):Play();
-
-            end
-
-            TweenService:Create(NPCNeck, TweenInfo.new(0.3), {C0 = OriginalC0, C1 = OriginalC1}):Play();
-
-          end
-
-        end)();
+        TweenService:Create(NPCNeck, TweenInfo.new(0.3), {C0 = OriginalC0, C1 = OriginalC1}):Play();
 
       end
 
-      -- Set the theme and prepare the response template
-      local DialogueGUI: ScreenGui = DialogueModule.createNewDialogueGui(npcSettings.general.themeName);
-      local ResponseContainer, ResponseTemplate, ClickSound: Sound?, ClickSoundEnabled, OldDialogueGui;
-      local GUIDialogueContainer = DialogueGUI:FindFirstChild("DialogueContainer");
-      local function setupDialogueGui(): ()
+    end)();
 
-        -- Set up responses
-        DialogueGUI.Parent = Player:WaitForChild("PlayerGui");
-        GUIDialogueContainer = DialogueGUI:FindFirstChild("DialogueContainer");
-        ResponseContainer = GUIDialogueContainer:FindFirstChild("ResponseContainer");
-        if not ResponseContainer or not ResponseContainer:IsA("ScrollingFrame") then
+  end
 
-          error("ResponseContainer is not a ScrollingFrame");
+  -- Set the theme and prepare the response template
+  local DialogueGUI: ScreenGui = DialogueModule.createNewDialogueGui(npcSettings.general.themeName);
+  local ResponseContainer, ResponseTemplate, ClickSound: Sound?, ClickSoundEnabled, OldDialogueGui;
+  local GUIDialogueContainer = DialogueGUI:FindFirstChild("DialogueContainer");
+  local function setupDialogueGui(): ()
 
-        end
-        ResponseTemplate = ResponseContainer:FindFirstChild("ResponseTemplate"):Clone();
+    -- Set up responses
+    DialogueGUI.Parent = Player:WaitForChild("PlayerGui");
+    GUIDialogueContainer = DialogueGUI:FindFirstChild("DialogueContainer");
+    ResponseContainer = GUIDialogueContainer:FindFirstChild("ResponseContainer");
+    assert(ResponseContainer and ResponseContainer:IsA("ScrollingFrame"), "[Dialogue Maker] ResponseContainer is not a ScrollingFrame");
+    ResponseTemplate = ResponseContainer:FindFirstChild("ResponseTemplate"):Clone();
 
-        -- Set NPC name
-        local npcName = npcSettings.general.npcName;
-        local NPCNameContainer = GUIDialogueContainer:FindFirstChild("NPCNameContainer");
-        if NPCNameContainer:IsA("GuiObject") then
+    -- Set NPC name
+    local npcName = npcSettings.general.npcName;
+    local NPCNameContainer = GUIDialogueContainer:FindFirstChild("NPCNameContainer");
+    if NPCNameContainer:IsA("GuiObject") then
 
-          local NPCNameTextClass = NPCNameContainer:FindFirstChild("NPCName");
-          if NPCNameTextClass:IsA("TextLabel") then
+      local NPCNameTextClass = NPCNameContainer:FindFirstChild("NPCName");
+      if NPCNameTextClass:IsA("TextLabel") then
 
-            NPCNameTextClass.Text = npcName;
-            if npcSettings.general.fitName then
+        NPCNameTextClass.Text = npcName;
+        if npcSettings.general.fitName then
 
-              NPCNameContainer.Size = UDim2.new(NPCNameContainer.Size.X.Scale, NPCNameTextClass.TextBounds.X + npcSettings.general.textBoundsOffset, NPCNameContainer.Size.Y.Scale, NPCNameContainer.Size.Y.Offset);
-
-            end;
-
-            NPCNameContainer.Visible = npcName ~= "";
-
-          end
+          NPCNameContainer.Size = UDim2.new(NPCNameContainer.Size.X.Scale, NPCNameTextClass.TextBounds.X + npcSettings.general.textBoundsOffset, NPCNameContainer.Size.Y.Scale, NPCNameContainer.Size.Y.Offset);
 
         end;
 
-        -- Setup click sound
-        local PossibleClickSound = DialogueGUI:FindFirstChild("ClickSound");
-        if PossibleClickSound and PossibleClickSound:IsA("Sound") then
+        NPCNameContainer.Visible = npcName ~= "";
 
-          ClickSound = PossibleClickSound;
+      end
 
-        end;
+    end;
 
-        ClickSoundEnabled = false;
-        
-        local defaultClickSound = clientSettings.defaultClickSound;
-        if defaultClickSound and defaultClickSound ~= 0 then
+    -- Setup click sound
+    local PossibleClickSound = DialogueGUI:FindFirstChild("ClickSound");
+    if PossibleClickSound and PossibleClickSound:IsA("Sound") then
 
-          if not ClickSound then
+      ClickSound = PossibleClickSound;
 
-            local NewClickSound = Instance.new("Sound");
-            NewClickSound.Name = "ClickSound";
-            NewClickSound.Parent = DialogueGUI;
-            ClickSound = NewClickSound;
+    end;
 
-          end;
+    ClickSoundEnabled = false;
 
-          ClickSoundEnabled = true;
-          (ClickSound :: Sound).SoundId = "rbxassetid://" .. defaultClickSound;
+    local defaultClickSound = clientSettings.defaultClickSound;
+    if defaultClickSound and defaultClickSound ~= 0 then
 
-        end;
+      if not ClickSound then
+
+        local NewClickSound = Instance.new("Sound");
+        NewClickSound.Name = "ClickSound";
+        NewClickSound.Parent = DialogueGUI;
+        ClickSound = NewClickSound;
 
       end;
 
+      ClickSoundEnabled = true;
+      (ClickSound :: Sound).SoundId = "rbxassetid://" .. defaultClickSound;
+
+    end;
+
+  end;
+
+  setupDialogueGui();
+
+  if GUIDialogueContainer:IsA("GuiObject") and ResponseContainer:IsA("ScrollingFrame") and ResponseTemplate:IsA("TextButton") then
+
+    -- Initialize the theme, then listen for changes
+    script.CurrentTheme.Value = DialogueGUI;
+    local ThemeChangedEvent = script.CurrentTheme.Changed:Connect(function(newTheme)
+
+      DialogueGUI:Destroy();
+      DialogueGUI = newTheme;
       setupDialogueGui();
 
-      if GUIDialogueContainer:IsA("GuiObject") and ResponseContainer:IsA("ScrollingFrame") and ResponseTemplate:IsA("TextButton") then
+    end);
 
-        -- Initialize the theme, then listen for changes
-        script.CurrentTheme.Value = DialogueGUI;
-        local ThemeChangedEvent = script.CurrentTheme.Changed:Connect(function(newTheme)
+    -- If necessary, end conversation if player or NPC goes out of distance
+    local NPCPrimaryPart = NPC.PrimaryPart;
+    local MaxConversationDistance = npcSettings.general.maxConversationDistance;
+    local EndConversationIfOutOfDistance = npcSettings.general.endConversationIfOutOfDistance;
+    if EndConversationIfOutOfDistance and MaxConversationDistance and NPCPrimaryPart then
 
-          DialogueGUI:Destroy();
-          DialogueGUI = newTheme;
-          setupDialogueGui();
+      coroutine.wrap(function() 
 
-        end);
+        while task.wait() and DialogueModule.isPlayerTakingWithNPC do
 
-        -- If necessary, end conversation if player or NPC goes out of distance
-        local NPCPrimaryPart = NPC.PrimaryPart;
-        local MaxConversationDistance = npcSettings.general.maxConversationDistance;
-        local EndConversationIfOutOfDistance = npcSettings.general.endConversationIfOutOfDistance;
-        if EndConversationIfOutOfDistance and MaxConversationDistance and NPCPrimaryPart then
+          if math.abs(NPCPrimaryPart.Position.Magnitude - Player.Character.PrimaryPart.Position.Magnitude) > MaxConversationDistance then
 
-          coroutine.wrap(function() 
+            DialogueModule.isPlayerTakingWithNPC = false;
+            break;
 
-            while task.wait() and script.PlayerTalkingWithNPC.Value do
-
-              if math.abs(NPCPrimaryPart.Position.Magnitude - Player.Character.PrimaryPart.Position.Magnitude) > MaxConversationDistance then
-
-                script.PlayerTalkingWithNPC.Value = false;
-                break;
-
-              end;
-
-            end;
-
-          end)();
+          end;
 
         end;
 
-        -- Show the dialouge to the player
-        local currentDialoguePriority = "1";
-        local CurrentContentScript: ModuleScript;
-        while script.PlayerTalkingWithNPC.Value and task.wait() do
+      end)();
 
-          -- Get the current directory.
-          CurrentContentScript = DialogueModule.goToDirectory(NPCDialogueContainer, currentDialoguePriority:split("."));
-          local dialogueType = CurrentContentScript:GetAttribute("DialogueType");
-          
-          -- Checks if the local player passes a condition.
-          -- @since v5.0.0
-          local function doesPlayerPassCondition(ContentScript: ModuleScript): boolean
+    end;
 
-            -- Search for condition
-            for _, PossibleCondition in ipairs(script.Parent.Parent.Conditions:GetChildren()) do
+    -- Show the dialouge to the player
+    local currentDialoguePriority = "1";
+    local CurrentContentScript: ModuleScript;
+    while DialogueModule.isPlayerTakingWithNPC and task.wait() do
 
-              if PossibleCondition.ContentScript.Value == ContentScript then
+      -- Get the current directory.
+      CurrentContentScript = DialogueModule.goToDirectory(NPCDialogueContainer, currentDialoguePriority:split("."));
+      local dialogueType = CurrentContentScript:GetAttribute("DialogueType");
 
-                -- Check if there is no condition or the condition passed
-                return (require(PossibleCondition) :: () -> boolean)();
+      -- Checks if the local player passes a condition.
+      -- @since v5.0.0
+      local function doesPlayerPassCondition(ContentScript: ModuleScript): boolean
 
-              end;
+        -- Search for condition
+        for _, PossibleCondition in ipairs(script.Parent.Parent.Conditions:GetChildren()) do
 
-            end;
+          if PossibleCondition.ContentScript.Value == ContentScript then
 
-            return true;
-            
+            -- Check if there is no condition or the condition passed
+            return (require(PossibleCondition) :: () -> boolean)();
+
+          end;
+
+        end;
+
+        return true;
+
+      end
+
+      if doesPlayerPassCondition(CurrentContentScript) then
+
+        local dialogueContentArray = (require(CurrentContentScript) :: () -> ())() :: any;
+        if dialogueType == "Redirect" then
+
+          -- A redirect is available, so let's switch priorities.
+          currentDialoguePriority = dialogueContentArray[1];
+          continue;
+
+        end;
+
+        -- Get a list of responses from the dialogue.
+        local responses: {{ModuleScript: ModuleScript; properties: any}} = {};
+        for _, PossibleResponse in ipairs(CurrentContentScript:GetChildren()) do
+
+          if PossibleResponse:IsA("ModuleScript") and tonumber(PossibleResponse.Name) and PossibleResponse:GetAttribute("DialogueType") == "Response" then
+
+            table.insert(responses, {
+              ModuleScript = PossibleResponse,
+              properties = require(PossibleResponse) :: any
+            });
+
           end
 
-          if doesPlayerPassCondition(CurrentContentScript) then
+        end
 
-            local dialogueContentArray = (require(CurrentContentScript) :: () -> ())() :: any;
-            if dialogueType == "Redirect" then
+        -- Determine which text container we should use.
+        local ResponsesEnabled = false;
+        local TextContainer: GuiObject;
+        local NPCTextContainerWithResponses = GUIDialogueContainer:FindFirstChild("NPCTextContainerWithResponses") :: GuiObject;
+        local NPCTextContainerWithoutResponses = GUIDialogueContainer:FindFirstChild("NPCTextContainerWithoutResponses") :: GuiObject;
+        if #responses > 0 then
 
-              -- A redirect is available, so let's switch priorities.
-              currentDialoguePriority = dialogueContentArray[1];
-              continue;
+          -- Clear the text container just in case there was some responses left behind.
+          DialogueModule.clearResponses(ResponseContainer);
+
+          -- Use the text container with responses.
+          TextContainer = NPCTextContainerWithResponses;
+          NPCTextContainerWithResponses.Visible = true;
+          NPCTextContainerWithoutResponses.Visible = false;
+          ResponsesEnabled = true;
+
+        else
+
+          -- Use the text container without responses.
+          TextContainer = NPCTextContainerWithoutResponses;
+          NPCTextContainerWithoutResponses.Visible = true;
+          NPCTextContainerWithResponses.Visible = false;
+          ResponseContainer.Visible = false;
+
+        end;
+
+        -- Ensure we have a text container line.
+        local textContainerLine: TextLabel? = TextContainer:FindFirstChild("Line") :: TextLabel;
+        assert(textContainerLine, "Line not found.");
+
+        -- Make the NPC stop talking if the player clicks the frame
+        local NPCTalking = true;
+        local WaitingForResponse = true;
+        local Skipped = false;
+        local NPCPaused = false;
+        local ContinueDialogue;
+        local Pointer = 1;
+        local PointerBefore = 1;
+        local defaultChatContinueKey = clientSettings.defaultChatContinueKey;
+        local defaultChatContinueKeyGamepad = clientSettings.defaultChatContinueKeyGamepad;
+        ContinueDialogue = function(keybind: Enum.KeyCode)
+
+          -- Ensure the player is holding the key.
+          if keybind and not UserInputService:IsKeyDown(defaultChatContinueKey) and not UserInputService:IsKeyDown(defaultChatContinueKeyGamepad) then
+
+            return;
+
+          end;
+
+          -- Temporarily remove the keybind so that the player doesn't skip the next message.
+          ContextActionService:UnbindAction("ContinueDialogue");
+
+          if NPCTalking then
+
+            if ClickSoundEnabled and ClickSound then
+
+              ClickSound:Play();
 
             end;
 
-            -- Get a list of responses from the dialogue.
-            local responses: {{ModuleScript: ModuleScript; properties: any}} = {};
-            for _, PossibleResponse in ipairs(CurrentContentScript:GetChildren()) do
+            if NPCPaused then
 
-              if PossibleResponse:IsA("ModuleScript") and tonumber(PossibleResponse.Name) and PossibleResponse:GetAttribute("DialogueType") == "Response" then
+              NPCPaused = false;
 
-                table.insert(responses, {
-                  ModuleScript = PossibleResponse,
-                  properties = require(PossibleResponse) :: any
-                });
+            end;
 
-              end
+            if npcSettings.general.allowPlayerToSkipDelay then
+
+              -- Replace the incomplete dialogue with the full text
+              textContainerLine.MaxVisibleGraphemes = -1;
+              Pointer = PointerBefore + textContainerLine.ContentText:len();
+
+            end;
+
+            ContextActionService:BindAction("ContinueDialogue", ContinueDialogue, false, defaultChatContinueKey, defaultChatContinueKeyGamepad);
+
+          elseif #responses == 0 then	
+
+            WaitingForResponse = false;
+
+          end;
+
+        end;
+
+        Events.DialogueClicked = GUIDialogueContainer.InputBegan:Connect(function(input)
+
+          -- Make sure the player clicked the frame
+          if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+
+            ContinueDialogue();
+
+          end;
+
+        end);
+
+        if clientSettings.keybindsEnabled then
+
+          local KEYS_PRESSED = UserInputService:GetKeysPressed();
+          local KeybindPressed = false;
+          if UserInputService:IsKeyDown(defaultChatContinueKey) or UserInputService:IsKeyDown(defaultChatContinueKeyGamepad) then
+
+            coroutine.wrap(function()
+
+              while UserInputService:IsKeyDown(defaultChatContinueKey) or UserInputService:IsKeyDown(defaultChatContinueKeyGamepad) do
+
+                task.wait();
+
+              end;
+              ContextActionService:BindAction("ContinueDialogue", ContinueDialogue, false, defaultChatContinueKey, defaultChatContinueKeyGamepad);
+
+            end)();
+
+          else
+
+            ContextActionService:BindAction("ContinueDialogue", ContinueDialogue, false, defaultChatContinueKey, defaultChatContinueKeyGamepad);
+
+          end;
+
+        end;
+
+        -- Put the letters of the message together for an animation effect
+        DialogueGUI.Enabled = true;
+        local Position = 0;
+        local Adding = false;
+        local MessageTextWithPauses = dialogueContentArray[1];
+
+        -- Clone the TextLabel.
+        local TempLine: TextLabel = textContainerLine:Clone();
+        TempLine.Name = "LineTest";
+        TempLine.Visible = false;
+        TempLine.Parent = TextContainer;
+
+        local MessageText, PausePoints = DialogueModule.retrievePausePoints(MessageTextWithPauses, TempLine);
+        local DividedText = DialogueModule.divideTextToFitBox(MessageText, TempLine);
+        TempLine:Destroy();
+
+        for index, page in ipairs(DividedText) do
+
+          -- Now we can get the new text
+          PointerBefore = Pointer;
+          local fullMessageText = page;
+          textContainerLine.Text = fullMessageText;
+          for count = 0, textContainerLine.Text:len() do
+
+            textContainerLine.MaxVisibleGraphemes = count;
+
+            task.wait(PausePoints[Pointer] or npcSettings.general.letterDelay);
+
+            if textContainerLine.MaxVisibleGraphemes == -1 then 
+
+              break;
 
             end
 
-            -- Determine which text container we should use.
-            local ResponsesEnabled = false;
-            local TextContainer: GuiObject;
-            local NPCTextContainerWithResponses = GUIDialogueContainer:FindFirstChild("NPCTextContainerWithResponses") :: GuiObject;
-            local NPCTextContainerWithoutResponses = GUIDialogueContainer:FindFirstChild("NPCTextContainerWithoutResponses") :: GuiObject;
-            if #responses > 0 then
+            Pointer += 1;
 
-              -- Clear the text container just in case there was some responses left behind.
-              DialogueModule.clearResponses(ResponseContainer);
+          end;
 
-              -- Use the text container with responses.
-              TextContainer = NPCTextContainerWithResponses;
-              NPCTextContainerWithResponses.Visible = true;
-              NPCTextContainerWithoutResponses.Visible = false;
-              ResponsesEnabled = true;
+          if DividedText[index + 1] and NPCTalking then
 
-            else
+            -- Wait for the player to click
+            local ClickToContinueButton: GuiButton? = GUIDialogueContainer:FindFirstChild("ClickToContinue") :: GuiButton;
+            if ClickToContinueButton then
 
-              -- Use the text container without responses.
-              TextContainer = NPCTextContainerWithoutResponses;
-              NPCTextContainerWithoutResponses.Visible = true;
-              NPCTextContainerWithResponses.Visible = false;
-              ResponseContainer.Visible = false;
+              ClickToContinueButton.Visible = true;
 
             end;
 
-            -- Ensure we have a text container line.
-            local textContainerLine: TextLabel? = TextContainer:FindFirstChild("Line") :: TextLabel;
-            assert(textContainerLine, "Line not found.");
+            NPCPaused = true;
+            while NPCPaused and NPCTalking and DialogueModule.isPlayerTakingWithNPC do 
 
-            -- Make the NPC stop talking if the player clicks the frame
-            local NPCTalking = true;
-            local WaitingForResponse = true;
-            local Skipped = false;
-            local NPCPaused = false;
-            local ContinueDialogue;
-            local Pointer = 1;
-            local PointerBefore = 1;
-            local defaultChatContinueKey = clientSettings.defaultChatContinueKey;
-            local defaultChatContinueKeyGamepad = clientSettings.defaultChatContinueKeyGamepad;
-            ContinueDialogue = function(keybind: Enum.KeyCode)
+              task.wait();
 
-              -- Ensure the player is holding the key.
-              if keybind and not UserInputService:IsKeyDown(defaultChatContinueKey) and not UserInputService:IsKeyDown(defaultChatContinueKeyGamepad) then
+            end;
 
-                return;
+            -- Let the NPC speak again
+            if ClickToContinueButton then
 
-              end;
+              ClickToContinueButton.Visible = false;
 
-              -- Temporarily remove the keybind so that the player doesn't skip the next message.
-              ContextActionService:UnbindAction("ContinueDialogue");
+            end;
+            NPCPaused = false;
 
-              if NPCTalking then
+          end;
+
+        end;
+        NPCTalking = false;
+
+        local chosenResponse;
+        if ResponsesEnabled and DialogueModule.isPlayerTakingWithNPC then
+
+          -- Sort responses because :GetChildren() doesn't guarantee it
+          table.sort(responses, function(folder1, folder2)
+
+            return folder1.ModuleScript.Name < folder2.ModuleScript.Name;
+
+          end);
+
+          -- Add response buttons
+          for _, response in ipairs(responses) do
+
+            if doesPlayerPassCondition(response.ModuleScript) then
+
+              local ResponseButton = ResponseTemplate:Clone();
+              ResponseButton.Name = "Response";
+              ResponseButton.Text = response.properties()[1];
+              ResponseButton.Parent = ResponseContainer;
+              ResponseButton.MouseButton1Click:Connect(function()
+
+                -- Acknowledge that the player clicked the button.
+                print("[Dialogue Maker] [Response] " .. Player.Name .. " (" .. Player.UserId .. "): " .. ResponseButton.Text);
+                ResponseContainer.Visible = false;
 
                 if ClickSoundEnabled and ClickSound then
 
@@ -603,275 +755,112 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
 
                 end;
 
-                if NPCPaused then
-
-                  NPCPaused = false;
-
-                end;
-
-                if npcSettings.general.allowPlayerToSkipDelay then
-
-                  -- Replace the incomplete dialogue with the full text
-                  textContainerLine.MaxVisibleGraphemes = -1;
-                  Pointer = PointerBefore + textContainerLine.ContentText:len();
-
-                end;
-
-                ContextActionService:BindAction("ContinueDialogue", ContinueDialogue, false, defaultChatContinueKey, defaultChatContinueKeyGamepad);
-
-              elseif #responses == 0 then	
-
+                chosenResponse = response;
                 WaitingForResponse = false;
-
-              end;
-
-            end;
-
-            Events.DialogueClicked = GUIDialogueContainer.InputBegan:Connect(function(input)
-
-              -- Make sure the player clicked the frame
-              if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-
-                ContinueDialogue();
-
-              end;
-
-            end);
-
-            if clientSettings.keybindsEnabled then
-
-              local KEYS_PRESSED = UserInputService:GetKeysPressed();
-              local KeybindPressed = false;
-              if UserInputService:IsKeyDown(defaultChatContinueKey) or UserInputService:IsKeyDown(defaultChatContinueKeyGamepad) then
-
-                coroutine.wrap(function()
-
-                  while UserInputService:IsKeyDown(defaultChatContinueKey) or UserInputService:IsKeyDown(defaultChatContinueKeyGamepad) do
-
-                    task.wait();
-
-                  end;
-                  ContextActionService:BindAction("ContinueDialogue", ContinueDialogue, false, defaultChatContinueKey, defaultChatContinueKeyGamepad);
-
-                end)();
-
-              else
-
-                ContextActionService:BindAction("ContinueDialogue", ContinueDialogue, false, defaultChatContinueKey, defaultChatContinueKeyGamepad);
-
-              end;
-
-            end;
-
-            -- Put the letters of the message together for an animation effect
-            DialogueGUI.Enabled = true;
-            local Position = 0;
-            local Adding = false;
-            local MessageTextWithPauses = dialogueContentArray[1];
-
-            -- Clone the TextLabel.
-            local TempLine: TextLabel = textContainerLine:Clone();
-            TempLine.Name = "LineTest";
-            TempLine.Visible = false;
-            TempLine.Parent = TextContainer;
-
-            local MessageText, PausePoints = DialogueModule.retrievePausePoints(MessageTextWithPauses, TempLine);
-            local DividedText = DialogueModule.divideTextToFitBox(MessageText, TempLine);
-            TempLine:Destroy();
-
-            for index, page in ipairs(DividedText) do
-
-              -- Now we can get the new text
-              PointerBefore = Pointer;
-              local fullMessageText = page;
-              textContainerLine.Text = fullMessageText;
-              for count = 0, textContainerLine.Text:len() do
-
-                textContainerLine.MaxVisibleGraphemes = count;
-
-                task.wait(PausePoints[Pointer] or npcSettings.general.letterDelay);
-
-                if textContainerLine.MaxVisibleGraphemes == -1 then 
-
-                  break;
-
-                end
-
-                Pointer += 1;
-
-              end;
-
-              if DividedText[index + 1] and NPCTalking then
-
-                -- Wait for the player to click
-                local ClickToContinueButton: GuiButton? = GUIDialogueContainer:FindFirstChild("ClickToContinue") :: GuiButton;
-                if ClickToContinueButton then
-                  
-                  ClickToContinueButton.Visible = true;
-                  
-                end;
-                
-                NPCPaused = true;
-                while NPCPaused and NPCTalking and script.PlayerTalkingWithNPC.Value do 
-
-                  task.wait();
-
-                end;
-
-                -- Let the NPC speak again
-                if ClickToContinueButton then
-
-                  ClickToContinueButton.Visible = false;
-
-                end;
-                NPCPaused = false;
-
-              end;
-
-            end;
-            NPCTalking = false;
-
-            local chosenResponse;
-            if ResponsesEnabled and script.PlayerTalkingWithNPC.Value then
-
-              -- Sort responses because :GetChildren() doesn't guarantee it
-              table.sort(responses, function(folder1, folder2)
-
-                return folder1.ModuleScript.Name < folder2.ModuleScript.Name;
 
               end);
 
-              -- Add response buttons
-              for _, response in ipairs(responses) do
+            end;
 
-                if doesPlayerPassCondition(response.ModuleScript) then
+          end;
 
-                  local ResponseButton = ResponseTemplate:Clone();
-                  ResponseButton.Name = "Response";
-                  ResponseButton.Text = response.properties()[1];
-                  ResponseButton.Parent = ResponseContainer;
-                  ResponseButton.MouseButton1Click:Connect(function()
+          ResponseContainer.CanvasSize = UDim2.new(0, ResponseContainer.CanvasSize.X.Offset, 0, (ResponseContainer:FindFirstChild("UIListLayout") :: UIListLayout).AbsoluteContentSize.Y);
+          ResponseContainer.Visible = true;
 
-                    -- Acknowledge that the player clicked the button.
-                    print("[Dialogue Maker] [Response] " .. Player.Name .. " (" .. Player.UserId .. "): " .. ResponseButton.Text);
-                    ResponseContainer.Visible = false;
+        end;
 
-                    if ClickSoundEnabled and ClickSound then
+        -- Run the timeout code in the background
+        coroutine.wrap(function()
 
-                      ClickSound:Play();
+          if npcSettings.timeout.enabled then
 
-                    end;
+            -- Wait for the player if the developer wants to
+            if ResponsesEnabled and npcSettings.timeout.waitForResponse then
 
-                    chosenResponse = response;
-                    WaitingForResponse = false;
-
-                  end);
-
-                end;
-
-              end;
-
-              ResponseContainer.CanvasSize = UDim2.new(0, ResponseContainer.CanvasSize.X.Offset, 0, (ResponseContainer:FindFirstChild("UIListLayout") :: UIListLayout).AbsoluteContentSize.Y);
-              ResponseContainer.Visible = true;
+              return;
 
             end;
 
-            -- Run the timeout code in the background
-            coroutine.wrap(function()
-              
-              if npcSettings.timeout.enabled then
+            -- Wait the timeout set by the developer
+            task.wait(npcSettings.timeout.seconds);
+            WaitingForResponse = false;
 
-                -- Wait for the player if the developer wants to
-                if ResponsesEnabled and npcSettings.timeout.waitForResponse then
+          end;
 
-                  return;
+        end)();
 
-                end;
+        while WaitingForResponse and DialogueModule.isPlayerTakingWithNPC do
 
-                -- Wait the timeout set by the developer
-                task.wait(npcSettings.timeout.seconds);
-                WaitingForResponse = false;
+          task.wait();
 
-              end;
+        end;
 
-            end)();
+        -- Run action
+        if DialogueModule.isPlayerTakingWithNPC then
 
-            while WaitingForResponse and script.PlayerTalkingWithNPC.Value do
+          for _, PossibleAction in ipairs(script.Parent.Parent.Actions:GetChildren()) do
 
-              task.wait();
+            if PossibleAction.ContentScript.Value == CurrentContentScript then
 
-            end;
-
-            -- Run action
-            if script.PlayerTalkingWithNPC.Value then
-
-              for _, PossibleAction in ipairs(script.Parent.Parent.Actions:GetChildren()) do
-
-                if PossibleAction.ContentScript.Value == CurrentContentScript then
-
-                  (require(PossibleAction) :: () -> ())();
-                  break;
-
-                end;
-
-              end;
+              (require(PossibleAction) :: () -> ())();
+              break;
 
             end;
-
-            -- Check if there is more dialogue.
-            local hasPossibleDialogue = false;
-            for _, PossibleDialogue in ipairs((if chosenResponse then chosenResponse.ModuleScript else CurrentContentScript):GetChildren()) do
-
-              local DialogueType = PossibleDialogue:GetAttribute("DialogueType");
-              if PossibleDialogue:IsA("ModuleScript") and tonumber(PossibleDialogue.Name) and (DialogueType == "Message" or DialogueType == "Redirect") then
-
-                hasPossibleDialogue = true;
-                break;
-
-              end
-
-            end
-
-            if script.PlayerTalkingWithNPC.Value and hasPossibleDialogue then
-
-              currentDialoguePriority = (if chosenResponse then currentDialoguePriority .. "." .. chosenResponse.ModuleScript.Name else currentDialoguePriority) .. ".1";
-
-            else
-
-              DialogueGUI:Destroy();
-              script.PlayerTalkingWithNPC.Value = false;
-
-            end;
-
-          elseif script.PlayerTalkingWithNPC.Value then
-
-            -- There is a message; however, the player failed the condition.
-            -- Let's check if there's something else available.
-            local SplitPriority = currentDialoguePriority:split(".");
-            SplitPriority[#SplitPriority] = tostring(tonumber(SplitPriority[#SplitPriority]) :: number + 1);
-            currentDialoguePriority = table.concat(SplitPriority, ".");
 
           end;
 
         end;
 
-        -- Free the player :)
-        ThemeChangedEvent:Disconnect();
+        -- Check if there is more dialogue.
+        local hasPossibleDialogue = false;
+        for _, PossibleDialogue in ipairs((if chosenResponse then chosenResponse.ModuleScript else CurrentContentScript):GetChildren()) do
 
-      end
+          local DialogueType = PossibleDialogue:GetAttribute("DialogueType");
+          if PossibleDialogue:IsA("ModuleScript") and tonumber(PossibleDialogue.Name) and (DialogueType == "Message" or DialogueType == "Redirect") then
 
-    end);
+            hasPossibleDialogue = true;
+            break;
 
-    script.PlayerTalkingWithNPC.Value = false;
+          end
 
-    if not ranSuccessfully then
+        end
 
-      error("[Dialogue Maker] " .. errorMessage);
+        if DialogueModule.isPlayerTakingWithNPC and hasPossibleDialogue then
 
-    end
+          currentDialoguePriority = (if chosenResponse then currentDialoguePriority .. "." .. chosenResponse.ModuleScript.Name else currentDialoguePriority) .. ".1";
+
+        else
+
+          DialogueGUI:Destroy();
+          DialogueModule.isPlayerTakingWithNPC = false;
+
+        end;
+
+      elseif DialogueModule.isPlayerTakingWithNPC then
+
+        -- There is a message; however, the player failed the condition.
+        -- Let's check if there's something else available.
+        local SplitPriority = currentDialoguePriority:split(".");
+        SplitPriority[#SplitPriority] = tostring(tonumber(SplitPriority[#SplitPriority]) :: number + 1);
+        currentDialoguePriority = table.concat(SplitPriority, ".");
+
+      end;
+
+    end;
+
+    -- Free the player :)
+    ThemeChangedEvent:Disconnect();
 
   end;
 
+  DialogueModule.isPlayerTakingWithNPC = false;
+
 end;
+
+Player.CharacterRemoving:Connect(function()
+
+  DialogueModule.isPlayerTakingWithNPC = false;
+
+end);
 
 return DialogueModule;

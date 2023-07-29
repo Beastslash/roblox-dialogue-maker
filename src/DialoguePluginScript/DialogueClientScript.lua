@@ -7,49 +7,46 @@ local UserInputService = game:GetService("UserInputService");
 local Player = game:GetService("Players").LocalPlayer;
 local PlayerGui = Player:WaitForChild("PlayerGui");
 local ReplicatedStorage = game:GetService("ReplicatedStorage");
-
--- Set some constants
 local APIFolder = script.API;
-local API = {
+local api = {
   dialogue = require(APIFolder.Dialogue);
   triggers = require(APIFolder.Triggers);
   player = require(APIFolder.Player);
 };
 local clientSettings = require(script.Settings);
 
--- Iterate through every NPC
-print("[Dialogue Maker]: Preparing dialogue received from the server...");
-
 local Types = require(script.Types);
 local function readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
   
   -- Make sure we can't talk to another NPC
-  API.triggers.disableAllSpeechBubbles();
-  API.triggers.disableAllClickDetectors();
-  API.triggers.disableAllProximityPrompts();
+  api.triggers.disableAllSpeechBubbles();
+  api.triggers.disableAllClickDetectors();
+  api.triggers.disableAllProximityPrompts();
   
   local freezePlayer = npcSettings.general.freezePlayer;
   if freezePlayer then 
 
-    API.player.freezePlayer(); 
+    api.player.freezePlayer(); 
 
   end;
   
   -- Let the Dialogue module handle it.
-  API.dialogue.readDialogue(NPC, npcSettings);
+  api.dialogue.readDialogue(NPC, npcSettings);
   
   -- Clean up.
-  API.triggers.enableAllSpeechBubbles();
-  API.triggers.enableAllClickDetectors();
-  API.triggers.enableAllProximityPrompts();
+  api.triggers.enableAllSpeechBubbles();
+  api.triggers.enableAllClickDetectors();
+  api.triggers.enableAllProximityPrompts();
   if freezePlayer then 
 
-    API.player.unfreezePlayer(); 
+    api.player.unfreezePlayer(); 
 
   end;
   
 end
 
+-- Iterate through every NPC
+print("[Dialogue Maker]: Preparing dialogue received from the server...");
 for _, NPCLocation: ObjectValue in ipairs(script.NPCLocations:GetChildren()) do
   
   -- Make sure all NPCs aren't affected if this one doesn't load properly
@@ -76,22 +73,19 @@ for _, NPCLocation: ObjectValue in ipairs(script.NPCLocations:GetChildren()) do
   local success, msg = pcall(function()
     
     -- Set up speech bubbles.
-    local dialogueSettings = require(NPC:FindFirstChild("NPCDialogueSettings")) :: any;
-    local SpeechBubbleEnabled = dialogueSettings.speechBubble.enabled;
-    local SpeechBubblePart = dialogueSettings.speechBubble.basePart;
-    if SpeechBubbleEnabled and SpeechBubblePart then
+    local dialogueSettings = require(NPC:FindFirstChild("NPCDialogueSettings")) :: Types.NPCSettings;
+    if dialogueSettings.speechBubble.enabled then
 
-      if SpeechBubblePart:IsA("BasePart") then
-
-        local SpeechBubble = API.Triggers.createSpeechBubble(NPC, dialogueSettings);
+      local SpeechBubblePart = dialogueSettings.speechBubble.location;
+      if SpeechBubblePart and SpeechBubblePart:IsA("BasePart") then
 
         -- Listen if the player clicks the speech bubble
+        local SpeechBubble = api.triggers.createSpeechBubble(NPC, dialogueSettings);
         (SpeechBubble:FindFirstChild("SpeechBubbleButton") :: ImageButton).MouseButton1Click:Connect(function()
 
-          API.Dialogue.readDialogue(NPC, dialogueSettings);
+          api.dialogue.readDialogue(NPC, dialogueSettings);
 
         end);
-
         SpeechBubble.Parent = PlayerGui;
 
       else
@@ -103,11 +97,10 @@ for _, NPCLocation: ObjectValue in ipairs(script.NPCLocations:GetChildren()) do
     end;
 
     -- Next, the prompt regions.
-    local PromptRegionEnabled = dialogueSettings.promptRegion.enabled;
-    local PromptRegionPart = dialogueSettings.promptRegion.part;
-    if PromptRegionEnabled and PromptRegionPart then
+    if dialogueSettings.promptRegion.enabled then
 
-      if PromptRegionPart:IsA("BasePart") then
+      local PromptRegionPart = dialogueSettings.promptRegion.location;
+      if PromptRegionPart and PromptRegionPart:IsA("BasePart") then
 
         PromptRegionPart.Touched:Connect(function(part)
 
@@ -115,7 +108,7 @@ for _, NPCLocation: ObjectValue in ipairs(script.NPCLocations:GetChildren()) do
           local PlayerFromCharacter = Players:GetPlayerFromCharacter(part.Parent);
           if PlayerFromCharacter == Player then
 
-            API.Dialogue.readDialogue(NPC, dialogueSettings);
+            api.dialogue.readDialogue(NPC, dialogueSettings);
 
           end;
 
@@ -130,63 +123,54 @@ for _, NPCLocation: ObjectValue in ipairs(script.NPCLocations:GetChildren()) do
     end;
 
     -- Now, the proximity prompts.
-    local ProximityPromptEnabled = dialogueSettings.proximityPrompt.enabled;
-    local ProximityPromptLocation = dialogueSettings.proximityPrompt.location;
-    local ProximityPromptAutoCreate = dialogueSettings.proximityPrompt.autoCreate;
-    if ProximityPromptEnabled and (ProximityPromptLocation or ProximityPromptAutoCreate) then
+    if dialogueSettings.proximityPrompt.enabled then
 
-      if ProximityPromptAutoCreate then
+      local ProximityPrompt = dialogueSettings.proximityPrompt.location;
+      if dialogueSettings.proximityPrompt.autoCreate then
 
-        local ProximityPrompt = Instance.new("ProximityPrompt");
-        ProximityPrompt.MaxActivationDistance = dialogueSettings.proximityPrompt.maxActivationDistance;
-        ProximityPrompt.HoldDuration = dialogueSettings.proximityPrompt.holdDuration;
-        ProximityPrompt.RequiresLineOfSight = dialogueSettings.proximityPrompt.requiresLineOfSight;
-        ProximityPrompt.Parent = NPC;
-        ProximityPromptLocation = ProximityPrompt;
+        local ProximityPromptTemp = Instance.new("ProximityPrompt");
+        ProximityPromptTemp.Parent = NPC;
+        ProximityPrompt = ProximityPromptTemp;
 
       end;
 
-      if ProximityPromptLocation:IsA("ProximityPrompt") then
+      if ProximityPrompt and ProximityPrompt:IsA("ProximityPrompt") then
 
-        API.Triggers.addProximityPrompt(NPC, ProximityPromptLocation);
+        api.triggers.addProximityPrompt(NPC, ProximityPrompt);
 
-        ProximityPromptLocation.Triggered:Connect(function()
+        ProximityPrompt.Triggered:Connect(function()
 
-          API.Dialogue.readDialogue(NPC, dialogueSettings);
+          api.dialogue.readDialogue(NPC, dialogueSettings);
 
         end);
 
       else
 
-        warn("[Dialogue Maker]: The ProximityPromptLocation for " .. NPC.Name .. " is not a ProximityPrompt.");
+        warn("[Dialogue Maker]: The proximity prompt location for " .. NPC.Name .. " is not a ProximityPrompt.");
 
       end;
 
     end;
 
     -- Almost there: it's time for the click detectors.
-    local ClickDetectorEnabled = dialogueSettings.clickDetector.enabled;
+    if dialogueSettings.clickDetector.enabled then
 
-    local ClickDetectorLocation = dialogueSettings.clickDetector.location;
-    local ClickDetectorAutoCreate = dialogueSettings.clickDetector.autoCreate;
-    if ClickDetectorEnabled and (ClickDetectorLocation or ClickDetectorAutoCreate) then
+      local ClickDetector = dialogueSettings.clickDetector.location;
+      if dialogueSettings.clickDetector.autoCreate then
 
-      if ClickDetectorAutoCreate then
-
-        local ClickDetector = Instance.new("ClickDetector");
-        ClickDetector.MaxActivationDistance = dialogueSettings.clickDetector.activationDistance;
-        ClickDetector.Parent = NPC;
-        ClickDetectorLocation = ClickDetector;
+        local ClickDetectorTemp = Instance.new("ClickDetector");
+        ClickDetectorTemp.Parent = NPC;
+        ClickDetector = ClickDetectorTemp;
 
       end;
 
-      if ClickDetectorLocation:IsA("ClickDetector") then
+      if ClickDetector and ClickDetector:IsA("ClickDetector") then
 
-        API.Triggers.addClickDetector(NPC, ClickDetectorLocation);
+        api.triggers.addClickDetector(NPC, ClickDetector);
 
-        ClickDetectorLocation.MouseClick:Connect(function()
+        ClickDetector.MouseClick:Connect(function()
           
-          API.Dialogue.readDialogue(NPC, dialogueSettings);
+          api.dialogue.readDialogue(NPC, dialogueSettings);
           
         end);
 
@@ -207,15 +191,9 @@ for _, NPCLocation: ObjectValue in ipairs(script.NPCLocations:GetChildren()) do
       local defaultChatTriggerKeyGamepad = clientSettings.defaultChatTriggerKeyGamepad;
       ReadDialogueWithKeybind = function()
 
-        if CanPressButton then
-
-          if not UserInputService:IsKeyDown(defaultChatTriggerKey) and not UserInputService:IsKeyDown(defaultChatTriggerKeyGamepad) then
+        if CanPressButton and (UserInputService:IsKeyDown(defaultChatTriggerKey) or UserInputService:IsKeyDown(defaultChatTriggerKeyGamepad)) then
             
-            return;
-
-          end;
-          
-          API.Dialogue.readDialogue(NPC, dialogueSettings);
+          api.dialogue.readDialogue(NPC, dialogueSettings);
 
         end;
 
@@ -225,15 +203,7 @@ for _, NPCLocation: ObjectValue in ipairs(script.NPCLocations:GetChildren()) do
       -- Check if the player is in range
       RunService.Heartbeat:Connect(function()
 
-        if Player:DistanceFromCharacter(NPC:GetPivot().Position) < clientSettings.minimumDistanceFromCharacter then
-
-          CanPressButton = true;
-
-        else
-
-          CanPressButton = false;
-
-        end;
+        CanPressButton = Player:DistanceFromCharacter(NPC:GetPivot().Position) < clientSettings.minimumDistanceFromCharacter;
 
       end);
 
@@ -249,11 +219,5 @@ for _, NPCLocation: ObjectValue in ipairs(script.NPCLocations:GetChildren()) do
   end;
 
 end;
-
-Player.CharacterRemoving:Connect(function()
-
-  API.Dialogue.PlayerTalkingWithNPC.Value = false;
-
-end);
 
 print("[Dialogue Maker]: Finished preparing dialogue.");
