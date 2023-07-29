@@ -552,8 +552,8 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
         ResponsesEnabled = #responses > 0;
 
         -- Ensure we have a text container line.
-        local textContainerLine: TextLabel? = TextContainer:FindFirstChild("Line") :: TextLabel;
-        assert(textContainerLine, "Line not found.");
+        local TextContainerLine: TextLabel? = TextContainer:FindFirstChild("Line") :: TextLabel;
+        assert(TextContainerLine, "Line not found.");
 
         -- Make the NPC stop talking if the player clicks the frame
         local isNPCTalking = true;
@@ -593,8 +593,8 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
             if npcSettings.general.allowPlayerToSkipDelay then
 
               -- Replace the incomplete dialogue with the full text
-              textContainerLine.MaxVisibleGraphemes = -1;
-              Pointer = PointerBefore + textContainerLine.ContentText:len();
+              TextContainerLine.MaxVisibleGraphemes = -1;
+              Pointer = PointerBefore + TextContainerLine.ContentText:len();
 
             end;
 
@@ -644,20 +644,19 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
 
         end;
 
-        -- Clone the TextLabel.
-        textContainerLine.Text = "";
-        local TempLine: TextLabel = textContainerLine:Clone();
-        TempLine.Name = "LineTest";
-        TempLine.Visible = false;
-        TempLine.Parent = TextContainer;
-        local pages = DialogueModule.getPages(dialogueContentArray, TempLine);
-        TempLine:Destroy();
-        DialogueGUI.Enabled = true;
+        -- Determine how many pages we need to show the dialogue.
+        local pages = DialogueModule.getPages(dialogueContentArray, TextContainerLine);
         
+        -- Show what's on every page.
+        TextContainerLine.Name = "TestLine";
+        TextContainerLine.Text = "";
+        TextContainerLine.Visible = false;
+        DialogueGUI.Enabled = true;
+        local newXOffset = 0;
+        local newYOffset = 0;
         for pageIndex, page in ipairs(pages) do
           
-          -- Show what's on the current page.
-          for _, dialogueContentItem in ipairs(page) do
+          for dialogueContentItemIndex, dialogueContentItem in ipairs(page) do
             
             if typeof(dialogueContentItem) == "table" then
 
@@ -666,17 +665,55 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
 
             elseif typeof(dialogueContentItem) == "string" then
 
-              -- Now we can get the new text
+              -- Pinpoint the offset where the text wraps.
               PointerBefore = Pointer;
-              textContainerLine.Text = textContainerLine.Text .. dialogueContentItem;
-              textContainerLine.MaxVisibleGraphemes = if textContainerLine.MaxVisibleGraphemes == -1 then 0 else textContainerLine.MaxVisibleGraphemes;
-              for count = textContainerLine.MaxVisibleGraphemes, textContainerLine.Text:len() do
+              local TextContainerLineCopy = TextContainerLine:Clone();
+              TextContainerLineCopy.Parent = TextContainerLine.Parent;
+              local oldYBound = 0;
+              local wrapXOffset = 0;
+              local newLineY = TextContainerLineCopy.LineHeight * TextContainerLineCopy.TextSize;
+              for count = 1, #dialogueContentItem do
+                
+                -- Check if the text wraps
+                local oldText = TextContainerLineCopy.Text;
+                TextContainerLineCopy.Text = oldText .. dialogueContentItem:sub(count, count);
+                local currentYBound = TextContainerLineCopy.TextBounds.Y;
+                if currentYBound ~= oldYBound then
+                  
+                  -- Change the line position.
+                  TextContainerLineCopy.Position = UDim2.new(0, 0, 0, TextContainerLineCopy.Position.Y.Offset + newLineY);
+                  
+                  oldYBound = currentYBound;
+                  
+                end
+                
+              end
+              wrapXOffset = TextContainerLineCopy.TextBounds.X;
 
-                textContainerLine.MaxVisibleGraphemes = count;
+              -- Determine new offset.
+              TextContainerLineCopy.Position = UDim2.new();
+              TextContainerLineCopy.Text = dialogueContentItem;
+              local TextBounds = TextContainerLineCopy.TextBounds;
+              
+              if newXOffset + TextBounds.X > TextContainer.AbsoluteSize.X then
+                
+                newXOffset = 0;
+                newYOffset += newLineY;
+                
+              end
+              
+              TextContainerLineCopy.Position = UDim2.new(0, newXOffset, 0, newYOffset);
+              TextContainerLineCopy.Size = UDim2.new(0, TextBounds.X, 0, TextBounds.Y);
+              TextContainerLineCopy.Name = pageIndex .. "_" .. dialogueContentItemIndex;
+              TextContainerLineCopy.Visible = true;
+              
+              for count = 0, TextContainerLineCopy.Text:len() do
+
+                TextContainerLineCopy.MaxVisibleGraphemes = count;
 
                 task.wait(npcSettings.general.letterDelay);
 
-                if textContainerLine.MaxVisibleGraphemes == -1 then 
+                if TextContainerLineCopy.MaxVisibleGraphemes == -1 then 
 
                   break;
 
@@ -685,6 +722,8 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
                 Pointer += 1;
 
               end;
+              
+              newXOffset += TextBounds.X;
 
             end;
             
