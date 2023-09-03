@@ -172,7 +172,7 @@ function DialogueModule.getPages(contentArray: Types.ContentArray, TextContainer
       if currentX ~= 0 then
         
         -- The text'll have to fit on one line.
-        TempTextLabel.Size = UDim2.new(1, -currentX, 0, TempTextLabel.TextSize);
+        TempTextLabel.Size = UDim2.new(1, -currentX, 0, TempTextLabel.TextSize * TempTextLabel.LineHeight);
         
       end;
 
@@ -205,8 +205,6 @@ function DialogueModule.getPages(contentArray: Types.ContentArray, TextContainer
           for spaceIndex = #spaceIndices, 1, -1 do
             
             TempTextLabel.Text = TempTextLabel.Text:sub(1, spaceIndices[spaceIndex] - 1);
-            
-            print(TempTextLabel.Text);
 
             if originalYBound ~= TempTextLabel.TextBounds.Y then
 
@@ -217,7 +215,6 @@ function DialogueModule.getPages(contentArray: Types.ContentArray, TextContainer
           end;
           
           TempTextLabel.Text = textCopy:sub(TempTextLabel.Text:len() + 1);
-          print(TempTextLabel.Text);
           
         end;
 
@@ -256,16 +253,21 @@ function DialogueModule.getPages(contentArray: Types.ContentArray, TextContainer
         
       end;
       
+      TempTextLabel:Clone().Parent = workspace;
       TempTextLabel:Destroy();
       
       -- Start a new page to see if it'll fit.
-      table.insert(pages, currentPage);
       currentX = 0;
       currentY = 0;
       
     else
       
-      print("nope!")
+      table.insert(currentPage, {
+        type = "effect",
+        size = UDim2.new(),
+        position = UDim2.new(),
+        value = contentItem
+      })
       
     end
     
@@ -275,7 +277,6 @@ function DialogueModule.getPages(contentArray: Types.ContentArray, TextContainer
   table.insert(pages, currentPage);
   
   -- We're done!
-  print(pages);
   return pages;
 
 end;
@@ -483,7 +484,7 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
           -- Try to find the effect script based on the name.
           local EffectScript = DialogueClientScript.Effects:FindFirstChild(effectName);
           assert(EffectScript and EffectScript:IsA("ModuleScript"), "[Dialogue Maker] " .. effectName .. " is not a valid effect. Check your Effects folder to make sure there's a ModuleScript with that name.");
-          return require(EffectScript) :: Types.Effect;
+          return require(EffectScript)(...) :: Types.Effect;
           
         end;
         
@@ -635,7 +636,7 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
             if dialogueContentItem.type == "effect" then
 
               -- The item is an effect. Let's run it.
-              (dialogueContentItem.value :: Types.Effect).run({}, false);
+              (dialogueContentItem.value :: Types.Effect).run(false);
 
             elseif dialogueContentItem.type == "string" then
               
