@@ -112,192 +112,170 @@ function DialogueModule.clearResponses(responseContainer: ScrollingFrame): ()
 
 end;
 
+type Page = {{type: "string" | "effect", size: UDim2?; position: UDim2?; value: string | Types.Effect}};
+
 -- @since v1.0.0
-function DialogueModule.getPages(contentArray: Types.ContentArray, tempLine: TextLabel): {Types.ContentArray}
-
-  local pages: {Types.ContentArray} = {};
-  local currentPage: Types.ContentArray = {};
+function DialogueModule.getPages(contentArray: Types.ContentArray, TextContainer: GuiObject, TextLabel: TextLabel): {Page}
   
-  for _, contentItem in ipairs(contentArray) do
+  -- If the content array contains just one string, attempt to fit it in one TextLabel.
+  if #contentArray == 1 and typeof(contentArray[1]) == "string" then
     
-    if typeof(contentItem) == "table" then
+    local TempTextLabel = TextLabel:Clone();
+    TempTextLabel.Text = contentArray[1] :: string;
+    TempTextLabel.Parent = TextContainer;
+    
+    if TempTextLabel.TextFits then
       
-      contentItem.runFromGetPages();
-      table.insert(currentPage, contentItem);
+      -- Fastest case scenario!
+      TempTextLabel:Destroy();
+      return {{
+        type = "string",
+        size = UDim2.new(1, 0, 1, 0),
+        position = UDim2.new(0, 0, 0, 0),
+        value = contentArray[1]
+      }};
       
-    elseif typeof(contentItem) == "string" then
+    end;
+    
+  end;
+  
+  -- Get the max dimensions and breakpoints of every effect.
+  local effectMetadata = {};
+  for _, possibleEffect in ipairs(contentArray) do
+    
+    if typeof(possibleEffect) == "table" then
       
-      -- Determine rich text indices.
-      local richTextTagIndices: {
-        [number]: {
-          attributes: string?;
-          endOffset: number?;
-          name: string;
-          startOffset: number;
-        }
-      } = {};
-      local openTagIndices: {number} = {};
-      local textCopy = contentItem;
-      local tagPattern = "<[^<>]->";
-      local pointer = 1;
-      for tag in textCopy:gmatch(tagPattern) do
+      table.insert(effectMetadata, {
+        dimensions = possibleEffect.getMaxDimensions(),
+        breakpoints = possibleEffect.getBreakpoints()
+      });
+      
+    end;
+    
+  end;
+  
+  local pages: {Page} = {};
+  local currentPage: Page = {};
+  local currentX = 0;
+  local currentY = 0;
+  
+  for index = 1, #contentArray do
+    
+    local contentItem = contentArray[index];
+    
+    -- Determine if the item is a raw message or an effect.
+    if typeof(contentItem) == "string" then
 
-        -- Get the tag name and attributes.
-        local tagText = tag:match("<([^<>]-)>");
-        if tagText then
+      -- Check if the text fits already.
+      local TempTextLabel = TextLabel:Clone();
+      
+      if currentX ~= 0 then
+        
+        -- The text'll have to fit on one line.
+        TempTextLabel.Size = UDim2.new(1, -currentX, 0, TempTextLabel.TextSize);
+        
+      end;
 
-          local firstSpaceIndex = tagText:find(" ");
-          local tagTextLength = tagText:len();
-          local name = tagText:sub(1, (firstSpaceIndex and firstSpaceIndex - 1) or tagTextLength);
-          if name:sub(1, 1) == "/" then
+      TempTextLabel.Position = UDim2.new(0, currentX, 0, currentY);
+      TempTextLabel.Text = contentItem;
+      TempTextLabel.Parent = TextContainer;
+      
+      -- Find all space indices.
+      local spaceIndices = {};
+      local spacePointer = 1;
+      local textCopy = TempTextLabel.Text;
+      while textCopy:find(" ", spacePointer) do
 
-            for _, index in ipairs(openTagIndices) do
+        local startIndex, lastIndex = textCopy:find(" ", spacePointer);
+        table.insert(spaceIndices, startIndex);
+        spacePointer = lastIndex + 1;
 
-              if richTextTagIndices[index].name == name:sub(2) then
+      end;
+      
+      if TempTextLabel.TextFits then
+        
+        -- Finding the Y bound is very easy.
+        currentY += TempTextLabel.TextBounds.Y;
 
-                -- Add a tag end offset.
-                local _, endOffset = textCopy:find(tagPattern);
-                if endOffset then
+        -- Finding the current X bound can be more complex.
+        if TempTextLabel.Size.Y.Offset ~= TempTextLabel.TextSize then
+          
+          -- By erasing every row except for the last row, TempTextLabel.TextBounds.X becomes accurate.
+          local originalYBound = TempTextLabel.TextBounds.Y;
+          for spaceIndex = #spaceIndices, 1, -1 do
+            
+            TempTextLabel.Text = TempTextLabel.Text:sub(1, spaceIndices[spaceIndex] - 1);
+            
+            print(TempTextLabel.Text);
 
-                  richTextTagIndices[index].endOffset = pointer + endOffset;
-
-                end;
-
-                -- Remove the tag from the open tag table.
-                table.remove(openTagIndices, index);
-                break;
-
-              end
-
-            end
-
-          else
-
-            -- Get the tag start offset.
-            local startOffset = pointer;
-            local attributes = firstSpaceIndex and tagText:sub(firstSpaceIndex + 1) or "";
-            table.insert(richTextTagIndices, {
-              name = name;
-              attributes = attributes;
-              startOffset = pointer;
-            });
-            table.insert(openTagIndices, #richTextTagIndices);
-
-          end
-
-          -- Remove the tag from our copy.
-          local _, pointerUpdate = textCopy:find(tagPattern);
-          if pointerUpdate then
-
-            pointer += pointerUpdate - 1;
-            textCopy = textCopy:sub(pointerUpdate);
-
-          end;
-
-        end;
-
-      end
-
-      -- 
-      pointer = 1;
-      repeat
-
-        -- Check if there's rich text missing.
-        tempLine.Text = contentItem;
-        local richTextTags = "";
-        for i = #richTextTagIndices, 1, -1 do
-
-          local tagInfo = richTextTagIndices[i];
-          if tagInfo.startOffset < pointer and tagInfo.endOffset and tagInfo.endOffset >= pointer then
-
-            richTextTags = "<" .. tagInfo.name .. (if tagInfo.attributes and tagInfo.attributes ~= "" then " " .. tagInfo.attributes else  "") .. ">" .. richTextTags;
-
-          end;
-
-        end
-
-        local richTextStart = richTextTags:len() + 1;
-        tempLine.Text = richTextTags .. tempLine.Text;
-
-        -- Check if the message fits without us having to do anything.
-        local richTextAdditions = 0;
-        while not tempLine.TextFits do
-
-          -- Add rich text endings to see if that changes anything.
-          local tempRichTextEndTags = "";
-          local originalText = tempLine.Text;
-          local tempPointer = pointer + originalText:sub(richTextStart):len();
-          local function refreshTempRichTextEndTags() 
-
-            for i = #richTextTagIndices, 1, -1 do
-
-              local richTextTagIndex = richTextTagIndices[i];
-              if richTextTagIndex.startOffset < tempPointer and richTextTagIndex.endOffset and richTextTagIndex.endOffset >= tempPointer then
-
-                tempRichTextEndTags = tempRichTextEndTags .. "</" .. richTextTagIndices[i].name .. ">";
-
-              elseif richTextTagIndex.startOffset > tempPointer then
-
-                break;
-
-              end;
-
-            end
-
-          end;
-
-          tempLine.Text = originalText .. tempRichTextEndTags;
-          richTextAdditions = tempRichTextEndTags:len();
-
-          -- Check if popping off a word helps.
-          if not tempLine.TextFits then
-
-            -- Get the space that is the closest to the end of the message.
-            local lastSpaceIndex = originalText:match("^.*() ");
-            if not lastSpaceIndex or typeof(lastSpaceIndex) ~= "number" then
+            if originalYBound ~= TempTextLabel.TextBounds.Y then
 
               break;
 
             end;
-
-            -- Reform the message without that word.
-            originalText = originalText:sub(1, lastSpaceIndex :: number - 1);
-            tempPointer = pointer + originalText:sub(richTextStart):len();
-            refreshTempRichTextEndTags();
-            richTextAdditions = tempRichTextEndTags:len();
-            tempLine.Text = originalText .. tempRichTextEndTags;
-
-            -- 
-            if not tempLine.TextFits then
-
-              richTextAdditions = 0;
-              tempLine.Text = originalText;
-
-            end
-
+            
           end;
-
-          task.wait();
-
+          
+          TempTextLabel.Text = textCopy:sub(TempTextLabel.Text:len() + 1);
+          print(TempTextLabel.Text);
+          
         end;
 
-        -- Add the words to the table.
-        table.insert(currentPage, tempLine.Text);
+        currentX = TempTextLabel.TextBounds.X;
+        
+        -- Add the text to the current page, then move on!
+        table.insert(currentPage, {
+          type = "string",
+          size = TempTextLabel.Size,
+          position = TempTextLabel.Position,
+          value = contentItem
+        });
+        
+        TempTextLabel:Destroy();
+        
+        continue;
+        
+      end;
+      
+      -- Let's try to individually remove the words.
+      for currentIndex = #spaceIndices, 1, -1 do
+        
+        TempTextLabel.Text = TempTextLabel.Text:sub(0, currentIndex);
+        
+        if TempTextLabel.TextFits then
 
-        -- Update the pointer.
-        pointer += tempLine.Text:sub(richTextStart):len() - richTextAdditions;
-
-        -- Subtract what we added to the table.
-        contentItem = contentItem:sub(tempLine.Text:sub(richTextStart):len() - richTextAdditions + 2);
-
-      until contentItem == "";
+          table.insert(currentPage, {
+            type = "string",
+            size = TempTextLabel.Size,
+            position = TempTextLabel.Position,
+            value = TempTextLabel.Text
+          });
+          break;
+          
+        end
+        
+      end;
+      
+      TempTextLabel:Destroy();
+      
+      -- Start a new page to see if it'll fit.
+      table.insert(pages, currentPage);
+      currentX = 0;
+      currentY = 0;
+      
+    else
+      
+      print("nope!")
       
     end
     
   end;
   
+  -- Insert the last page
   table.insert(pages, currentPage);
-
+  
+  -- We're done!
+  print(pages);
   return pages;
 
 end;
@@ -373,6 +351,7 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
   local DialogueGUI: ScreenGui = DialogueModule.createNewDialogueGui(npcSettings.general.themeName);
   local ResponseContainer, ResponseTemplate, ClickSound: Sound?, ClickSoundEnabled, OldDialogueGui;
   local GUIDialogueContainer = DialogueGUI:FindFirstChild("DialogueContainer");
+  local npcName = npcSettings.general.npcName;
   local function setupDialogueGui(): ()
 
     -- Set up responses
@@ -383,7 +362,6 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
     ResponseTemplate = ResponseContainer:FindFirstChild("ResponseTemplate"):Clone();
 
     -- Set NPC name
-    local npcName = npcSettings.general.npcName;
     local NPCNameContainer = GUIDialogueContainer:FindFirstChild("NPCNameContainer");
     if NPCNameContainer:IsA("GuiObject") then
 
@@ -500,12 +478,12 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
 
       if doesPlayerPassCondition(CurrentContentScript) then
         
-        local function useEffect(effectProperties: Types.UseEffectProperties): Types.Effect
+        local function useEffect(effectName: string, ...: any): Types.Effect
           
           -- Try to find the effect script based on the name.
-          local EffectScript = DialogueClientScript.Effects:FindFirstChild(effectProperties.name);
-          assert(EffectScript and EffectScript:IsA("ModuleScript"), "[Dialogue Maker] " .. effectProperties.name .. " is not a valid effect. Check your Effects folder to make sure there's a ModuleScript with that name.");
-          return require(EffectScript)(effectProperties) :: Types.Effect;
+          local EffectScript = DialogueClientScript.Effects:FindFirstChild(effectName);
+          assert(EffectScript and EffectScript:IsA("ModuleScript"), "[Dialogue Maker] " .. effectName .. " is not a valid effect. Check your Effects folder to make sure there's a ModuleScript with that name.");
+          return require(EffectScript) :: Types.Effect;
           
         end;
         
@@ -536,7 +514,6 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
 
         -- Determine which text container we should use.
         local ResponsesEnabled = false;
-        local TextContainer: GuiObject;
         local NPCTextContainerWithResponses = GUIDialogueContainer:FindFirstChild("NPCTextContainerWithResponses") :: GuiObject;
         local NPCTextContainerWithoutResponses = GUIDialogueContainer:FindFirstChild("NPCTextContainerWithoutResponses") :: GuiObject;
         if #responses > 0 then
@@ -546,7 +523,7 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
 
         end;
         
-        TextContainer = if #responses > 0 then NPCTextContainerWithResponses else NPCTextContainerWithoutResponses;
+        local TextContainer = if #responses > 0 then NPCTextContainerWithResponses else NPCTextContainerWithoutResponses;
         NPCTextContainerWithResponses.Visible = #responses > 0;
         NPCTextContainerWithoutResponses.Visible = not (#responses > 0);
         ResponsesEnabled = #responses > 0;
@@ -594,7 +571,7 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
 
               -- Replace the incomplete dialogue with the full text
               TextContainerLine.MaxVisibleGraphemes = -1;
-              Pointer = PointerBefore + TextContainerLine.ContentText:len();
+              Pointer = PointerBefore + #TextContainerLine.ContentText;
 
             end;
 
@@ -645,69 +622,38 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
         end;
 
         -- Determine how many pages we need to show the dialogue.
-        local pages = DialogueModule.getPages(dialogueContentArray, TextContainerLine);
+        local pages = DialogueModule.getPages(dialogueContentArray, TextContainer, TextContainerLine);
         
         -- Show what's on every page.
-        TextContainerLine.Name = "TestLine";
         TextContainerLine.Text = "";
         TextContainerLine.Visible = false;
         DialogueGUI.Enabled = true;
-        local newXOffset = 0;
-        local newYOffset = 0;
         for pageIndex, page in ipairs(pages) do
           
           for dialogueContentItemIndex, dialogueContentItem in ipairs(page) do
             
-            if typeof(dialogueContentItem) == "table" then
+            if dialogueContentItem.type == "effect" then
 
               -- The item is an effect. Let's run it.
-              dialogueContentItem.run(false);
+              (dialogueContentItem.value :: Types.Effect).run({}, false);
 
-            elseif typeof(dialogueContentItem) == "string" then
-
-              -- Pinpoint the offset where the text wraps.
-              PointerBefore = Pointer;
-              local TextContainerLineCopy = TextContainerLine:Clone();
-              TextContainerLineCopy.Parent = TextContainerLine.Parent;
-              local oldYBound = 0;
-              local wrapXOffset = 0;
-              local newLineY = TextContainerLineCopy.LineHeight * TextContainerLineCopy.TextSize;
-              for count = 1, #dialogueContentItem do
-                
-                -- Check if the text wraps
-                local oldText = TextContainerLineCopy.Text;
-                TextContainerLineCopy.Text = oldText .. dialogueContentItem:sub(count, count);
-                local currentYBound = TextContainerLineCopy.TextBounds.Y;
-                if currentYBound ~= oldYBound then
-                  
-                  -- Change the line position.
-                  TextContainerLineCopy.Position = UDim2.new(0, 0, 0, TextContainerLineCopy.Position.Y.Offset + newLineY);
-                  
-                  oldYBound = currentYBound;
-                  
-                end
-                
-              end
-              wrapXOffset = TextContainerLineCopy.TextBounds.X;
-
+            elseif dialogueContentItem.type == "string" then
+              
+              -- Print to the debug console.
+              print("[Dialogue Maker] [Message] " .. (npcName or "Unknown NPC") .. ": " .. dialogueContentItem.value :: string);
+              
               -- Determine new offset.
+              local TextContainerLineCopy = TextContainerLine:Clone();
               TextContainerLineCopy.Position = UDim2.new();
-              TextContainerLineCopy.Text = dialogueContentItem;
-              local TextBounds = TextContainerLineCopy.TextBounds;
-              
-              if newXOffset + TextBounds.X > TextContainer.AbsoluteSize.X then
-                
-                newXOffset = 0;
-                newYOffset += newLineY;
-                
-              end
-              
-              TextContainerLineCopy.Position = UDim2.new(0, newXOffset, 0, newYOffset);
-              TextContainerLineCopy.Size = UDim2.new(0, TextBounds.X, 0, TextBounds.Y);
+              TextContainerLineCopy.Text = dialogueContentItem.value :: string;
+              TextContainerLineCopy.Position = dialogueContentItem.position :: UDim2;
+              TextContainerLineCopy.Size = dialogueContentItem.size :: UDim2;
               TextContainerLineCopy.Name = pageIndex .. "_" .. dialogueContentItemIndex;
               TextContainerLineCopy.Visible = true;
-              
-              for count = 0, TextContainerLineCopy.Text:len() do
+              TextContainerLineCopy.Parent = TextContainerLine.Parent;
+
+              PointerBefore = Pointer;
+              for count = 1, #TextContainerLineCopy.Text do
 
                 TextContainerLineCopy.MaxVisibleGraphemes = count;
 
@@ -722,8 +668,6 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
                 Pointer += 1;
 
               end;
-              
-              newXOffset += TextBounds.X;
 
             end;
             
@@ -849,7 +793,8 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
 
         -- Check if there is more dialogue.
         local hasPossibleDialogue = false;
-        for _, PossibleDialogue in ipairs((if chosenResponse then chosenResponse.ModuleScript else CurrentContentScript):GetChildren()) do
+        local NextScript = if chosenResponse then chosenResponse.ModuleScript else CurrentContentScript;
+        for _, PossibleDialogue in ipairs(NextScript:GetChildren()) do
 
           local DialogueType = PossibleDialogue:GetAttribute("DialogueType");
           if PossibleDialogue:IsA("ModuleScript") and tonumber(PossibleDialogue.Name) and (DialogueType == "Message" or DialogueType == "Redirect") then
