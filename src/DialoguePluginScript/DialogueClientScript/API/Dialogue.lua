@@ -535,24 +535,22 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
 
         -- Make the NPC stop talking if the player clicks the frame
         local isNPCTalking = true;
+        local isSkipping = false;
+        local onSkip;
         local WaitingForResponse = true;
         local NPCPaused = false;
         local Pointer = 1;
-        local PointerBefore = 1;
         local defaultChatContinueKey = clientSettings.defaultChatContinueKey;
         local defaultChatContinueKeyGamepad = clientSettings.defaultChatContinueKeyGamepad;
         local ContinueDialogue;
-        ContinueDialogue = function(keybind: Enum.KeyCode): ()
+        ContinueDialogue = function(keybind: Enum.KeyCode?): ()
 
           -- Ensure the player is holding the key.
-          if keybind and not UserInputService:IsKeyDown(defaultChatContinueKey) and not UserInputService:IsKeyDown(defaultChatContinueKeyGamepad) then
+          if isSkipping or (keybind and not UserInputService:IsKeyDown(defaultChatContinueKey) and not UserInputService:IsKeyDown(defaultChatContinueKeyGamepad)) then
 
             return;
 
           end;
-
-          -- Temporarily remove the keybind so that the player doesn't skip the next message.
-          ContextActionService:UnbindAction("ContinueDialogue");
 
           if isNPCTalking then
 
@@ -569,14 +567,11 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
             end;
 
             if npcSettings.general.allowPlayerToSkipDelay then
-
-              -- Replace the incomplete dialogue with the full text
-              TextContainerLine.MaxVisibleGraphemes = -1;
-              Pointer = PointerBefore + #TextContainerLine.ContentText;
+              
+              isSkipping = true;
+              onSkip();
 
             end;
-
-            ContextActionService:BindAction("ContinueDialogue", ContinueDialogue, false, defaultChatContinueKey, defaultChatContinueKeyGamepad);
 
           elseif #responses == 0 then	
 
@@ -590,7 +585,7 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
 
           -- Make sure the player clicked the frame
           if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-
+            
             ContinueDialogue();
 
           end;
@@ -631,17 +626,20 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
         DialogueGUI.Enabled = true;
         for pageIndex, page in ipairs(pages) do
           
+          local componentsToDelete = {};
+          
           for dialogueContentItemIndex, dialogueContentItem in ipairs(page) do
             
             if dialogueContentItem.type == "effect" then
 
               -- The item is an effect. Let's run it.
-              (dialogueContentItem.value :: Types.Effect).run(false);
+              print("[Dialogue Maker] [" .. dialogueContentItemIndex .. "/" .. #page .. "] [Effect] " .. (npcName or "Unknown NPC") .. ": " .. (dialogueContentItem.value :: Types.Effect).name);
+              (dialogueContentItem.value :: Types.Effect).run(isSkipping);
 
             elseif dialogueContentItem.type == "string" then
               
               -- Print to the debug console.
-              print("[Dialogue Maker] [Message] " .. (npcName or "Unknown NPC") .. ": " .. dialogueContentItem.value :: string);
+              print("[Dialogue Maker] [" .. dialogueContentItemIndex .. "/" .. #page .. "] [Message] " .. (npcName or "Unknown NPC") .. ": " .. dialogueContentItem.value :: string);
               
               -- Determine new offset.
               local TextContainerLineCopy = TextContainerLine:Clone();
@@ -652,22 +650,37 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
               TextContainerLineCopy.Name = pageIndex .. "_" .. dialogueContentItemIndex;
               TextContainerLineCopy.Visible = true;
               TextContainerLineCopy.Parent = TextContainerLine.Parent;
+              
+              table.insert(componentsToDelete, TextContainerLineCopy);
+              
+              onSkip = function()
+                
+                TextContainerLineCopy.MaxVisibleGraphemes = -1;
+                
+              end;
+              
+              if isSkipping then
+                
+                onSkip();
+                
+              else
+                
+                for count = 1, #TextContainerLineCopy.Text do
 
-              PointerBefore = Pointer;
-              for count = 1, #TextContainerLineCopy.Text do
+                  TextContainerLineCopy.MaxVisibleGraphemes = count;
 
-                TextContainerLineCopy.MaxVisibleGraphemes = count;
+                  task.wait(npcSettings.general.letterDelay);
 
-                task.wait(npcSettings.general.letterDelay);
+                  if TextContainerLineCopy.MaxVisibleGraphemes == -1 then 
 
-                if TextContainerLineCopy.MaxVisibleGraphemes == -1 then 
+                    break;
 
-                  break;
+                  end
 
-                end
+                  Pointer += 1;
 
-                Pointer += 1;
-
+                end;
+                
               end;
 
             end;
@@ -703,6 +716,7 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
           end;
           
         end;
+        isSkipping = false;
         isNPCTalking = false;
 
         local chosenResponse;
