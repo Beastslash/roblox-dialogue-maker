@@ -181,14 +181,14 @@ function DialogueModule.getPages(contentArray: Types.ContentArray, TextContainer
       TempTextLabel.Parent = TextContainer;
       
       -- Find all space indices.
-      local spaceIndices = {};
+      local spaceIndices: {number} = {};
       local spacePointer = 1;
       local textCopy = TempTextLabel.Text;
       while textCopy:find(" ", spacePointer) do
 
         local _, lastIndex = textCopy:find(" ", spacePointer);
-        table.insert(spaceIndices, lastIndex);
-        spacePointer = lastIndex + 1;
+        table.insert(spaceIndices, lastIndex :: number);
+        spacePointer = (lastIndex :: number) + 1;
 
       end;
       
@@ -514,7 +514,7 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
         end
 
         -- Determine which text container we should use.
-        local ResponsesEnabled = false;
+        local areResponsesEnabled = false;
         local NPCTextContainerWithResponses = GUIDialogueContainer:FindFirstChild("NPCTextContainerWithResponses") :: GuiObject;
         local NPCTextContainerWithoutResponses = GUIDialogueContainer:FindFirstChild("NPCTextContainerWithoutResponses") :: GuiObject;
         if #responses > 0 then
@@ -527,7 +527,7 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
         local TextContainer = if #responses > 0 then NPCTextContainerWithResponses else NPCTextContainerWithoutResponses;
         NPCTextContainerWithResponses.Visible = #responses > 0;
         NPCTextContainerWithoutResponses.Visible = not (#responses > 0);
-        ResponsesEnabled = #responses > 0;
+        areResponsesEnabled = #responses > 0;
 
         -- Ensure we have a text container line.
         local TextContainerLine: TextLabel? = TextContainer:FindFirstChild("Line") :: TextLabel;
@@ -535,15 +535,13 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
 
         -- Make the NPC stop talking if the player clicks the frame
         local isNPCTalking = true;
+        local isNPCPaused = false;
         local isSkipping = false;
+        local isWaitingForPlayerResponse = true;
         local onSkip;
-        local WaitingForResponse = true;
-        local NPCPaused = false;
-        local Pointer = 1;
         local defaultChatContinueKey = clientSettings.defaultChatContinueKey;
         local defaultChatContinueKeyGamepad = clientSettings.defaultChatContinueKeyGamepad;
-        local ContinueDialogue;
-        ContinueDialogue = function(keybind: Enum.KeyCode?): ()
+        local ContinueDialogue = function(keybind: Enum.KeyCode?): ()
 
           -- Ensure the player is holding the key.
           if isSkipping or (keybind and not UserInputService:IsKeyDown(defaultChatContinueKey) and not UserInputService:IsKeyDown(defaultChatContinueKeyGamepad)) then
@@ -560,9 +558,9 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
 
             end;
 
-            if NPCPaused then
+            if isNPCPaused then
 
-              NPCPaused = false;
+              isNPCPaused = false;
 
             end;
 
@@ -575,7 +573,7 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
 
           elseif #responses == 0 then	
 
-            WaitingForResponse = false;
+            isWaitingForPlayerResponse = false;
 
           end;
 
@@ -677,8 +675,6 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
 
                   end
 
-                  Pointer += 1;
-
                 end;
                 
               end;
@@ -698,8 +694,8 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
 
             end;
 
-            NPCPaused = true;
-            while NPCPaused and isNPCTalking and DialogueModule.isPlayerTakingWithNPC do 
+            isNPCPaused = true;
+            while isNPCPaused and isNPCTalking and DialogueModule.isPlayerTakingWithNPC do 
 
               task.wait();
 
@@ -711,7 +707,7 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
               ClickToContinueButton.Visible = false;
 
             end;
-            NPCPaused = false;
+            isNPCPaused = false;
 
           end;
           
@@ -720,7 +716,7 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
         isNPCTalking = false;
 
         local chosenResponse;
-        if ResponsesEnabled and DialogueModule.isPlayerTakingWithNPC then
+        if areResponsesEnabled and DialogueModule.isPlayerTakingWithNPC then
 
           -- Sort responses because :GetChildren() doesn't guarantee it
           table.sort(responses, function(folder1, folder2)
@@ -751,7 +747,7 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
                 end;
 
                 chosenResponse = response;
-                WaitingForResponse = false;
+                isWaitingForPlayerResponse = false;
 
               end);
 
@@ -770,21 +766,19 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
           if npcSettings.timeout.enabled then
 
             -- Wait for the player if the developer wants to
-            if ResponsesEnabled and npcSettings.timeout.waitForResponse then
+            if not areResponsesEnabled or not npcSettings.timeout.waitForResponse then
 
-              return;
+              -- Wait the timeout set by the developer
+              task.wait(npcSettings.timeout.seconds);
+              isWaitingForPlayerResponse = false;
 
             end;
-
-            -- Wait the timeout set by the developer
-            task.wait(npcSettings.timeout.seconds);
-            WaitingForResponse = false;
 
           end;
 
         end)();
 
-        while WaitingForResponse and DialogueModule.isPlayerTakingWithNPC do
+        while isWaitingForPlayerResponse and DialogueModule.isPlayerTakingWithNPC do
 
           task.wait();
 
