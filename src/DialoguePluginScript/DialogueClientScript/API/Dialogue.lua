@@ -195,7 +195,7 @@ function DialogueModule.getPages(contentArray: Types.ContentArray, TextContainer
       if TempTextLabel.TextFits then
         
         -- Finding the Y bound is very easy.
-        currentY += TempTextLabel.TextBounds.Y;
+        currentY += TempTextLabel.TextBounds.Y - (TempTextLabel.TextSize * TempTextLabel.LineHeight);
 
         -- Finding the current X bound can be more complex.
         if TempTextLabel.Size.Y.Offset ~= TempTextLabel.TextSize then
@@ -277,6 +277,7 @@ function DialogueModule.getPages(contentArray: Types.ContentArray, TextContainer
   table.insert(pages, currentPage);
   
   -- We're done!
+  print(pages)
   return pages;
 
 end;
