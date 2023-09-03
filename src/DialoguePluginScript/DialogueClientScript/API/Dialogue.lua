@@ -186,8 +186,8 @@ function DialogueModule.getPages(contentArray: Types.ContentArray, TextContainer
       local textCopy = TempTextLabel.Text;
       while textCopy:find(" ", spacePointer) do
 
-        local startIndex, lastIndex = textCopy:find(" ", spacePointer);
-        table.insert(spaceIndices, startIndex);
+        local _, lastIndex = textCopy:find(" ", spacePointer);
+        table.insert(spaceIndices, lastIndex);
         spacePointer = lastIndex + 1;
 
       end;
@@ -204,7 +204,7 @@ function DialogueModule.getPages(contentArray: Types.ContentArray, TextContainer
           local originalYBound = TempTextLabel.TextBounds.Y;
           for spaceIndex = #spaceIndices, 1, -1 do
             
-            TempTextLabel.Text = TempTextLabel.Text:sub(1, spaceIndices[spaceIndex] - 1);
+            TempTextLabel.Text = TempTextLabel.Text:sub(1, spaceIndices[spaceIndex] + 1);
 
             if originalYBound ~= TempTextLabel.TextBounds.Y then
 
@@ -214,7 +214,7 @@ function DialogueModule.getPages(contentArray: Types.ContentArray, TextContainer
             
           end;
           
-          TempTextLabel.Text = textCopy:sub(TempTextLabel.Text:len() + 1);
+          TempTextLabel.Text = textCopy:sub(TempTextLabel.Text:len());
           
         end;
 
@@ -277,7 +277,6 @@ function DialogueModule.getPages(contentArray: Types.ContentArray, TextContainer
   table.insert(pages, currentPage);
   
   -- We're done!
-  print(pages)
   return pages;
 
 end;
