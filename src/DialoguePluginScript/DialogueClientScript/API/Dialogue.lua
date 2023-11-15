@@ -128,12 +128,12 @@ function DialogueModule.getPages(contentArray: Types.ContentArray, TextContainer
       
       -- Fastest case scenario!
       TempTextLabel:Destroy();
-      return {{
+      return {{{
         type = "string",
         size = UDim2.new(1, 0, 1, 0),
         position = UDim2.new(0, 0, 0, 0),
         value = contentArray[1]
-      }};
+      }}};
       
     end;
     
@@ -252,9 +252,6 @@ function DialogueModule.getPages(contentArray: Types.ContentArray, TextContainer
         end
         
       end;
-      
-      TempTextLabel:Clone().Parent = workspace;
-      TempTextLabel:Destroy();
       
       -- Start a new page to see if it'll fit.
       currentX = 0;
