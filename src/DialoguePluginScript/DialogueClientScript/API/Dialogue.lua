@@ -112,168 +112,346 @@ function DialogueModule.clearResponses(responseContainer: ScrollingFrame): ()
 
 end;
 
-type Page = {{type: "string" | "effect", size: UDim2?; position: UDim2?; value: string | Types.Effect}};
+type Page = {{type: "text"; text: string; size: UDim2} | Types.Effect};
 
--- @since v1.0.0
-function DialogueModule.getPages(contentArray: Types.ContentArray, TextContainer: GuiObject, TextLabel: TextLabel): {Page}
+type Pages = {Page};
+
+-- @since v5.0.0
+function DialogueModule.getPages(contentArray: Types.ContentArray, TextContainer: GuiObject, TextLabel: TextLabel): Pages
   
-  -- If the content array contains just one string, attempt to fit it in one TextLabel.
-  if #contentArray == 1 and typeof(contentArray[1]) == "string" then
-    
-    local TempTextLabel = TextLabel:Clone();
-    TempTextLabel.Text = contentArray[1] :: string;
-    TempTextLabel.Parent = TextContainer;
-    
-    if TempTextLabel.TextFits then
-      
-      -- Fastest case scenario!
-      TempTextLabel:Destroy();
-      return {{{
-        type = "string",
-        size = UDim2.new(1, 0, 1, 0),
-        position = UDim2.new(0, 0, 0, 0),
-        value = contentArray[1]
-      }}};
-      
-    end;
-    
-  end;
-  
-  -- Get the max dimensions and breakpoints of every effect.
-  local effectMetadata = {};
-  for _, possibleEffect in ipairs(contentArray) do
-    
-    if typeof(possibleEffect) == "table" then
-      
-      table.insert(effectMetadata, {
-        dimensions = possibleEffect.getMaxDimensions(),
-        breakpoints = possibleEffect.getBreakpoints()
-      });
-      
-    end;
-    
-  end;
-  
-  local pages: {Page} = {};
+  local pages: Pages = {};
   local currentPage: Page = {};
-  local currentX = 0;
-  local currentY = 0;
+  local TextContainerClone = TextContainer:Clone();
+  local TextLabelClone;
   
-  for index = 1, #contentArray do
+  TextContainerClone.Visible = false;
+  TextContainerClone.Parent = TextContainer.Parent;
+  
+  if TextContainerClone:FindFirstChild("Segment") then
     
-    local contentItem = contentArray[index];
+    TextContainerClone:FindFirstChild("Segment"):Destroy();
     
-    -- Determine if the item is a raw message or an effect.
-    if typeof(contentItem) == "string" then
-
-      -- Check if the text fits already.
-      local TempTextLabel = TextLabel:Clone();
+  end
+  
+  local function newPage()
+    
+    table.insert(pages, currentPage);
+    currentPage = {};
+    
+    for _, child in ipairs(TextContainerClone:GetChildren()) do
       
-      if currentX ~= 0 then
-        
-        -- The text'll have to fit on one line.
-        TempTextLabel.Size = UDim2.new(1, -currentX, 0, TempTextLabel.TextSize * TempTextLabel.LineHeight);
-        
-      end;
-
-      TempTextLabel.Position = UDim2.new(0, currentX, 0, currentY);
-      TempTextLabel.Text = contentItem;
-      TempTextLabel.Parent = TextContainer;
-      
-      -- Find all space indices.
-      local spaceIndices: {number} = {};
-      local spacePointer = 1;
-      local textCopy = TempTextLabel.Text;
-      while textCopy:find(" ", spacePointer) do
-
-        local _, lastIndex = textCopy:find(" ", spacePointer);
-        table.insert(spaceIndices, lastIndex :: number);
-        spacePointer = (lastIndex :: number) + 1;
-
-      end;
-      
-      if TempTextLabel.TextFits then
-        
-        -- Finding the Y bound is very easy.
-        currentY += TempTextLabel.TextBounds.Y - (TempTextLabel.TextSize * TempTextLabel.LineHeight);
-
-        -- Finding the current X bound can be more complex.
-        if TempTextLabel.Size.Y.Offset ~= TempTextLabel.TextSize then
-          
-          -- By erasing every row except for the last row, TempTextLabel.TextBounds.X becomes accurate.
-          local originalYBound = TempTextLabel.TextBounds.Y;
-          for spaceIndex = #spaceIndices, 1, -1 do
-            
-            TempTextLabel.Text = TempTextLabel.Text:sub(1, spaceIndices[spaceIndex] + 1);
-
-            if originalYBound ~= TempTextLabel.TextBounds.Y then
-
-              break;
-
-            end;
-            
-          end;
-          
-          TempTextLabel.Text = textCopy:sub(TempTextLabel.Text:len());
-          
-        end;
-
-        currentX = TempTextLabel.TextBounds.X;
-        
-        -- Add the text to the current page, then move on!
-        table.insert(currentPage, {
-          type = "string",
-          size = TempTextLabel.Size,
-          position = TempTextLabel.Position,
-          value = contentItem
-        });
-        
-        TempTextLabel:Destroy();
-        
-        continue;
-        
-      end;
-      
-      -- Let's try to individually remove the words.
-      for currentIndex = #spaceIndices, 1, -1 do
-        
-        TempTextLabel.Text = TempTextLabel.Text:sub(0, currentIndex);
-        
-        if TempTextLabel.TextFits then
-
-          table.insert(currentPage, {
-            type = "string",
-            size = TempTextLabel.Size,
-            position = TempTextLabel.Position,
-            value = TempTextLabel.Text
-          });
-          break;
-          
-        end
-        
-      end;
-      
-      -- Start a new page to see if it'll fit.
-      currentX = 0;
-      currentY = 0;
-      
-    else
-      
-      table.insert(currentPage, {
-        type = "effect",
-        size = UDim2.new(),
-        position = UDim2.new(),
-        value = contentItem
-      })
+      child:Destroy();
       
     end
     
-  end;
+    TextLabelClone = TextLabel:Clone();
+    TextLabelClone.Parent = TextContainerClone;
+    TextLabelClone.Size = UDim2.new(1, 0, 1, 0);
+    
+  end
   
-  -- Insert the last page
-  table.insert(pages, currentPage);
+  local xSizeOffset = 0;
   
-  -- We're done!
+  for contentArrayIndex, contentArrayItem in ipairs(contentArray) do
+    
+    local function addTextLabelToPage(TextLabel: TextLabel)
+      
+      table.insert(currentPage, {
+        type = "text";
+        text = TextLabel.Text;
+        size = TextLabel.Size;
+      });
+      
+    end
+    
+    local contentArrayItemType = typeof(contentArrayItem);
+    
+    if contentArrayItemType == "string" then
+      
+      TextLabelClone = TextLabel:Clone();
+      
+      -- Calculate the X size offset.
+      local TextWrapper = TextContainerClone:FindFirstChild("TextWrapper");
+      assert(TextWrapper and TextWrapper:IsA("UIListLayout"), "[Dialogue Maker] TextWrapper not found");
+      
+      local lastSpaceIndex: number? = nil;
+      
+      repeat
+        
+        if lastSpaceIndex then
+          
+          TextLabelClone.Text = (contentArrayItem :: string):sub(lastSpaceIndex);
+          
+        else 
+          
+          TextLabelClone.Text = contentArrayItem :: string;
+          
+        end
+        
+        TextLabelClone.Size = UDim2.new(1, -xSizeOffset, 1, -TextWrapper.AbsoluteContentSize.Y);
+        TextLabelClone.Parent = TextContainerClone;
+        
+        if not TextLabelClone.TextFits then
+          
+          -- Check if we should add a new page.
+          if TextWrapper.AbsoluteContentSize.Y > TextContainerClone.AbsoluteSize.Y then
+
+            -- Add the current page to the page list.
+            newPage();
+
+            -- Reset the TextLabel size.
+            TextLabelClone.Text = contentArrayItem :: string;
+
+          end
+          
+        end
+        
+        if TextLabelClone.TextFits then
+          
+          local function getRichTextIndices(text: string)
+
+            local richTextTagIndices: {
+              [number]: {
+                attributes: string?;
+                endOffset: number?;
+                name: string;
+                startOffset: number;
+              }
+            } = {};
+            local openTagIndices: {number} = {};
+            local textCopy = text;
+            local tagPattern = "<[^<>]->";
+            local pointer = 1;
+            for tag in textCopy:gmatch(tagPattern) do
+
+              -- Get the tag name and attributes.
+              local tagText = tag:match("<([^<>]-)>");
+              if tagText then
+
+                local firstSpaceIndex = tagText:find(" ");
+                local tagTextLength = tagText:len();
+                local name = tagText:sub(1, (firstSpaceIndex and firstSpaceIndex - 1) or tagTextLength);
+                if name:sub(1, 1) == "/" then
+
+                  for _, index in ipairs(openTagIndices) do
+
+                    if richTextTagIndices[index].name == name:sub(2) then
+
+                      -- Add a tag end offset.
+                      local _, endOffset = textCopy:find(tagPattern);
+                      if endOffset then
+
+                        richTextTagIndices[index].endOffset = pointer + endOffset;
+
+                      end;
+
+                      -- Remove the tag from the open tag table.
+                      table.remove(openTagIndices, index);
+                      break;
+
+                    end
+
+                  end
+
+                else
+
+                  -- Get the tag start offset.
+                  local startOffset = pointer;
+                  local attributes = firstSpaceIndex and tagText:sub(firstSpaceIndex + 1) or "";
+                  table.insert(richTextTagIndices, {
+                    name = name;
+                    attributes = attributes;
+                    startOffset = textCopy:find(tagPattern) :: number + pointer - 1;
+                  });
+                  table.insert(openTagIndices, #richTextTagIndices);
+
+                end
+
+                -- Remove the tag from our copy.
+                local _, pointerUpdate = textCopy:find(tagPattern);
+                if pointerUpdate then
+
+                  pointer += pointerUpdate - 1;
+                  textCopy = textCopy:sub(pointerUpdate);
+
+                end;
+
+              end;
+
+            end
+
+            return richTextTagIndices;
+
+          end
+
+          local function getLineBreakPositions(text: string, TextLabel: TextLabel, isRichText: boolean): {number}
+
+            -- Iterate through each character.
+            local breakpoints: {number} = {};
+            TextLabel.Text = "";
+            local lastSpaceIndex: number = 1;
+            local skipCounter = 0;
+            local remainingRichTextTags = getRichTextIndices(text);
+            for index, character in ipairs(text:split("")) do
+
+              -- Check if this is an offset.
+              if skipCounter ~= 0 then
+
+                skipCounter -= 1;
+                continue;
+
+              end
+
+              if isRichText then
+
+                for _, richTextTagIndex in ipairs(remainingRichTextTags) do
+
+                  if richTextTagIndex.startOffset == index then
+
+                    skipCounter = ("<" .. richTextTagIndex.name .. (if richTextTagIndex.attributes and richTextTagIndex.attributes ~= "" then " " .. richTextTagIndex.attributes else "") .. ">"):len() - 1;
+                    break;
+
+                  elseif richTextTagIndex.endOffset :: number - ("</" .. richTextTagIndex.name .. ">"):len() == index then
+
+                    skipCounter = ("</" .. richTextTagIndex.name .. ">"):len() - 1;
+                    break;
+
+                  end
+
+                end
+
+              end;
+
+              if skipCounter > 0 then
+
+                continue;
+
+              end
+
+              -- Keep track of spaces.
+              if character == " " then
+
+                lastSpaceIndex = index;
+
+              end
+
+              -- Keep track of the original text bounds.
+              local originalTextBoundsY = TextLabel.TextBounds.Y;
+
+              -- Add the character and applicable rich text tags.
+              TextLabel.Text = TextLabel.ContentText .. character;
+              if isRichText then
+
+                for _, richTextTagInfo in ipairs(remainingRichTextTags) do
+                  
+                  local startOffset = richTextTagInfo.startOffset;
+                  local endOffset = richTextTagInfo.endOffset :: number;
+                  if index >= startOffset and endOffset > (breakpoints[#breakpoints] or 0) then
+
+                    local prefix = "<" .. richTextTagInfo.name .. (if richTextTagInfo.attributes and richTextTagInfo.attributes ~= "" then " " .. richTextTagInfo.attributes else "") .. ">";
+                    local suffix = "</" .. richTextTagInfo.name .. ">";
+                    local startOffset = startOffset - (breakpoints[#breakpoints] or 0);
+                    local endOffset = (endOffset - (breakpoints[#breakpoints] or 0)) - prefix:len() - suffix:len();
+                    TextLabel.Text = TextLabel.ContentText:sub(1, startOffset - 1) .. prefix .. TextLabel.ContentText:sub(startOffset, endOffset - 1) .. suffix .. TextLabel.ContentText:sub(endOffset);
+
+                  end
+
+                end
+
+              end;
+
+
+              if TextLabel.TextBounds.Y > originalTextBoundsY then
+
+                local currentTextBoundsY = TextLabel.TextBounds.Y;
+                TextLabel.TextWrapped = false;
+
+                if TextLabel.TextBounds.Y < currentTextBoundsY then
+
+                  table.insert(breakpoints, lastSpaceIndex);
+                  TextLabel.Text = text:sub(lastSpaceIndex + 1, index);
+
+                end
+
+                TextLabel.TextWrapped = true;
+
+              end
+
+            end
+
+            -- Return breakpoints.
+            return breakpoints;
+
+          end
+          
+          local breakpoints = getLineBreakPositions(contentArrayItem :: string, TextLabelClone, TextLabelClone.RichText);
+          local lastBreakpointIndex = breakpoints[#breakpoints];
+          
+          if lastBreakpointIndex then
+            
+            -- Create another TextLabel to replace the last line of text.
+            -- This will allow the TextWrapper to accurately calculate 
+            -- how much space is available on the X-axis.
+            local ParagraphTextLabel = TextLabelClone:Clone();
+            ParagraphTextLabel.Text = (contentArrayItem :: string):sub(1, lastBreakpointIndex);
+            ParagraphTextLabel.Parent = TextLabelClone.Parent;
+            ParagraphTextLabel.Size = UDim2.new(0, ParagraphTextLabel.TextBounds.X, 0, ParagraphTextLabel.TextBounds.Y);
+            addTextLabelToPage(ParagraphTextLabel);
+            
+            -- Fix the TextLabelClone's text back.
+            TextLabelClone.Parent = nil;
+            TextLabelClone.Parent = ParagraphTextLabel.Parent;
+            TextLabelClone.Text = (contentArrayItem :: string):sub(lastBreakpointIndex);
+            
+          end;
+          
+          TextLabelClone.Size = UDim2.new(0, TextLabelClone.TextBounds.X, 0, TextLabelClone.TextBounds.Y);
+          addTextLabelToPage(TextLabelClone);
+          
+          xSizeOffset = if TextContainerClone.AbsolutePosition.X == TextLabelClone.AbsolutePosition.X then 0 else xSizeOffset + TextLabelClone.TextBounds.X;
+          
+          lastSpaceIndex = nil;
+          
+        else
+          
+          -- Remove a word from the text until we can fit the text.
+          lastSpaceIndex = 0;
+          repeat
+
+            lastSpaceIndex = table.pack(TextLabelClone.Text:find(".* "))[2] :: number;
+            TextLabelClone.Parent:Clone().Parent = workspace
+            assert(lastSpaceIndex, "[Dialogue Maker] Unable to fit text in text container even after removing the spaces. Is the text too big?");
+            TextLabelClone.Text = TextLabelClone.Text:sub(1, lastSpaceIndex :: number - 1)
+            
+          until TextLabelClone.TextFits;
+          
+          -- Add the remaining text to a new page.
+          addTextLabelToPage(TextLabelClone);
+          newPage();
+          
+          xSizeOffset = 0;
+          
+        end
+
+      until not lastSpaceIndex;
+      
+    elseif contentArrayItemType == "table" then
+      
+      -- TODO: Add effects
+      
+    end;
+    
+  end
+  
+  TextContainerClone:Destroy();
+  
+  -- Return all pages for this message.
+  if currentPage[1] then
+    
+    newPage();
+    
+  end
+  
   return pages;
 
 end;
@@ -527,8 +705,8 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
         areResponsesEnabled = #responses > 0;
 
         -- Ensure we have a text container line.
-        local TextContainerLine: TextLabel? = TextContainer:FindFirstChild("Line") :: TextLabel;
-        assert(TextContainerLine, "Line not found.");
+        local TextContainerLine: TextLabel? = TextContainer:FindFirstChild("Segment") :: TextLabel;
+        assert(TextContainerLine, "[Dialogue Maker] Segment not found.");
 
         -- Make the NPC stop talking if the player clicks the frame
         local isNPCTalking = true;
@@ -628,19 +806,18 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
             if dialogueContentItem.type == "effect" then
 
               -- The item is an effect. Let's run it.
-              print("[Dialogue Maker] [" .. dialogueContentItemIndex .. "/" .. #page .. "] [Effect] " .. (npcName or "Unknown NPC") .. ": " .. (dialogueContentItem.value :: Types.Effect).name);
-              (dialogueContentItem.value :: Types.Effect).run(isSkipping);
+              print("[Dialogue Maker] [" .. dialogueContentItemIndex .. "/" .. #page .. "] [Effect] " .. (npcName or "Unknown NPC") .. ": " .. dialogueContentItem.name);
+              dialogueContentItem.run(isSkipping);
 
-            elseif dialogueContentItem.type == "string" then
+            elseif dialogueContentItem.type == "text" then
               
               -- Print to the debug console.
-              print("[Dialogue Maker] [" .. dialogueContentItemIndex .. "/" .. #page .. "] [Message] " .. (npcName or "Unknown NPC") .. ": " .. dialogueContentItem.value :: string);
+              print("[Dialogue Maker] [" .. dialogueContentItemIndex .. "/" .. #page .. "] [Message] " .. (npcName or "Unknown NPC") .. ": " .. dialogueContentItem.text);
               
               -- Determine new offset.
               local TextContainerLineCopy = TextContainerLine:Clone();
               TextContainerLineCopy.Position = UDim2.new();
-              TextContainerLineCopy.Text = dialogueContentItem.value :: string;
-              TextContainerLineCopy.Position = dialogueContentItem.position :: UDim2;
+              TextContainerLineCopy.Text = dialogueContentItem.text;
               TextContainerLineCopy.Size = dialogueContentItem.size :: UDim2;
               TextContainerLineCopy.Name = pageIndex .. "_" .. dialogueContentItemIndex;
               TextContainerLineCopy.Visible = true;
