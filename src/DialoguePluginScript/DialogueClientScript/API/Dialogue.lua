@@ -140,7 +140,11 @@ function DialogueModule.getPages(contentArray: Types.ContentArray, TextContainer
     
     for _, child in ipairs(TextContainerClone:GetChildren()) do
       
-      child:Destroy();
+      if child.Name ~= "TextWrapper" then
+        
+        child:Destroy();
+        
+      end;
       
     end
     
@@ -188,7 +192,7 @@ function DialogueModule.getPages(contentArray: Types.ContentArray, TextContainer
           
         end
         
-        TextLabelClone.Size = UDim2.new(1, -xSizeOffset, 1, -TextWrapper.AbsoluteContentSize.Y);
+        TextLabelClone.Size = UDim2.new(1, -xSizeOffset, if xSizeOffset > 0 then 0 else 1, if xSizeOffset > 0 then TextLabelClone.TextSize * TextLabelClone.LineHeight else -TextWrapper.AbsoluteContentSize.Y);
         TextLabelClone.Parent = TextContainerClone;
         
         if not TextLabelClone.TextFits then
@@ -408,7 +412,7 @@ function DialogueModule.getPages(contentArray: Types.ContentArray, TextContainer
           TextLabelClone.Size = UDim2.new(0, TextLabelClone.TextBounds.X, 0, TextLabelClone.TextBounds.Y);
           addTextLabelToPage(TextLabelClone);
           
-          xSizeOffset = if TextContainerClone.AbsolutePosition.X == TextLabelClone.AbsolutePosition.X then 0 else xSizeOffset + TextLabelClone.TextBounds.X;
+          xSizeOffset += TextLabelClone.TextBounds.X;
           
           lastSpaceIndex = nil;
           
@@ -419,15 +423,15 @@ function DialogueModule.getPages(contentArray: Types.ContentArray, TextContainer
           repeat
 
             lastSpaceIndex = table.pack(TextLabelClone.Text:find(".* "))[2] :: number;
-            TextLabelClone.Parent:Clone().Parent = workspace
             assert(lastSpaceIndex, "[Dialogue Maker] Unable to fit text in text container even after removing the spaces. Is the text too big?");
-            TextLabelClone.Text = TextLabelClone.Text:sub(1, lastSpaceIndex :: number - 1)
+            TextLabelClone.Text = TextLabelClone.Text:sub(1, lastSpaceIndex - 1);
             
           until TextLabelClone.TextFits;
           
+          TextLabelClone.Size = UDim2.new(0, TextLabelClone.TextBounds.X, 0, TextLabelClone.TextBounds.Y);
+          
           -- Add the remaining text to a new page.
           addTextLabelToPage(TextLabelClone);
-          newPage();
           
           xSizeOffset = 0;
           
@@ -818,7 +822,7 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
               local TextContainerLineCopy = TextContainerLine:Clone();
               TextContainerLineCopy.Position = UDim2.new();
               TextContainerLineCopy.Text = dialogueContentItem.text;
-              TextContainerLineCopy.Size = dialogueContentItem.size :: UDim2;
+              TextContainerLineCopy.Size = dialogueContentItem.size;
               TextContainerLineCopy.Name = pageIndex .. "_" .. dialogueContentItemIndex;
               TextContainerLineCopy.Visible = true;
               TextContainerLineCopy.Parent = TextContainerLine.Parent;
