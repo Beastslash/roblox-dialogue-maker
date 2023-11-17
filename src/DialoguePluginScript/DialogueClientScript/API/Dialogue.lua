@@ -401,7 +401,7 @@ function DialogueModule.getPages(contentArray: Types.ContentArray, TextContainer
             -- Fix the TextLabelClone's text back.
             TextLabelClone.Parent = nil;
             TextLabelClone.Parent = ParagraphTextLabel.Parent;
-            TextLabelClone.Text = (contentArrayItem :: string):sub(lastBreakpointIndex);
+            TextLabelClone.Text = (contentArrayItem :: string):sub(lastBreakpointIndex + 1);
             
           end;
           
