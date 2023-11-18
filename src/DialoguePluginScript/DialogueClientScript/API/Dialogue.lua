@@ -122,7 +122,7 @@ function DialogueModule.getPages(contentArray: Types.ContentArray, TextContainer
   local pages: Pages = {};
   local currentPage: Page = {};
   local TextContainerClone = TextContainer:Clone();
-  local TextLabelClone;
+  local TextLabelClone = TextLabel:Clone();
   
   TextContainerClone.Visible = false;
   TextContainerClone.Parent = TextContainer.Parent;
@@ -140,6 +140,8 @@ function DialogueModule.getPages(contentArray: Types.ContentArray, TextContainer
     table.insert(pages, currentPage);
     currentPage = {};
     
+    TextLabelClone = TextLabelClone:Clone();
+    
     for _, child in ipairs(TextContainerClone:GetChildren()) do
       
       if child.Name ~= "TextWrapper" then
@@ -150,7 +152,6 @@ function DialogueModule.getPages(contentArray: Types.ContentArray, TextContainer
       
     end
     
-    TextLabelClone = TextLabel:Clone();
     TextLabelClone.Parent = TextContainerClone;
     TextLabelClone.Size = UDim2.new(1, 0, 1, 0);
     
@@ -174,8 +175,6 @@ function DialogueModule.getPages(contentArray: Types.ContentArray, TextContainer
     local contentArrayItemType = typeof(contentArrayItem);
     
     if contentArrayItemType == "string" then
-      
-      TextLabelClone = TextLabel:Clone();
       
       -- Calculate the X size offset.
       local TextWrapper = TextContainerClone:FindFirstChild("TextWrapper");
@@ -207,7 +206,7 @@ function DialogueModule.getPages(contentArray: Types.ContentArray, TextContainer
             newPage();
 
             -- Reset the TextLabel size.
-            TextLabelClone.Text = contentArrayItem :: string;
+            --TextLabelClone.Text = contentArrayItem :: string;
 
           end
           
@@ -405,7 +404,7 @@ function DialogueModule.getPages(contentArray: Types.ContentArray, TextContainer
             local ParagraphTextLabel = TextLabelClone:Clone();
             ParagraphTextLabel.Text = (contentArrayItem :: string):sub(1, lastBreakpointIndex);
             ParagraphTextLabel.Parent = TextLabelClone.Parent;
-            ParagraphTextLabel.Size = UDim2.new(0, ParagraphTextLabel.TextBounds.X, 0, ParagraphTextLabel.TextBounds.Y);
+            ParagraphTextLabel.Size = UDim2.new(0, ParagraphTextLabel.TextBounds.X, 0, ParagraphTextLabel.TextBounds.Y + (ParagraphTextLabel.TextSize * ParagraphTextLabel.LineHeight - ParagraphTextLabel.TextSize));
             addTextLabelToPage(ParagraphTextLabel);
             
             -- Fix the TextLabelClone's text back.
@@ -415,7 +414,7 @@ function DialogueModule.getPages(contentArray: Types.ContentArray, TextContainer
             
           end;
           
-          TextLabelClone.Size = UDim2.new(0, TextLabelClone.TextBounds.X, 0, TextLabelClone.TextBounds.Y);
+          TextLabelClone.Size = UDim2.new(0, TextLabelClone.TextBounds.X, 0, TextLabelClone.TextBounds.Y + (TextLabelClone.TextSize * TextLabelClone.LineHeight - TextLabelClone.TextSize));
           addTextLabelToPage(TextLabelClone);
           
           xSizeOffset += TextLabelClone.TextBounds.X;
@@ -430,12 +429,20 @@ function DialogueModule.getPages(contentArray: Types.ContentArray, TextContainer
           repeat
 
             lastSpaceIndex = table.pack(TextLabelClone.Text:find(".* "))[2] :: number;
+            if not lastSpaceIndex and TextLabelClone.TextBounds.Y < TextLabelClone.TextSize * TextLabelClone.LineHeight then
+              
+              -- The given area is too small. Add this to a new page.
+              newPage();
+              continue;              
+              
+            end
+            
             assert(lastSpaceIndex, "[Dialogue Maker] Unable to fit text in text container even after removing the spaces. Is the text too big?");
             TextLabelClone.Text = TextLabelClone.Text:sub(1, lastSpaceIndex - 1);
             
           until TextLabelClone.TextFits;
           
-          TextLabelClone.Size = UDim2.new(0, TextLabelClone.TextBounds.X, 0, TextLabelClone.TextBounds.Y);
+          TextLabelClone.Size = UDim2.new(0, TextLabelClone.TextBounds.X, 0, TextLabelClone.TextBounds.Y + (TextLabelClone.TextSize * TextLabelClone.LineHeight - TextLabelClone.TextSize));
           
           -- Add the remaining text to a new page.
           addTextLabelToPage(TextLabelClone);
