@@ -112,10 +112,6 @@ function DialogueModule.clearResponses(responseContainer: ScrollingFrame): ()
 
 end;
 
-type Page = {{type: "text"; text: string; size: UDim2} | Types.Effect};
-
-type Pages = {Page};
-
 function deleteNonTextWrapperChildren(TextContainer: Instance) 
   
   for _, child in ipairs(TextContainer:GetChildren()) do
@@ -131,10 +127,10 @@ function deleteNonTextWrapperChildren(TextContainer: Instance)
 end
 
 -- @since v5.0.0
-function DialogueModule.getPages(contentArray: Types.ContentArray, TextContainer: GuiObject, TextLabel: TextLabel): Pages
+function DialogueModule.getPages(contentArray: Types.ContentArray, TextContainer: GuiObject, TextLabel: TextLabel): {Types.Page}
   
-  local pages: Pages = {};
-  local currentPage: Page = {};
+  local pages: {Types.Page} = {};
+  local currentPage: Types.Page = {};
   local TextContainerClone = TextContainer:Clone();
   local TextLabelClone = TextLabel:Clone();
   
@@ -221,14 +217,7 @@ function DialogueModule.getPages(contentArray: Types.ContentArray, TextContainer
           
           local function getRichTextIndices(text: string)
 
-            local richTextTagIndices: {
-              [number]: {
-                attributes: string?;
-                endOffset: number?;
-                name: string;
-                startOffset: number;
-              }
-            } = {};
+            local richTextTagIndices: {Types.RichTextTagInformation} = {};
             local openTagIndices: {number} = {};
             local textCopy = text;
             local tagPattern = "<[^<>]->";
