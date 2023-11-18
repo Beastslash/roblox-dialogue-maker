@@ -741,7 +741,7 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
         local ContinueDialogue = function(keybind: Enum.KeyCode?): ()
 
           -- Ensure the player is holding the key.
-          if isSkipping or (keybind and not UserInputService:IsKeyDown(defaultChatContinueKey) and not UserInputService:IsKeyDown(defaultChatContinueKeyGamepad)) then
+          if (keybind and not UserInputService:IsKeyDown(defaultChatContinueKey) and not UserInputService:IsKeyDown(defaultChatContinueKeyGamepad)) then
 
             return;
 
@@ -911,7 +911,7 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
             isNPCPaused = false;
 
           end;
-          
+
           isSkipping = false;
           
         end;
