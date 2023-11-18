@@ -25,7 +25,7 @@ Check out [How to use the Dialogue Maker](https://github.com/beastslash/roblox-d
 Sure! If you feel like that the Dialogue Maker can be improved for everyone, just send a feature request in the issues. You could also submit a pull request if you already added it yourself. Beastslash will sync changes made between the plugin and repository.
 
 ## Acknowledgements
-* [**Christian "Sudobeast" Toney**](https://twitter.com/Sudobeast) - Project Manager and Lead Programmer
+* [**Christian "Sudobeast" Toney**](https://christiantoney.com) - Project Manager and Lead Programmer
 * [**BHickey94**](https://github.com/BHickey94) - Code Contributor
 * [**GAVsi115**](https://devforum.roblox.com/u/gavsi115/summary) - Code Contributor and Bug Reporter
 * [**extravent3**](https://devforum.roblox.com/u/extravent3/summary) - Issue Sponsor and Bug Reporter
@@ -35,3 +35,4 @@ Sure! If you feel like that the Dialogue Maker can be improved for everyone, jus
 * [**joshuajon**](https://github.com/joshuajon) - Bug Reporter
 * [**LordMerc**](https://devforum.roblox.com/u/lordmerc/summary) - Bug Reporter
 * [**thomkok13**](https://devforum.roblox.com/u/thomkok13/summary) - Bug Reporter
+* [**kitifulnines**](https://devforum.roblox.com/u/kitifulnines/summary**) - [Bug Reporter](https://github.com/Beastslash/roblox-dialogue-maker/issues/88)
