@@ -36,3 +36,4 @@ Sure! If you feel like that the Dialogue Maker can be improved for everyone, jus
 * [**LordMerc**](https://devforum.roblox.com/u/lordmerc/summary) - Bug Reporter
 * [**thomkok13**](https://devforum.roblox.com/u/thomkok13/summary) - Bug Reporter
 * [**kitifulnines**](https://devforum.roblox.com/u/kitifulnines/summary**) - [Bug Reporter](https://github.com/Beastslash/roblox-dialogue-maker/issues/88)
+* [**DavidColetta**](https://github.com/DavidColetta) - [Bug Reporter](https://github.com/Beastslash/roblox-dialogue-maker/issues/86)
