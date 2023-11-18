@@ -132,6 +132,8 @@ function DialogueModule.getPages(contentArray: Types.ContentArray, TextContainer
     TextContainerClone:FindFirstChild("Segment"):Destroy();
     
   end
+
+  local xSizeOffset = 0;
   
   local function newPage()
     
@@ -152,9 +154,10 @@ function DialogueModule.getPages(contentArray: Types.ContentArray, TextContainer
     TextLabelClone.Parent = TextContainerClone;
     TextLabelClone.Size = UDim2.new(1, 0, 1, 0);
     
+    xSizeOffset = 0;
+    
   end
   
-  local xSizeOffset = 0;
   
   for contentArrayIndex, contentArrayItem in ipairs(contentArray) do
     
@@ -184,7 +187,7 @@ function DialogueModule.getPages(contentArray: Types.ContentArray, TextContainer
         
         if lastSpaceIndex then
           
-          TextLabelClone.Text = (contentArrayItem :: string):sub(lastSpaceIndex);
+          TextLabelClone.Text = (contentArrayItem :: string):sub(lastSpaceIndex + 1);
           
         else 
           
@@ -292,6 +295,7 @@ function DialogueModule.getPages(contentArray: Types.ContentArray, TextContainer
 
             -- Iterate through each character.
             local breakpoints: {number} = {};
+            local originalTextLabelText = TextLabel.Text;
             TextLabel.Text = "";
             local lastSpaceIndex: number = 1;
             local skipCounter = 0;
@@ -382,6 +386,8 @@ function DialogueModule.getPages(contentArray: Types.ContentArray, TextContainer
               end
 
             end
+            
+            TextLabel.Text = originalTextLabelText;
 
             -- Return breakpoints.
             return breakpoints;
@@ -420,6 +426,7 @@ function DialogueModule.getPages(contentArray: Types.ContentArray, TextContainer
           
           -- Remove a word from the text until we can fit the text.
           lastSpaceIndex = 0;
+          local originalText = TextLabelClone.Text;
           repeat
 
             lastSpaceIndex = table.pack(TextLabelClone.Text:find(".* "))[2] :: number;
