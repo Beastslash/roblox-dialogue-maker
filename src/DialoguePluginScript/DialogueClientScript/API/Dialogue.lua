@@ -168,16 +168,6 @@ function DialogueModule.getPages(contentArray: Types.ContentArray, TextContainer
   
   for contentArrayIndex, contentArrayItem in ipairs(contentArray) do
     
-    local function addTextLabelToPage(TextLabel: TextLabel)
-      
-      table.insert(currentPage, {
-        type = "text";
-        text = TextLabel.Text;
-        size = TextLabel.Size;
-      });
-      
-    end
-    
     local contentArrayItemType = typeof(contentArrayItem);
     
     if contentArrayItemType == "string" then
@@ -189,6 +179,16 @@ function DialogueModule.getPages(contentArray: Types.ContentArray, TextContainer
       local lastSpaceIndex: number? = nil;
       
       repeat
+        
+        local function addTextLabelToPage(TextLabel: TextLabel)
+
+          table.insert(currentPage, {
+            type = "text";
+            text = TextLabel.Text;
+            size = TextLabel.Size;
+          });
+
+        end
         
         TextLabelClone = TextLabelClone:Clone();
         
@@ -205,8 +205,6 @@ function DialogueModule.getPages(contentArray: Types.ContentArray, TextContainer
         TextLabelClone.Size = UDim2.new(1, -xSizeOffset, if xSizeOffset > 0 then 0 else 1, if xSizeOffset > 0 then TextLabelClone.TextSize * TextLabelClone.LineHeight else -TextWrapper.AbsoluteContentSize.Y);
         TextLabelClone.Parent = TextContainerClone;
         
-        print(TextLabelClone.Text);
-        
         if not TextLabelClone.TextFits then
           
           -- Check if we should add a new page.
@@ -214,9 +212,6 @@ function DialogueModule.getPages(contentArray: Types.ContentArray, TextContainer
 
             -- Add the current page to the page list.
             newPage();
-
-            -- Reset the TextLabel size.
-            --TextLabelClone.Text = contentArrayItem :: string;
 
           end
           
@@ -917,8 +912,9 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
 
           end;
           
+          isSkipping = false;
+          
         end;
-        isSkipping = false;
         isNPCTalking = false;
 
         local chosenResponse;
