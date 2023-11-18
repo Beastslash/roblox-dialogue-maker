@@ -116,6 +116,20 @@ type Page = {{type: "text"; text: string; size: UDim2} | Types.Effect};
 
 type Pages = {Page};
 
+function deleteNonTextWrapperChildren(TextContainer: Instance) 
+  
+  for _, child in ipairs(TextContainer:GetChildren()) do
+
+    if child.Name ~= "TextWrapper" then
+
+      child:Destroy();
+
+    end;
+
+  end
+  
+end
+
 -- @since v5.0.0
 function DialogueModule.getPages(contentArray: Types.ContentArray, TextContainer: GuiObject, TextLabel: TextLabel): Pages
   
@@ -142,15 +156,7 @@ function DialogueModule.getPages(contentArray: Types.ContentArray, TextContainer
     
     TextLabelClone = TextLabelClone:Clone();
     
-    for _, child in ipairs(TextContainerClone:GetChildren()) do
-      
-      if child.Name ~= "TextWrapper" then
-        
-        child:Destroy();
-        
-      end;
-      
-    end
+    deleteNonTextWrapperChildren(TextContainerClone);
     
     TextLabelClone.Parent = TextContainerClone;
     TextLabelClone.Size = UDim2.new(1, 0, 1, 0);
@@ -184,6 +190,8 @@ function DialogueModule.getPages(contentArray: Types.ContentArray, TextContainer
       
       repeat
         
+        TextLabelClone = TextLabelClone:Clone();
+        
         if lastSpaceIndex then
           
           TextLabelClone.Text = (contentArrayItem :: string):sub(lastSpaceIndex + 1);
@@ -196,6 +204,8 @@ function DialogueModule.getPages(contentArray: Types.ContentArray, TextContainer
         
         TextLabelClone.Size = UDim2.new(1, -xSizeOffset, if xSizeOffset > 0 then 0 else 1, if xSizeOffset > 0 then TextLabelClone.TextSize * TextLabelClone.LineHeight else -TextWrapper.AbsoluteContentSize.Y);
         TextLabelClone.Parent = TextContainerClone;
+        
+        print(TextLabelClone.Text);
         
         if not TextLabelClone.TextFits then
           
@@ -425,7 +435,6 @@ function DialogueModule.getPages(contentArray: Types.ContentArray, TextContainer
           
           -- Remove a word from the text until we can fit the text.
           lastSpaceIndex = 0;
-          local originalText = TextLabelClone.Text;
           repeat
 
             lastSpaceIndex = table.pack(TextLabelClone.Text:find(".* "))[2] :: number;
@@ -815,9 +824,14 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
         TextContainerLine.Text = "";
         TextContainerLine.Visible = false;
         DialogueGUI.Enabled = true;
+        local componentsToDelete = {};
         for pageIndex, page in ipairs(pages) do
           
-          local componentsToDelete = {};
+          for _, child in ipairs(componentsToDelete) do
+            
+            child:Destroy();
+            
+          end
           
           for dialogueContentItemIndex, dialogueContentItem in ipairs(page) do
             
