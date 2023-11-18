@@ -76,14 +76,14 @@ for _, NPCLocation: ObjectValue in ipairs(script.NPCLocations:GetChildren()) do
     local dialogueSettings = require(NPC:FindFirstChild("NPCDialogueSettings")) :: Types.NPCSettings;
     if dialogueSettings.speechBubble.enabled then
 
-      local SpeechBubblePart = dialogueSettings.speechBubble.location;
+      local SpeechBubblePart = dialogueSettings.speechBubble.BasePart;
       if SpeechBubblePart and SpeechBubblePart:IsA("BasePart") then
 
         -- Listen if the player clicks the speech bubble
         local SpeechBubble = api.triggers.createSpeechBubble(NPC, dialogueSettings);
         (SpeechBubble:FindFirstChild("SpeechBubbleButton") :: ImageButton).MouseButton1Click:Connect(function()
 
-          api.dialogue.readDialogue(NPC, dialogueSettings);
+          readDialogue(NPC, dialogueSettings);
 
         end);
         SpeechBubble.Parent = PlayerGui;
@@ -99,7 +99,7 @@ for _, NPCLocation: ObjectValue in ipairs(script.NPCLocations:GetChildren()) do
     -- Next, the prompt regions.
     if dialogueSettings.promptRegion.enabled then
 
-      local PromptRegionPart = dialogueSettings.promptRegion.location;
+      local PromptRegionPart = dialogueSettings.promptRegion.BasePart;
       if PromptRegionPart and PromptRegionPart:IsA("BasePart") then
 
         PromptRegionPart.Touched:Connect(function(part)
@@ -125,7 +125,7 @@ for _, NPCLocation: ObjectValue in ipairs(script.NPCLocations:GetChildren()) do
     -- Now, the proximity prompts.
     if dialogueSettings.proximityPrompt.enabled then
 
-      local ProximityPrompt = dialogueSettings.proximityPrompt.location;
+      local ProximityPrompt = dialogueSettings.proximityPrompt.Instance;
       if dialogueSettings.proximityPrompt.autoCreate then
 
         local ProximityPromptTemp = Instance.new("ProximityPrompt");
@@ -139,9 +139,9 @@ for _, NPCLocation: ObjectValue in ipairs(script.NPCLocations:GetChildren()) do
         api.triggers.addProximityPrompt(NPC, ProximityPrompt);
 
         ProximityPrompt.Triggered:Connect(function()
-
-          api.dialogue.readDialogue(NPC, dialogueSettings);
-
+          
+          readDialogue(NPC, dialogueSettings);
+          
         end);
 
       else
@@ -155,7 +155,7 @@ for _, NPCLocation: ObjectValue in ipairs(script.NPCLocations:GetChildren()) do
     -- Almost there: it's time for the click detectors.
     if dialogueSettings.clickDetector.enabled then
 
-      local ClickDetector = dialogueSettings.clickDetector.location;
+      local ClickDetector = dialogueSettings.clickDetector.Instance;
       if dialogueSettings.clickDetector.autoCreate then
 
         local ClickDetectorTemp = Instance.new("ClickDetector");
@@ -170,7 +170,7 @@ for _, NPCLocation: ObjectValue in ipairs(script.NPCLocations:GetChildren()) do
 
         ClickDetector.MouseClick:Connect(function()
           
-          api.dialogue.readDialogue(NPC, dialogueSettings);
+          readDialogue(NPC, dialogueSettings);
           
         end);
 
@@ -193,7 +193,7 @@ for _, NPCLocation: ObjectValue in ipairs(script.NPCLocations:GetChildren()) do
 
         if CanPressButton and (UserInputService:IsKeyDown(defaultChatTriggerKey) or UserInputService:IsKeyDown(defaultChatTriggerKeyGamepad)) then
             
-          api.dialogue.readDialogue(NPC, dialogueSettings);
+          readDialogue(NPC, dialogueSettings);
 
         end;
 
