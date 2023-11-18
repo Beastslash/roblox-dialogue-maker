@@ -864,7 +864,7 @@ function DialogueModule.readDialogue(NPC: Model, npcSettings: Types.NPCSettings)
                 
               else
                 
-                for count = 1, #TextContainerLineCopy.Text do
+                for count = 1, #TextContainerLineCopy.ContentText do
 
                   TextContainerLineCopy.MaxVisibleGraphemes = count;
 
