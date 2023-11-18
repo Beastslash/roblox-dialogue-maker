@@ -397,8 +397,9 @@ function DialogueModule.getPages(contentArray: Types.ContentArray, TextContainer
             return breakpoints;
 
           end
-          
-          local breakpoints = getLineBreakPositions(contentArrayItem :: string, TextLabelClone, TextLabelClone.RichText);
+
+          local originalText = TextLabelClone.Text;
+          local breakpoints = getLineBreakPositions(originalText, TextLabelClone, TextLabelClone.RichText);
           local lastBreakpointIndex = breakpoints[#breakpoints];
           
           if lastBreakpointIndex then
@@ -407,7 +408,7 @@ function DialogueModule.getPages(contentArray: Types.ContentArray, TextContainer
             -- This will allow the TextWrapper to accurately calculate 
             -- how much space is available on the X-axis.
             local ParagraphTextLabel = TextLabelClone:Clone();
-            ParagraphTextLabel.Text = (contentArrayItem :: string):sub(1, lastBreakpointIndex);
+            ParagraphTextLabel.Text = originalText:sub(1, lastBreakpointIndex);
             ParagraphTextLabel.Parent = TextLabelClone.Parent;
             ParagraphTextLabel.Size = UDim2.new(0, ParagraphTextLabel.TextBounds.X, 0, ParagraphTextLabel.TextBounds.Y + (ParagraphTextLabel.TextSize * ParagraphTextLabel.LineHeight - ParagraphTextLabel.TextSize));
             addTextLabelToPage(ParagraphTextLabel);
@@ -415,7 +416,7 @@ function DialogueModule.getPages(contentArray: Types.ContentArray, TextContainer
             -- Fix the TextLabelClone's text back.
             TextLabelClone.Parent = nil;
             TextLabelClone.Parent = ParagraphTextLabel.Parent;
-            TextLabelClone.Text = (contentArrayItem :: string):sub(lastBreakpointIndex + 1);
+            TextLabelClone.Text = originalText:sub(lastBreakpointIndex + 1);
             
           end;
           
