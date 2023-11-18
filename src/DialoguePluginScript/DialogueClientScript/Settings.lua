@@ -1,5 +1,5 @@
 --!strict
-type ClientSettings = {
+export type ClientSettings = {
 
   -- This is the default theme that will be used when talking with NPCs
   defaultThemes: {
